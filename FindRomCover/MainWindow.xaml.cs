@@ -102,8 +102,8 @@ namespace FindRomCover
         {
             if (lstMissingImages.SelectedItem is string selectedFile)
             {
-                selectedZipFileName = selectedFile; // Update the selected ZIP filename
-                SimilarImages.Clear(); // Clear previous similar images
+                selectedZipFileName = selectedFile;
+                List<ImageData> tempList = [];
 
                 if (!string.IsNullOrEmpty(imageFolderPath))
                 {
@@ -111,47 +111,44 @@ namespace FindRomCover
                     foreach (string imageFile in imageFiles)
                     {
                         string imageName = Path.GetFileNameWithoutExtension(imageFile);
+                        double similarityRate = CalculateSimilarity(selectedZipFileName, imageName);
 
-                        if (IsSimilar(selectedZipFileName, imageName))
+                        if (similarityRate >= 50) // Minimum similarity threshold
                         {
-                            SimilarImages.Add(new ImageData
+                            tempList.Add(new ImageData
                             {
                                 ImagePath = imageFile,
                                 ImageName = imageName,
-                                SimilarityRate = "50%" // Example similarity rate
+                                SimilarityRate = similarityRate
                             });
                         }
                     }
 
-                    // If no similar images found, add a "not found" message
+                    // Sort the list by similarity rate in descending order
+                    tempList.Sort((x, y) => y.SimilarityRate.CompareTo(x.SimilarityRate));
+
+                    // Clear and add sorted items to SimilarImages
+                    SimilarImages.Clear();
+                    foreach (var item in tempList)
+                    {
+                        SimilarImages.Add(item);
+                    }
+
                     if (SimilarImages.Count == 0)
                     {
-                        SimilarImages.Add(new ImageData
-                        {
-                            ImageName = "There is no similar image",
-                            IsNotFoundMessage = true
-                        });
+                        // No similar images found, add not found message
+                        SimilarImages.Add(new ImageData { ImageName = "No similar image found" });
                     }
                 }
             }
-        }
-
-        private static bool IsSimilar(string fileName, string otherFileName)
-        {
-            // Simple example: check if the other file name contains most of the characters of the original file name
-            int similarityThreshold = (int)(fileName.Length * 0.5); // 50% similarity
-            int matchCount = otherFileName.Where((c, i) => i < fileName.Length && c == fileName[i]).Count();
-
-            return matchCount >= similarityThreshold;
         }
 
         public class ImageData
         {
             public string? ImagePath { get; set; }
             public string? ImageName { get; set; }
-            public string? SimilarityRate { get; set; }
+            public double SimilarityRate { get; set; }
             public bool IsNotFoundMessage { get; set; } // Flag for "not found" message
-                                                        // Any other properties...
         }
 
         private void ImageCell_MouseDown(object sender, MouseButtonEventArgs e)
@@ -194,5 +191,49 @@ namespace FindRomCover
                 System.Windows.MessageBox.Show("Error playing sound: " + ex.Message);
             }
         }
+
+        public static double CalculateSimilarity(string a, string b)
+        {
+            if (string.IsNullOrEmpty(a) || string.IsNullOrEmpty(b)) return 0.0;
+
+            int distance = LevenshteinDistance(a, b);
+            double longestLength = Math.Max(a.Length, b.Length);
+            double similarityRate = (1.0 - distance / longestLength) * 100;
+            return Math.Round(similarityRate, 2); // Round to 2 decimal places
+        }
+
+
+        public static int LevenshteinDistance(string a, string b)
+        {
+            if (string.IsNullOrEmpty(a))
+            {
+                return b?.Length ?? 0;
+            }
+
+            if (string.IsNullOrEmpty(b))
+            {
+                return a.Length;
+            }
+
+            int lengthA = a.Length;
+            int lengthB = b.Length;
+            var distances = new int[lengthA + 1, lengthB + 1];
+
+            for (int i = 0; i <= lengthA; distances[i, 0] = i++) { }
+            for (int j = 0; j <= lengthB; distances[0, j] = j++) { }
+
+            for (int i = 1; i <= lengthA; i++)
+            {
+                for (int j = 1; j <= lengthB; j++)
+                {
+                    int cost = (b[j - 1] == a[i - 1]) ? 0 : 1;
+                    distances[i, j] = Math.Min(
+                        Math.Min(distances[i - 1, j] + 1, distances[i, j - 1] + 1),
+                        distances[i - 1, j - 1] + cost);
+                }
+            }
+            return distances[lengthA, lengthB];
+        }
+
     }
 }

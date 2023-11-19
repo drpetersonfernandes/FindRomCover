@@ -19,7 +19,7 @@
                 <StackPanel>
                     <Image
                         Width="200"
-                        Height="250"
+                        Height="200"
                         MouseDown="ImageCell_MouseDown"
                         Source="{Binding ImagePath}" />
                     <TextBlock HorizontalAlignment="Center" Text="{Binding ImageName}" />
@@ -40,7 +40,7 @@
         </Grid.RowDefinitions>
 
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="500" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
@@ -59,7 +59,7 @@
             Margin="10,10,0,0">
             <TextBox
                 x:Name="txtRomFolder"
-                Width="280"
+                Width="330"
                 Margin="0,0,10,0"
                 HorizontalAlignment="Stretch" />
             <Button
@@ -77,7 +77,7 @@
             Margin="10,10,0,0">
             <TextBox
                 x:Name="txtImageFolder"
-                Width="280"
+                Width="330"
                 Margin="0,0,10,0"
                 HorizontalAlignment="Stretch" />
             <Button
@@ -101,7 +101,7 @@
         <ScrollViewer
             Grid.Row="4"
             Grid.Column="0"
-            Height="650"
+            Height="Auto"
             Margin="10"
             VerticalAlignment="Top"
             VerticalScrollBarVisibility="Auto">
@@ -112,7 +112,7 @@
             Grid.Row="1"
             Grid.RowSpan="4"
             Grid.Column="1"
-            Margin="10,10,10,15"
+            Margin="10,10,10,10"
             VerticalScrollBarVisibility="Auto">
             <ScrollViewer.Background>
                 <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
