@@ -1,0 +1,136 @@
+﻿<Window
+    x:Class="FindRomCover.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:FindRomCover"
+    Title="Find ROM Cover"
+    Width="1100"
+    Height="820"
+    ResizeMode="CanResize">
+
+    <Window.Resources>
+        <!--  DataTemplate for Image Cells  -->
+        <DataTemplate x:Key="ImageCellTemplate">
+            <Border
+                Margin="5"
+                Padding="5"
+                BorderBrush="Gray"
+                BorderThickness="1">
+                <StackPanel>
+                    <Image
+                        Width="200"
+                        Height="250"
+                        MouseDown="ImageCell_MouseDown"
+                        Source="{Binding ImagePath}" />
+                    <TextBlock HorizontalAlignment="Center" Text="{Binding ImageName}" />
+                    <TextBlock HorizontalAlignment="Center" Text="{Binding SimilarityRate}" />
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <Menu
+            Grid.Row="0"
+            Grid.ColumnSpan="2"
+            VerticalAlignment="Top">
+            <MenuItem Click="About_Click" Header="About" />
+            <MenuItem Click="Exit_Click" Header="Exit" />
+        </Menu>
+
+        <!--  ROM Folder Selection  -->
+        <DockPanel
+            Grid.Row="1"
+            Grid.Column="0"
+            Margin="10,10,0,0">
+            <TextBox
+                x:Name="txtRomFolder"
+                Width="280"
+                Margin="0,0,10,0"
+                HorizontalAlignment="Stretch" />
+            <Button
+                Width="140"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Center"
+                Click="BtnBrowseRomFolder_Click"
+                Content="Browse ROM Folder" />
+        </DockPanel>
+
+        <!--  Image Folder Selection  -->
+        <DockPanel
+            Grid.Row="2"
+            Grid.Column="0"
+            Margin="10,10,0,0">
+            <TextBox
+                x:Name="txtImageFolder"
+                Width="280"
+                Margin="0,0,10,0"
+                HorizontalAlignment="Stretch" />
+            <Button
+                Width="140"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Center"
+                Click="BtnBrowseImageFolder_Click"
+                Content="Browse Image Folder" />
+        </DockPanel>
+
+        <!--  Button to Check for Missing Images  -->
+        <Button
+            Grid.Row="3"
+            Grid.Column="0"
+            Width="160"
+            Margin="10,10,0,0"
+            Click="BtnCheckForMissingImages_Click"
+            Content="Check for Missing Images" />
+
+        <!--  List to Display Missing Images  -->
+        <ScrollViewer
+            Grid.Row="4"
+            Grid.Column="0"
+            Height="650"
+            Margin="10"
+            VerticalAlignment="Top"
+            VerticalScrollBarVisibility="Auto">
+            <ListBox x:Name="lstMissingImages" SelectionChanged="LstMissingImages_SelectionChanged" />
+        </ScrollViewer>
+
+        <ScrollViewer
+            Grid.Row="1"
+            Grid.RowSpan="4"
+            Grid.Column="1"
+            Margin="10,10,10,15"
+            VerticalScrollBarVisibility="Auto">
+            <ScrollViewer.Background>
+                <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
+                    <GradientStop Color="#FF545454" />
+                    <GradientStop Offset="1" Color="#FFD2D2D2" />
+                </LinearGradientBrush>
+            </ScrollViewer.Background>
+            <ItemsControl ItemsSource="{Binding SimilarImages}">
+                <ItemsControl.ItemTemplate>
+                    <StaticResource ResourceKey="ImageCellTemplate" />
+                </ItemsControl.ItemTemplate>
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel x:Name="panelSimilarImages" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+            </ItemsControl>
+
+        </ScrollViewer>
+    </Grid>
+</Window>
