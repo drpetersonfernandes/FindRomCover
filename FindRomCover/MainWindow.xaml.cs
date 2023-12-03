@@ -32,7 +32,7 @@ namespace FindRomCover
         //About_Click event handler
         private void About_Click(object sender, RoutedEventArgs e)
         {
-            System.Windows.MessageBox.Show("Find Rom Cover\nPeterson's Software\n11/2023", "About");
+            System.Windows.MessageBox.Show("Find Rom Cover\nPeterson's Software\nVersion 1.0\n12/2023", "About");
         }
 
         private void BtnBrowseRomFolder_Click(object sender, RoutedEventArgs e)
@@ -84,7 +84,12 @@ namespace FindRomCover
             }
 
             lstMissingImages.Items.Clear();
-            string[] files = Directory.GetFiles(txtRomFolder.Text, "*.zip");
+
+            string[] supportedExtensions = ["*.zip", "*.7z", "*.cdi", "*.chd", "*.iso", "*.3ds", "*.rvz", "*.nsp", "*.xci", "*.wua", "*.wad", "*.cso"];
+
+            // Get all files in the directory with supported extensions
+            var files = supportedExtensions.SelectMany(ext => Directory.GetFiles(txtRomFolder.Text, ext)).ToArray();
+
             foreach (string file in files)
             {
                 string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(file);
@@ -96,7 +101,6 @@ namespace FindRomCover
                 }
             }
         }
-
 
         private void LstMissingImages_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
@@ -113,7 +117,7 @@ namespace FindRomCover
                         string imageName = Path.GetFileNameWithoutExtension(imageFile);
                         double similarityRate = CalculateSimilarity(selectedZipFileName, imageName);
 
-                        if (similarityRate >= 50) // Minimum similarity threshold
+                        if (similarityRate >= 60) // Minimum similarity threshold
                         {
                             tempList.Add(new ImageData
                             {
@@ -166,7 +170,9 @@ namespace FindRomCover
                         // Play click sound
                         PlayClickSound();
                         // Refresh the missing images list
-                        LoadMissingImagesList();
+                        // LoadMissingImagesList();
+                        // Remove the selected item from the list
+                        RemoveSelectedItem();
                         // Clear the bound collection
                         SimilarImages.Clear();
                     }
@@ -202,7 +208,6 @@ namespace FindRomCover
             return Math.Round(similarityRate, 2); // Round to 2 decimal places
         }
 
-
         public static int LevenshteinDistance(string a, string b)
         {
             if (string.IsNullOrEmpty(a))
@@ -233,6 +238,20 @@ namespace FindRomCover
                 }
             }
             return distances[lengthA, lengthB];
+        }
+
+        private void BtnRemoveSelectedItem_Click(object sender, RoutedEventArgs e)
+        {
+            RemoveSelectedItem();
+
+        }
+
+        private void RemoveSelectedItem()
+        {
+            if (lstMissingImages.SelectedItem != null)
+            {
+                lstMissingImages.Items.Remove(lstMissingImages.SelectedItem);
+            }
         }
 
     }

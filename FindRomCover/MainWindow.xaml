@@ -18,8 +18,8 @@
                 BorderThickness="1">
                 <StackPanel>
                     <Image
-                        Width="200"
-                        Height="200"
+                        Width="300"
+                        Height="300"
                         MouseDown="ImageCell_MouseDown"
                         Source="{Binding ImagePath}" />
                     <TextBlock HorizontalAlignment="Center" Text="{Binding ImageName}" />
@@ -88,14 +88,29 @@
                 Content="Browse Image Folder" />
         </DockPanel>
 
-        <!--  Button to Check for Missing Images  -->
-        <Button
+        <DockPanel
             Grid.Row="3"
             Grid.Column="0"
-            Width="160"
             Margin="10,10,0,0"
-            Click="BtnCheckForMissingImages_Click"
-            Content="Check for Missing Images" />
+            HorizontalAlignment="Center">
+            <!--  Button to Check for Missing Images  -->
+            <Button
+                Grid.Row="4"
+                Grid.Column="0"
+                Width="160"
+                Margin="10,10,0,0"
+                Click="BtnCheckForMissingImages_Click"
+                Content="Check for Missing Images" />
+            <!--  Button to Remove Selected Item From The List  -->
+            <Button
+                x:Name="btnRemoveSelectedItem"
+                Grid.Row="4"
+                Grid.Column="0"
+                Width="160"
+                Margin="10,10,0,0"
+                Click="BtnRemoveSelectedItem_Click"
+                Content="Remove Selected Item" />
+        </DockPanel>
 
         <!--  List to Display Missing Images  -->
         <ScrollViewer
