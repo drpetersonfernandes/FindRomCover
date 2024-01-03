@@ -12,12 +12,15 @@ namespace FindRomCover
         private string? imageFolderPath;
         private string? selectedZipFileName;
         private readonly MediaPlayer _mediaPlayer = new();
-
+        private double similarityThreshold = 60;  // default value
 
         public MainWindow()
         {
             InitializeComponent();
             DataContext = this;
+
+            // Set the default checked menu item
+            Menu60.IsChecked = true;
         }
 
         //Collection that will hold the data for the similar images
@@ -32,7 +35,7 @@ namespace FindRomCover
         //About_Click event handler
         private void About_Click(object sender, RoutedEventArgs e)
         {
-            System.Windows.MessageBox.Show("Find Rom Cover\nPeterson's Software\nVersion 1.0\n12/2023", "About");
+            System.Windows.MessageBox.Show("Find Rom Cover\nPeterson's Software\nVersion 1.1\n01/2024", "About");
         }
 
         private void BtnBrowseRomFolder_Click(object sender, RoutedEventArgs e)
@@ -117,7 +120,7 @@ namespace FindRomCover
                         string imageName = Path.GetFileNameWithoutExtension(imageFile);
                         double similarityRate = CalculateSimilarity(selectedZipFileName, imageName);
 
-                        if (similarityRate >= 60) // Minimum similarity threshold
+                        if (similarityRate >= similarityThreshold) // Use the variable here
                         {
                             tempList.Add(new ImageData
                             {
@@ -253,6 +256,36 @@ namespace FindRomCover
                 lstMissingImages.Items.Remove(lstMissingImages.SelectedItem);
             }
         }
+
+        private void SetSimilarityRate_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is MenuItem clickedItem)
+            {
+                if (double.TryParse(clickedItem.Header.ToString(), out double rate))
+                {
+                    similarityThreshold = rate;
+                    UncheckAllSimilarityRates();
+                    clickedItem.IsChecked = true;
+                }
+                else
+                {
+                    System.Windows.MessageBox.Show("Invalid similarity rate selected.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private void UncheckAllSimilarityRates()
+        {
+            foreach (var item in MySimilarityMenu.Items)
+            {
+                if (item is MenuItem menuItem)
+                {
+                    menuItem.IsChecked = double.TryParse(menuItem.Header.ToString(), out double rate) && rate == similarityThreshold;
+                }
+            }
+        }
+
+
 
     }
 }

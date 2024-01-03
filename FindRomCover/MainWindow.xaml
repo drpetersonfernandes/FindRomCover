@@ -45,9 +45,58 @@
         </Grid.ColumnDefinitions>
 
         <Menu
+            Name="MainMenu"
             Grid.Row="0"
             Grid.ColumnSpan="2"
             VerticalAlignment="Top">
+            <MenuItem x:Name="MySimilarityMenu" Header="Set Similarity Rate">
+                <MenuItem
+                    x:Name="Menu10"
+                    Click="SetSimilarityRate_Click"
+                    Header="10"
+                    IsCheckable="True" />
+                <MenuItem
+                    x:Name="Menu20"
+                    Click="SetSimilarityRate_Click"
+                    Header="20"
+                    IsCheckable="True" />
+                <MenuItem
+                    x:Name="Menu30"
+                    Click="SetSimilarityRate_Click"
+                    Header="30"
+                    IsCheckable="True" />
+                <MenuItem
+                    x:Name="Menu40"
+                    Click="SetSimilarityRate_Click"
+                    Header="40"
+                    IsCheckable="True" />
+                <MenuItem
+                    x:Name="Menu50"
+                    Click="SetSimilarityRate_Click"
+                    Header="50"
+                    IsCheckable="True" />
+                <MenuItem
+                    x:Name="Menu60"
+                    Click="SetSimilarityRate_Click"
+                    Header="60"
+                    IsCheckable="True"
+                    IsChecked="True" />
+                <MenuItem
+                    x:Name="Menu70"
+                    Click="SetSimilarityRate_Click"
+                    Header="70"
+                    IsCheckable="True" />
+                <MenuItem
+                    x:Name="Menu80"
+                    Click="SetSimilarityRate_Click"
+                    Header="80"
+                    IsCheckable="True" />
+                <MenuItem
+                    x:Name="Menu90"
+                    Click="SetSimilarityRate_Click"
+                    Header="90"
+                    IsCheckable="True" />
+            </MenuItem>
             <MenuItem Click="About_Click" Header="About" />
             <MenuItem Click="Exit_Click" Header="Exit" />
         </Menu>
