@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Xml;
 
 namespace FindRomCover
 {
@@ -19,8 +20,8 @@ namespace FindRomCover
             InitializeComponent();
             DataContext = this;
 
-            // Set the default checked menu item
-            Menu60.IsChecked = true;
+            // Load settings
+            LoadSettings();
         }
 
         //Collection that will hold the data for the similar images
@@ -266,6 +267,8 @@ namespace FindRomCover
                     similarityThreshold = rate;
                     UncheckAllSimilarityRates();
                     clickedItem.IsChecked = true;
+                    // Save to Settings.xml
+                    SaveSetting("SimilarityRate", similarityThreshold.ToString());
                 }
                 else
                 {
@@ -280,12 +283,61 @@ namespace FindRomCover
             {
                 if (item is MenuItem menuItem)
                 {
-                    menuItem.IsChecked = double.TryParse(menuItem.Header.ToString(), out double rate) && rate == similarityThreshold;
+                    if (double.TryParse(menuItem.Header.ToString(), out double rate))
+                    {
+                        menuItem.IsChecked = rate == similarityThreshold;
+                    }
                 }
             }
         }
 
+        private static void SaveSetting(string key, string value)
+        {
+            var doc = new XmlDocument();
+            try
+            {
+                doc.Load("settings.xml");
+            }
+            catch (FileNotFoundException)
+            {
+                // File not found, create a new XML document with a root element
+                var declaration = doc.CreateXmlDeclaration("1.0", "utf-8", null);
+                doc.AppendChild(declaration);
 
+                var root = doc.CreateElement("Settings");
+                doc.AppendChild(root);
+            }
+            catch (XmlException)
+            {
+                // Handle cases where the file is not well-formed XML
+            }
+
+            var node = doc.SelectSingleNode($"//Settings/{key}");
+            if (node != null)
+            {
+                node.InnerText = value;
+            }
+            else
+            {
+                var newNode = doc.CreateElement(key);
+                newNode.InnerText = value;
+                doc.DocumentElement?.AppendChild(newNode); // Use ?. to guard against null
+            }
+            doc.Save("settings.xml");
+        }
+
+
+        private void LoadSettings()
+        {
+            var doc = new XmlDocument();
+            doc.Load("settings.xml");
+            var node = doc.SelectSingleNode("//Settings/SimilarityRate");
+            if (node != null && double.TryParse(node.InnerText, out double savedRate))
+            {
+                similarityThreshold = savedRate;
+                UncheckAllSimilarityRates(); // Make sure to reflect this in the UI
+            }
+        }
 
     }
 }
