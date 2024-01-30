@@ -11,32 +11,29 @@ namespace FindRomCover
     public partial class MainWindow : Window
     {
         private string? imageFolderPath;
-        private string? selectedZipFileName;
+        private string? selectedRomFileName;
         private readonly MediaPlayer _mediaPlayer = new();
-        private double similarityThreshold = 60;  // default value
+        private double similarityThreshold = 50;
+        private string[]? supportedExtensions;
 
         public MainWindow()
         {
             InitializeComponent();
             DataContext = this;
 
-            // Load settings
             LoadSettings();
         }
 
-        //Collection that will hold the data for the similar images
         public ObservableCollection<ImageData> SimilarImages { get; set; } = [];
 
-        //Exit_Click event handler
         private void Exit_Click(object sender, RoutedEventArgs e)
         {
             this.Close();
         }
 
-        //About_Click event handler
         private void About_Click(object sender, RoutedEventArgs e)
         {
-            System.Windows.MessageBox.Show("Find Rom Cover\nPeterson's Software\nVersion 1.1\n01/2024", "About");
+            System.Windows.MessageBox.Show("Find Rom Cover\nPure Logic Code\nVersion 1.1.0.2", "About");
         }
 
         private void BtnBrowseRomFolder_Click(object sender, RoutedEventArgs e)
@@ -63,24 +60,45 @@ namespace FindRomCover
             LoadMissingImagesList();
         }
 
-        private void CheckForMissingImages(string[] zipFiles)
+        private void CheckForMissingImages(string[] romFiles)
         {
-            lstMissingImages.Items.Clear();
-
-            foreach (string file in zipFiles)
+            foreach (string file in romFiles)
             {
                 string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(file);
-                string correspondingImage = Path.Combine(txtImageFolder.Text, fileNameWithoutExtension + ".png");
 
-                if (!File.Exists(correspondingImage))
+                // Declare correspondingImagePath as a nullable string
+                string? correspondingImagePath = FindCorrespondingImage(fileNameWithoutExtension);
+
+                if (correspondingImagePath == null)
                 {
                     lstMissingImages.Items.Add(fileNameWithoutExtension);
                 }
             }
         }
 
+
+        private string? FindCorrespondingImage(string fileNameWithoutExtension)
+        {
+            string[] imageExtensions = [".png", ".jpg", ".jpeg"];
+            foreach (var ext in imageExtensions)
+            {
+                string imagePath = Path.Combine(txtImageFolder.Text, fileNameWithoutExtension + ext);
+                if (File.Exists(imagePath))
+                {
+                    return imagePath;
+                }
+            }
+            return null;
+        }
+
         private void LoadMissingImagesList()
         {
+            if (supportedExtensions == null || supportedExtensions.Length == 0)
+            {
+                System.Windows.MessageBox.Show("No supported file extensions loaded.");
+                return;
+            }
+
             if (string.IsNullOrEmpty(txtRomFolder.Text) || string.IsNullOrEmpty(txtImageFolder.Text))
             {
                 System.Windows.MessageBox.Show("Please select both ROM and Image folders.");
@@ -89,53 +107,62 @@ namespace FindRomCover
 
             lstMissingImages.Items.Clear();
 
-            string[] supportedExtensions = ["*.zip", "*.7z", "*.cdi", "*.chd", "*.iso", "*.3ds", "*.rvz", "*.nsp", "*.xci", "*.wua", "*.wad", "*.cso"];
+            // Use the loaded supportedExtensions array
+            if (supportedExtensions == null || supportedExtensions.Length == 0)
+            {
+                System.Windows.MessageBox.Show("No supported file extensions loaded. Please check your settings.");
+                return;
+            }
+
+            // Prepend wildcard and dot to each extension
+            var searchPatterns = supportedExtensions.Select(ext => "*." + ext).ToArray();
 
             // Get all files in the directory with supported extensions
-            var files = supportedExtensions.SelectMany(ext => Directory.GetFiles(txtRomFolder.Text, ext)).ToArray();
+            var files = searchPatterns.SelectMany(ext => Directory.GetFiles(txtRomFolder.Text, ext)).ToArray();
 
-            foreach (string file in files)
-            {
-                string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(file);
-                string correspondingImage = Path.Combine(txtImageFolder.Text, fileNameWithoutExtension + ".png");
-
-                if (!File.Exists(correspondingImage))
-                {
-                    lstMissingImages.Items.Add(fileNameWithoutExtension);
-                }
-            }
+            // Call CheckForMissingImages with the found files
+            CheckForMissingImages(files);
         }
 
-        private void LstMissingImages_SelectionChanged(object sender, SelectionChangedEventArgs e)
+
+        private async void LstMissingImages_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (lstMissingImages.SelectedItem is string selectedFile)
             {
-                selectedZipFileName = selectedFile;
+                selectedRomFileName = selectedFile;
+                await CalculateSimilarityAsync(selectedRomFileName);
+            }
+        }
+
+        private async Task CalculateSimilarityAsync(string selectedFileName)
+        {
+            if (!string.IsNullOrEmpty(imageFolderPath))
+            {
+                string[] imageFiles = Directory.GetFiles(imageFolderPath, "*.png");
                 List<ImageData> tempList = [];
 
-                if (!string.IsNullOrEmpty(imageFolderPath))
+                foreach (string imageFile in imageFiles)
                 {
-                    string[] imageFiles = Directory.GetFiles(imageFolderPath, "*.png");
-                    foreach (string imageFile in imageFiles)
+                    string imageName = Path.GetFileNameWithoutExtension(imageFile);
+                    double similarityRate = await Task.Run(() => CalculateSimilarity(selectedFileName, imageName));
+
+                    if (similarityRate >= similarityThreshold)
                     {
-                        string imageName = Path.GetFileNameWithoutExtension(imageFile);
-                        double similarityRate = CalculateSimilarity(selectedZipFileName, imageName);
-
-                        if (similarityRate >= similarityThreshold) // Use the variable here
+                        tempList.Add(new ImageData
                         {
-                            tempList.Add(new ImageData
-                            {
-                                ImagePath = imageFile,
-                                ImageName = imageName,
-                                SimilarityRate = similarityRate
-                            });
-                        }
+                            ImagePath = imageFile,
+                            ImageName = imageName,
+                            SimilarityRate = similarityRate
+                        });
                     }
+                }
 
-                    // Sort the list by similarity rate in descending order
-                    tempList.Sort((x, y) => y.SimilarityRate.CompareTo(x.SimilarityRate));
+                // Sort the list by similarity rate in descending order
+                tempList.Sort((x, y) => y.SimilarityRate.CompareTo(x.SimilarityRate));
 
-                    // Clear and add sorted items to SimilarImages
+                // Update the ObservableCollection on the UI thread
+                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                {
                     SimilarImages.Clear();
                     foreach (var item in tempList)
                     {
@@ -144,10 +171,9 @@ namespace FindRomCover
 
                     if (SimilarImages.Count == 0)
                     {
-                        // No similar images found, add not found message
                         SimilarImages.Add(new ImageData { ImageName = "No similar image found" });
                     }
-                }
+                });
             }
         }
 
@@ -156,37 +182,53 @@ namespace FindRomCover
             public string? ImagePath { get; set; }
             public string? ImageName { get; set; }
             public double SimilarityRate { get; set; }
-            public bool IsNotFoundMessage { get; set; } // Flag for "not found" message
+            public bool IsNotFoundMessage { get; set; }
         }
 
         private void ImageCell_MouseDown(object sender, MouseButtonEventArgs e)
         {
             if (sender is FrameworkElement selectedCell && selectedCell.DataContext is ImageData imageData)
             {
-                if (!string.IsNullOrEmpty(selectedZipFileName) &&
+                if (!string.IsNullOrEmpty(selectedRomFileName) &&
                     !string.IsNullOrEmpty(imageData.ImagePath) &&
                     !string.IsNullOrEmpty(imageFolderPath))
                 {
-                    string newFileName = Path.Combine(imageFolderPath, selectedZipFileName + ".png");
-                    try
+                    string newFileName = Path.Combine(imageFolderPath, selectedRomFileName + ".png");
+                    if (ConvertAndSaveImage(imageData.ImagePath, newFileName))
                     {
-                        File.Copy(imageData.ImagePath, newFileName, true);
-                        // Play click sound
                         PlayClickSound();
-                        // Refresh the missing images list
-                        // LoadMissingImagesList();
-                        // Remove the selected item from the list
                         RemoveSelectedItem();
-                        // Clear the bound collection
                         SimilarImages.Clear();
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        System.Windows.MessageBox.Show("Error copying file: " + ex.Message);
+                        System.Windows.MessageBox.Show("Failed to save the image. Please try again.");
                     }
                 }
             }
         }
+
+
+        private static bool ConvertAndSaveImage(string sourcePath, string targetPath)
+        {
+            try
+            {
+                using (var image = System.Drawing.Image.FromFile(sourcePath))
+                {
+                    using var bitmap = new System.Drawing.Bitmap(image);
+                    bitmap.Save(targetPath, System.Drawing.Imaging.ImageFormat.Png);
+                }
+
+                // Check if the file was saved successfully
+                return File.Exists(targetPath);
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Error saving file: {ex.Message}");
+                return false;
+            }
+        }
+
 
         private void PlayClickSound()
         {
@@ -310,6 +352,7 @@ namespace FindRomCover
             catch (XmlException)
             {
                 // Handle cases where the file is not well-formed XML
+                System.Windows.MessageBox.Show("The settings file is not well-formed XML. Please delete it and restart the application.");
             }
 
             var node = doc.SelectSingleNode($"//Settings/{key}");
@@ -330,14 +373,53 @@ namespace FindRomCover
         private void LoadSettings()
         {
             var doc = new XmlDocument();
-            doc.Load("settings.xml");
-            var node = doc.SelectSingleNode("//Settings/SimilarityRate");
-            if (node != null && double.TryParse(node.InnerText, out double savedRate))
+            try
             {
-                similarityThreshold = savedRate;
-                UncheckAllSimilarityRates(); // Make sure to reflect this in the UI
+                doc.Load("settings.xml");
+
+                // Load similarity rate
+                var similarityNode = doc.SelectSingleNode("//Settings/SimilarityRate");
+                if (similarityNode != null && double.TryParse(similarityNode.InnerText, out double savedRate))
+                {
+                    similarityThreshold = savedRate;
+                    UncheckAllSimilarityRates();
+                }
+
+                // Load supported extensions
+                var extensionsNode = doc.SelectSingleNode("//Settings/SupportedExtensions");
+                if (extensionsNode != null)
+                {
+                    var extensionNodes = extensionsNode.SelectNodes("./Extension");
+                    var extensions = new List<string>();
+
+                    if (extensionNodes != null)
+                    {
+                        foreach (XmlNode node in extensionNodes)
+                        {
+                            if (node.InnerText != null)
+                            {
+                                extensions.Add(node.InnerText);
+                            }
+                        }
+                    }
+
+                    supportedExtensions = [.. extensions];
+                }
+                else
+                {
+                    // If no extensions are found, use an empty array
+                    supportedExtensions = [];
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show("Error loading settings: " + ex.Message);
+                // Initialize with an empty array in case of exception
+                supportedExtensions = [];
             }
         }
+
+
 
     }
 }

@@ -1,4 +1,19 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <Settings>
-  <SimilarityRate>60</SimilarityRate>
+	<SimilarityRate>30</SimilarityRate>
+	<SupportedExtensions>
+		<Extension>zip</Extension>
+		<Extension>7z</Extension>
+		<Extension>cdi</Extension>
+		<Extension>chd</Extension>
+		<Extension>iso</Extension>
+		<Extension>3ds</Extension>
+		<Extension>rvz</Extension>
+		<Extension>nsp</Extension>
+		<Extension>xci</Extension>
+		<Extension>wua</Extension>
+		<Extension>wad</Extension>
+		<Extension>cso</Extension>
+		<Extension>bat</Extension>
+	</SupportedExtensions>
 </Settings>
