@@ -38,22 +38,34 @@ namespace FindRomCover
 
         private void BtnBrowseRomFolder_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new FolderBrowserDialog();
+            var dialog = new FolderBrowserDialog
+            {
+                // Set the description for the folder dialog
+                Description = "Select the folder where your ROM files are stored."
+            };
+
             if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
             {
                 txtRomFolder.Text = dialog.SelectedPath;
             }
         }
 
+
         private void BtnBrowseImageFolder_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new FolderBrowserDialog();
+            var dialog = new FolderBrowserDialog
+            {
+                // Set the description for the folder dialog
+                Description = "Select the folder where your image files are stored."
+            };
+
             if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
             {
                 txtImageFolder.Text = dialog.SelectedPath;
                 imageFolderPath = dialog.SelectedPath; // Set the class-level variable
             }
         }
+
 
         private void BtnCheckForMissingImages_Click(object sender, RoutedEventArgs e)
         {
@@ -66,7 +78,6 @@ namespace FindRomCover
             {
                 string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(file);
 
-                // Declare correspondingImagePath as a nullable string
                 string? correspondingImagePath = FindCorrespondingImage(fileNameWithoutExtension);
 
                 if (correspondingImagePath == null)
@@ -75,7 +86,6 @@ namespace FindRomCover
                 }
             }
         }
-
 
         private string? FindCorrespondingImage(string fileNameWithoutExtension)
         {
@@ -123,7 +133,6 @@ namespace FindRomCover
             // Call CheckForMissingImages with the found files
             CheckForMissingImages(files);
         }
-
 
         private async void LstMissingImages_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
@@ -208,7 +217,6 @@ namespace FindRomCover
             }
         }
 
-
         private static bool ConvertAndSaveImage(string sourcePath, string targetPath)
         {
             try
@@ -228,7 +236,6 @@ namespace FindRomCover
                 return false;
             }
         }
-
 
         private void PlayClickSound()
         {
@@ -369,7 +376,6 @@ namespace FindRomCover
             doc.Save("settings.xml");
         }
 
-
         private void LoadSettings()
         {
             var doc = new XmlDocument();
@@ -418,8 +424,6 @@ namespace FindRomCover
                 supportedExtensions = [];
             }
         }
-
-
 
     }
 }
