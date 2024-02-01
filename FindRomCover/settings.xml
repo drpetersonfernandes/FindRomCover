@@ -16,4 +16,8 @@
 		<Extension>cso</Extension>
 		<Extension>bat</Extension>
 	</SupportedExtensions>
+	<ImageSize>
+		<Width>300</Width>
+		<Height>300</Height>
+	</ImageSize>
 </Settings>
