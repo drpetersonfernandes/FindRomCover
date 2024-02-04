@@ -331,7 +331,7 @@ namespace FindRomCover
             }
         }
 
-        private void SetSimilarityRate_Click(object sender, RoutedEventArgs e)
+        private void SetSimilarityThreshold_Click(object sender, RoutedEventArgs e)
         {
             if (sender is MenuItem clickedItem)
             {
