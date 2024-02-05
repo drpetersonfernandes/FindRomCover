@@ -2,15 +2,25 @@
 
 Find ROM Cover is an easy-to-use application designed to help you effortlessly rename and organize cover images for your ROM collection. There's no need to manually rename your images to match the filenames of your ROMs.
 
+## Screenshots:
 
+![Screenshot](screenshot1.png)
+
+![Screenshot](screenshot2.png)
+
+![Screenshot](screenshot3.png)
+
+![Screenshot](screenshot4.png)
+
+![Screenshot](screenshot5.png)
 
 ## How It Works:
 
 - **Browse:** Select the folders where your ROMs and cover images are stored.
 
-- **List:** List which cover images are missing for your ROM collection.
+- **List:** It will list which cover images are missing for your ROM collection.
 
-- **Match:** Search within the Cover Image folder for an image with a similar filename. Adjust the similarity threshold to find the best matches.
+- **Match:** The app will search within the Cover Image folder for an image with a similar filename. Adjust the similarity threshold to find the best matches.
 
 - **Display:** Displays suggestions for cover images on the right panel for the selected ROM. You can adjust the size of the image previews.
 
@@ -36,18 +46,6 @@ Find ROM Cover is an easy-to-use application designed to help you effortlessly r
 ## Where can I find ROM Cover Images?
 
 You can find cover images on websites such as [Libretro Thumbnails](https://github.com/libretro-thumbnails/libretro-thumbnails) and [EmuMovies](https://emumovies.com/), with which I have no affiliation.
-
-## Screenshots:
-
-![Screenshot](screenshot1.png)
-
-![Screenshot](screenshot2.png)
-
-![Screenshot](screenshot3.png)
-
-![Screenshot](screenshot4.png)
-
-![Screenshot](screenshot5.png)
 
 ## Support the Project:
 
