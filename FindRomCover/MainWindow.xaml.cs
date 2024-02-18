@@ -67,15 +67,11 @@ namespace FindRomCover
         private void SetThumbnailSize_Click(object sender, RoutedEventArgs e)
         {
 
-#pragma warning disable CS8602 // Dereference of a possibly null reference.
             if (sender is MenuItem menuItem && menuItem.Header != null && int.TryParse(menuItem.Header.ToString().Split(' ')[0], out int size))
             {
                 // Update properties
                 ImageWidth = size;
                 ImageHeight = size;
-
-                // Update UI if necessary
-                // For example, if you have a method to refresh the ItemsControl displaying images
 
                 // Save the new size to settings.xml
                 SaveSetting("ImageSize/Width", size.ToString());
@@ -90,12 +86,10 @@ namespace FindRomCover
                     }
                 }
             }
-#pragma warning restore CS8602 // Dereference of a possibly null reference.
         }
 
         private void UpdateThumbnailSizeMenuChecks()
         {
-            // ImageWidth and ImageHeight are the same for thumbnails
             int currentSize = ImageWidth;
 
             foreach (var item in ImageSizeMenu.Items)
@@ -103,12 +97,10 @@ namespace FindRomCover
                 if (item is MenuItem menuItem)
                 {
                     // Assuming the header format is "{size} pixels", extract the number
-#pragma warning disable CS8602 // Dereference of a possibly null reference.
                     if (int.TryParse(menuItem.Header.ToString().Split(' ')[0], out int size))
                     {
                         menuItem.IsChecked = size == currentSize;
                     }
-#pragma warning restore CS8602 // Dereference of a possibly null reference.
                 }
             }
         }
@@ -237,12 +229,15 @@ namespace FindRomCover
                 var similarityThreshold = this.similarityThreshold; // Ensure this is set correctly
 
                 // Call the method and await its result
-                var similarImages = await SimilarityCalculator.CalculateSimilarityAsync(selectedFile, imageFolderPath!, similarityThreshold);
+                var similarImages = await SimilarityCalculator.CalculateSimilarityAsync(selectedFile, imageFolderPath!, similarityThreshold, SelectedSimilarityAlgorithm);
 
                 // Update the UI accordingly
                 // Assuming SimilarImages is an ObservableCollection bound to a UI control
                 System.Windows.Application.Current.Dispatcher.Invoke(() =>
                 {
+                    // Update the label to display the search query
+                    lblSearchQuery.Content = "Similarity Algorithm: " + SelectedSimilarityAlgorithm + "\nSearch Query: " + selectedFile;
+
                     SimilarImages.Clear();
                     foreach (var imageData in similarImages)
                     {
@@ -336,9 +331,7 @@ namespace FindRomCover
             if (sender is MenuItem clickedItem)
             {
                 // Remove the '%' symbol before parsing
-#pragma warning disable CS8602 // Dereference of a possibly null reference.
                 string headerText = clickedItem.Header.ToString().Replace("%", "");
-#pragma warning restore CS8602 // Dereference of a possibly null reference.
 
                 if (double.TryParse(headerText, out double rate))
                 {
@@ -361,12 +354,10 @@ namespace FindRomCover
             {
                 if (item is MenuItem menuItem)
                 {
-#pragma warning disable CS8602 // Dereference of a possibly null reference.
                     if (double.TryParse(menuItem.Header.ToString().Replace("%", ""), out double rate))
                     {
                         menuItem.IsChecked = Math.Abs(rate - similarityThreshold) < 0.01; // Checking for equality in double
                     }
-#pragma warning restore CS8602 // Dereference of a possibly null reference.
                 }
             }
         }
@@ -486,14 +477,32 @@ namespace FindRomCover
 
         private void SetDefaultSettings()
         {
-            // Set default values for settings
             similarityThreshold = 30;
             supportedExtensions = [];
             ImageWidth = 300;
             ImageHeight = 300;
             UncheckAllSimilarityRates();
-
         }
+
+        public string SelectedSimilarityAlgorithm { get; set; } = "Jaro-Winkler Distance"; // Default value
+
+        private void SetSimilarityAlgorithm_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is MenuItem menuItem)
+            {
+                SelectedSimilarityAlgorithm = menuItem.Header.ToString();
+                UncheckAllSimilarityAlgorithms();
+                menuItem.IsChecked = true;
+            }
+        }
+
+        private void UncheckAllSimilarityAlgorithms()
+        {
+            MenuAlgorithmJaccard.IsChecked = SelectedSimilarityAlgorithm == "Jaccard Similarity";
+            MenuAlgorithmJaroWinkler.IsChecked = SelectedSimilarityAlgorithm == "Jaro-Winkler Distance";
+            MenuAlgorithmLevenshtein.IsChecked = SelectedSimilarityAlgorithm == "Levenshtein Distance";
+        }
+
 
     }
 }
