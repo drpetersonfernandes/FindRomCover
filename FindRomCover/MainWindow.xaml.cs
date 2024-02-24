@@ -67,7 +67,7 @@ namespace FindRomCover
         private void SetThumbnailSize_Click(object sender, RoutedEventArgs e)
         {
 
-            if (sender is MenuItem menuItem && menuItem.Header != null && int.TryParse(menuItem.Header.ToString().Split(' ')[0], out int size))
+            if (sender is MenuItem menuItem && menuItem.Header != null && int.TryParse(menuItem.Header.ToString()!.Split(' ')[0], out int size))
             {
                 // Update properties
                 ImageWidth = size;
@@ -97,7 +97,7 @@ namespace FindRomCover
                 if (item is MenuItem menuItem)
                 {
                     // Assuming the header format is "{size} pixels", extract the number
-                    if (int.TryParse(menuItem.Header.ToString().Split(' ')[0], out int size))
+                    if (int.TryParse(menuItem.Header.ToString()!.Split(' ')[0], out int size))
                     {
                         menuItem.IsChecked = size == currentSize;
                     }
@@ -303,7 +303,11 @@ namespace FindRomCover
             try
             {
                 string soundPath = "audio/click.mp3";
+                _mediaPlayer.MediaOpened += (sender, e) => {
+                    _mediaPlayer.Play();
+                };
                 _mediaPlayer.Open(new Uri(soundPath, UriKind.Relative));
+                _mediaPlayer.Volume = 1.0; // Maximum volume
                 _mediaPlayer.Play();
             }
             catch (Exception ex)
@@ -315,6 +319,7 @@ namespace FindRomCover
         private void BtnRemoveSelectedItem_Click(object sender, RoutedEventArgs e)
         {
             RemoveSelectedItem();
+            PlayClickSound();
 
         }
 
@@ -331,7 +336,7 @@ namespace FindRomCover
             if (sender is MenuItem clickedItem)
             {
                 // Remove the '%' symbol before parsing
-                string headerText = clickedItem.Header.ToString().Replace("%", "");
+                string headerText = clickedItem.Header.ToString()!.Replace("%", "");
 
                 if (double.TryParse(headerText, out double rate))
                 {
@@ -354,7 +359,7 @@ namespace FindRomCover
             {
                 if (item is MenuItem menuItem)
                 {
-                    if (double.TryParse(menuItem.Header.ToString().Replace("%", ""), out double rate))
+                    if (double.TryParse(menuItem.Header.ToString()!.Replace("%", ""), out double rate))
                     {
                         menuItem.IsChecked = Math.Abs(rate - similarityThreshold) < 0.01; // Checking for equality in double
                     }
@@ -490,7 +495,7 @@ namespace FindRomCover
         {
             if (sender is MenuItem menuItem)
             {
-                SelectedSimilarityAlgorithm = menuItem.Header.ToString();
+                SelectedSimilarityAlgorithm = menuItem.Header.ToString()!;
                 UncheckAllSimilarityAlgorithms();
                 menuItem.IsChecked = true;
             }
