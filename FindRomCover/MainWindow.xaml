@@ -2,7 +2,6 @@
     x:Class="FindRomCover.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:local="clr-namespace:FindRomCover"
     Title="Find ROM Cover"
     Width="1100"
     Height="820"
@@ -30,7 +29,7 @@
 
                     <TextBlock HorizontalAlignment="Center">
                         <Bold>
-                            <Run Text="{Binding SimilarityRate, StringFormat={}{0:F2}%}" />
+                            <Run Text="{Binding SimilarityThreshold, StringFormat={}{0:F2}%}" />
                         </Bold>
                     </TextBlock>
 
@@ -60,7 +59,7 @@
             Grid.ColumnSpan="2"
             VerticalAlignment="Top">
 
-            <MenuItem Header="Set Similarity Algorithm">
+            <MenuItem Header="Set Similarity Algorithm" x:Name="MenuSimilarityAlgorithms">
                 <MenuItem
                     x:Name="MenuAlgorithmJaccard"
                     Click="SetSimilarityAlgorithm_Click"
@@ -70,8 +69,7 @@
                     x:Name="MenuAlgorithmJaroWinkler"
                     Click="SetSimilarityAlgorithm_Click"
                     Header="Jaro-Winkler Distance"
-                    IsCheckable="True"
-                    IsChecked="True" />
+                    IsCheckable="True"/>
                 <MenuItem
                     x:Name="MenuAlgorithmLevenshtein"
                     Click="SetSimilarityAlgorithm_Click"

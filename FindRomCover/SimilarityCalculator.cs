@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿// Ignore Spelling: Levenshtein Jaccard Jaro Winkler
+
 using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 using static FindRomCover.MainWindow;
 
 namespace FindRomCover
@@ -11,7 +9,7 @@ namespace FindRomCover
     {
         // The scaling factor is typically set between 0.1 and 0.25. 
         // The effect of the scaling factor is to give more importance to strings that match from the beginning.
-        private const double scalingFactor = 0.1;
+        private const double ScalingFactor = 0.1;
 
         public static async Task<List<ImageData>> CalculateSimilarityAsync(string selectedFileName, string imageFolderPath, double similarityThreshold, string algorithm)
         {
@@ -28,27 +26,27 @@ namespace FindRomCover
                     {
                         string imageName = Path.GetFileNameWithoutExtension(imageFile);
 
-                        double similarityRate = 0;
-                        similarityRate = algorithm switch
+                        double SimilarityThreshold;
+                        SimilarityThreshold = algorithm switch
                         {
                             "Levenshtein Distance" => await Task.Run(() => CalculateLevenshteinSimilarity(selectedFileName, imageName)),
                             "Jaccard Similarity" => await Task.Run(() => CalculateJaccardIndex(selectedFileName, imageName)),
                             "Jaro-Winkler Distance" => await Task.Run(() => CalculateJaroWinklerDistance(selectedFileName, imageName)),
                             _ => throw new NotImplementedException($"Algorithm {algorithm} is not implemented."),
                         };
-                        if (similarityRate >= similarityThreshold)
+                        if (SimilarityThreshold >= similarityThreshold)
                         {
                             tempList.Add(new ImageData
                             {
                                 ImagePath = imageFile,
                                 ImageName = imageName,
-                                SimilarityRate = similarityRate
+                                SimilarityThreshold = SimilarityThreshold
                             });
                         }
                     }
                 }
 
-                tempList.Sort((x, y) => y.SimilarityRate.CompareTo(x.SimilarityRate));
+                tempList.Sort((x, y) => y.SimilarityThreshold.CompareTo(x.SimilarityThreshold));
             }
 
             return tempList;
@@ -75,8 +73,8 @@ namespace FindRomCover
                         distances[i - 1, j - 1] + cost);
                 }
 
-            double similarityRate = (1.0 - distances[lengthA, lengthB] / (double)Math.Max(a.Length, b.Length)) * 100;
-            return Math.Round(similarityRate, 2); // Round to 2 decimal places
+            double SimilarityThreshold = (1.0 - distances[lengthA, lengthB] / (double)Math.Max(a.Length, b.Length)) * 100;
+            return Math.Round(SimilarityThreshold, 2); // Round to 2 decimal places
         }
 
         public static double CalculateJaccardIndex(string a, string b)
@@ -151,7 +149,7 @@ namespace FindRomCover
                 else break;
             }
 
-            double jaroWinkler = jaro + (prefixLength * scalingFactor * (1 - jaro));
+            double jaroWinkler = jaro + (prefixLength * ScalingFactor * (1 - jaro));
             return jaroWinkler * 100;
         }
 

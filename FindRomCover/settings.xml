@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <Settings>
-	<SimilarityRate>30</SimilarityRate>
+	<SimilarityThreshold>70</SimilarityThreshold>
 	<SupportedExtensions>
 		<Extension>zip</Extension>
 		<Extension>7z</Extension>
@@ -20,4 +20,5 @@
 		<Width>300</Width>
 		<Height>300</Height>
 	</ImageSize>
+	<SimilarityAlgorithm>Jaro-Winkler Distance</SimilarityAlgorithm>
 </Settings>
