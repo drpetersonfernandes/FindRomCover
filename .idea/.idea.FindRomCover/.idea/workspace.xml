@@ -8,7 +8,12 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="abe2b93d-c3ff-4a0a-9788-6c193805cf2c" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/workload-install.ps1" beforeDir="false" afterPath="$PROJECT_DIR$/workload-install.ps1" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/.idea.FindRomCover/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.FindRomCover/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FindRomCover/App.xaml" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/App.xaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FindRomCover/App.xaml.cs" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/App.xaml.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FindRomCover/MainWindow.xaml.cs" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/MainWindow.xaml.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FindRomCover/SimilarityCalculator.cs" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/SimilarityCalculator.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FindRomCover/settings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/settings.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -47,30 +52,30 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    ".NET Project.FindRomCover.executor": "Run",
-    "Notification.DisplayName-DoNotAsk-Vcs Important Messages": "VCS important messages",
-    "Notification.DoNotAsk-Vcs Important Messages": "true",
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "ignore.virus.scanning.warn.message": "true",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "editor.preferences.appearance",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;.NET Project.FindRomCover.executor&quot;: &quot;Run&quot;,
+    &quot;Notification.DisplayName-DoNotAsk-Vcs Important Messages&quot;: &quot;VCS important messages&quot;,
+    &quot;Notification.DoNotAsk-Vcs Important Messages&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;editor.preferences.appearance&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   },
-  "keyToStringList": {
-    "rider.external.source.directories": [
-      "C:\\Users\\HomePC\\AppData\\Roaming\\JetBrains\\Rider2023.3\\resharper-host\\DecompilerCache",
-      "C:\\Users\\HomePC\\AppData\\Roaming\\JetBrains\\Rider2023.3\\resharper-host\\SourcesCache",
-      "C:\\Users\\HomePC\\AppData\\Local\\Symbols\\src"
+  &quot;keyToStringList&quot;: {
+    &quot;rider.external.source.directories&quot;: [
+      &quot;C:\\Users\\HomePC\\AppData\\Roaming\\JetBrains\\Rider2023.3\\resharper-host\\DecompilerCache&quot;,
+      &quot;C:\\Users\\HomePC\\AppData\\Roaming\\JetBrains\\Rider2023.3\\resharper-host\\SourcesCache&quot;,
+      &quot;C:\\Users\\HomePC\\AppData\\Local\\Symbols\\src&quot;
     ]
   }
-}]]></component>
+}</component>
   <component name="RunManager">
     <configuration name="FindRomCover" type="DotNetProject" factoryName=".NET Project">
       <option name="EXE_PATH" value="$PROJECT_DIR$/FindRomCover/bin/Debug/net8.0-windows10.0.22621.0/FindRomCover.exe" />
@@ -120,6 +125,7 @@
       <updated>1708741737876</updated>
       <workItem from="1708741740870" duration="4153000" />
       <workItem from="1709087791717" duration="1859000" />
+      <workItem from="1709780411798" duration="1551000" />
     </task>
     <servers />
   </component>
@@ -146,7 +152,7 @@
       <breakpoints>
         <line-breakpoint enabled="true" type="DotNet Breakpoints">
           <url>file://$PROJECT_DIR$/FindRomCover/MainWindow.xaml.cs</url>
-          <line>497</line>
+          <line>499</line>
           <properties documentPath="C:\Sincronizar\source\repos\CSharp_FindRomCover\FindRomCover\MainWindow.xaml.cs" initialLine="492" containingFunctionPresentation="Method 'SetSimilarityAlgorithm_Click'">
             <startOffsets>
               <option value="17939" />

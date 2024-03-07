@@ -6,11 +6,12 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Xml;
 using System.ComponentModel;
+using System.Globalization;
 using System.Reflection;
 
 namespace FindRomCover
 {
-    public partial class MainWindow : Window
+    public partial class MainWindow
     {
         private string? _imageFolderPath;
         private string? _selectedRomFileName;
@@ -47,7 +48,7 @@ namespace FindRomCover
 
         public event PropertyChangedEventHandler PropertyChanged = null!;
         protected virtual void OnPropertyChanged(string propertyName) =>
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
 
         public MainWindow()
         {
@@ -57,7 +58,7 @@ namespace FindRomCover
             UpdateThumbnailSizeMenuChecks();
         }
 
-        public ObservableCollection<ImageData> SimilarImages { get; set; } = [];
+        public ObservableCollection<ImageData> SimilarImages { get; } = [];
 
         private void About_Click(object sender, RoutedEventArgs e)
         {
@@ -337,7 +338,7 @@ namespace FindRomCover
                     UncheckAllSimilarityThresholds();
                     clickedItem.IsChecked = true;
                     // Save to Settings.xml
-                    SaveSetting("SimilarityThreshold", _similarityThreshold.ToString());
+                    SaveSetting("SimilarityThreshold", _similarityThreshold.ToString(CultureInfo.CurrentCulture));
                 }
                 else
                 {
@@ -391,10 +392,7 @@ namespace FindRomCover
                     {
                         foreach (XmlNode node in extensionNodes)
                         {
-                            if (node.InnerText != null)
-                            {
-                                extensions.Add(node.InnerText);
-                            }
+                           extensions.Add(node.InnerText);
                         }
                     }
 

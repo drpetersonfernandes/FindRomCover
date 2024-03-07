@@ -48,12 +48,10 @@ namespace FindRomCover
 
                 tempList.Sort((x, y) => y.SimilarityThreshold.CompareTo(x.SimilarityThreshold));
             }
-
             return tempList;
         }
 
-
-        public static double CalculateLevenshteinSimilarity(string a, string b)
+        private static double CalculateLevenshteinSimilarity(string a, string b)
         {
             // Implementation of the Levenshtein distance calculation
             // This part remains unchanged
@@ -73,11 +71,12 @@ namespace FindRomCover
                         distances[i - 1, j - 1] + cost);
                 }
 
-            double SimilarityThreshold = (1.0 - distances[lengthA, lengthB] / (double)Math.Max(a.Length, b.Length)) * 100;
-            return Math.Round(SimilarityThreshold, 2); // Round to 2 decimal places
+            double similarityThreshold = (1.0 - distances[lengthA, lengthB] / (double)Math.Max(a.Length, b.Length)) * 100;
+            double levenshtein = Math.Round(similarityThreshold, 2); // Round to 2 decimal places
+            return levenshtein;
         }
 
-        public static double CalculateJaccardIndex(string a, string b)
+        private static double CalculateJaccardIndex(string a, string b)
         {
             var setA = new HashSet<char>(a);
             var setB = new HashSet<char>(b);
@@ -88,10 +87,11 @@ namespace FindRomCover
             var union = new HashSet<char>(setA);
             union.UnionWith(setB);
 
-            return (intersection.Count / (double)union.Count) * 100;
+            double jaccard = (intersection.Count / (double)union.Count) * 100; 
+            return jaccard;
         }
 
-        public static double CalculateJaroWinklerDistance(string s1, string s2)
+        private static double CalculateJaroWinklerDistance(string s1, string s2)
         {
             int s1Len = s1.Length;
             int s2Len = s2.Length;
@@ -149,8 +149,8 @@ namespace FindRomCover
                 else break;
             }
 
-            double jaroWinkler = jaro + (prefixLength * ScalingFactor * (1 - jaro));
-            return jaroWinkler * 100;
+            double jaroWinkler = (jaro + (prefixLength * ScalingFactor * (1 - jaro))) * 100;
+            return jaroWinkler;
         }
 
     }
