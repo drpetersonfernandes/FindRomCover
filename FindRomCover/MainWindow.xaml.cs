@@ -167,6 +167,9 @@ namespace FindRomCover
                 if (correspondingImagePath == null)
                 {
                     lstMissingImages.Items.Add(fileNameWithoutExtension);
+                    
+                    // Update the label to display the Missing Total
+                    lblMissingTotal.Content = "Missing Total: " + lstMissingImages.Items.Count;
                 }
             }
         }
@@ -322,6 +325,9 @@ namespace FindRomCover
             if (lstMissingImages.SelectedItem != null)
             {
                 lstMissingImages.Items.Remove(lstMissingImages.SelectedItem);
+                
+                // Update the label to display the Missing Total
+                lblMissingTotal.Content = "Missing Total: " + lstMissingImages.Items.Count;
             }
         }
 

@@ -45,6 +45,7 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
@@ -241,10 +242,21 @@
                 Click="BtnRemoveSelectedItem_Click"
                 Content="Remove Selected Item" />
         </DockPanel>
+        
+        <!--  Search Query Display  -->
+        <DockPanel
+            Grid.Row="4"
+            Grid.Column="0"
+            Margin="10">
+            <Label
+                x:Name="lblMissingTotal"
+                VerticalAlignment="Center"
+                FontWeight="Normal" />
+        </DockPanel>
 
         <!--  List to Display Missing Images  -->
         <ScrollViewer
-            Grid.Row="4"
+            Grid.Row="5"
             Grid.Column="0"
             Height="Auto"
             Margin="10"
@@ -267,7 +279,7 @@
         <!--  Image Display  -->
         <ScrollViewer
             Grid.Row="2"
-            Grid.RowSpan="3"
+            Grid.RowSpan="4"
             Grid.Column="1"
             Margin="10,0,10,10"
             VerticalScrollBarVisibility="Auto">
