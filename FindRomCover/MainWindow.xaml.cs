@@ -369,7 +369,6 @@ namespace FindRomCover
 
         private void LoadSettings()
         {
-
             var doc = new XmlDocument();
             try
             {
@@ -384,7 +383,7 @@ namespace FindRomCover
                 }
                 else
                 {
-                    _similarityThreshold = 30; // Default value if not found in settings
+                    _similarityThreshold = 70; // Default value if not found in settings
                 }
 
                 // Load supported extensions
