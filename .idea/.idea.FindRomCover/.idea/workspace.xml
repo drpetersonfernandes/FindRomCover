@@ -7,7 +7,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="abe2b93d-c3ff-4a0a-9788-6c193805cf2c" name="Changes" comment="Add missing total count and refactor workspace settings&#10;&#10;A new feature has been added to the 'FindRomCover' application, providing a total count for missing images. Additionally, workspace settings in the .idea directory have been updated and unnecessary configurations, including breakpoints in XDebuggerManager, have been removed for cleaner maintenance." />
+    <list default="true" id="abe2b93d-c3ff-4a0a-9788-6c193805cf2c" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -139,7 +139,15 @@
       <option name="project" value="LOCAL" />
       <updated>1709876612023</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="Add missing count feature and refactor workspace settings&#10;&#10;A new feature providing a total count for missing images was added to the 'FindRomCover' application. Workspace settings in the .idea directory were updated and unnecessary configurations, including breakpoints in XDebuggerManager, were removed for cleaner maintenance.">
+      <option name="closed" value="true" />
+      <created>1709877001355</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1709877001355</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -161,6 +169,7 @@
     <option name="CLEAR_INITIAL_COMMIT_MESSAGE" value="true" />
     <MESSAGE value="Update application logic and settings&#10;&#10;This commit modifies the logic of the 'FindRomCover' application along with its respective configuration settings. Notably, functions in the 'SimilarityCalculator' class have been modified for brevity and readability, the general application's logic (in 'MainWindow.xaml.cs') has been altered slightly, and additional file extensions have been added to the 'settings.xml' configuration file." />
     <MESSAGE value="Add missing total count and refactor workspace settings&#10;&#10;A new feature has been added to the 'FindRomCover' application, providing a total count for missing images. Additionally, workspace settings in the .idea directory have been updated and unnecessary configurations, including breakpoints in XDebuggerManager, have been removed for cleaner maintenance." />
-    <option name="LAST_COMMIT_MESSAGE" value="Add missing total count and refactor workspace settings&#10;&#10;A new feature has been added to the 'FindRomCover' application, providing a total count for missing images. Additionally, workspace settings in the .idea directory have been updated and unnecessary configurations, including breakpoints in XDebuggerManager, have been removed for cleaner maintenance." />
+    <MESSAGE value="Add missing count feature and refactor workspace settings&#10;&#10;A new feature providing a total count for missing images was added to the 'FindRomCover' application. Workspace settings in the .idea directory were updated and unnecessary configurations, including breakpoints in XDebuggerManager, were removed for cleaner maintenance." />
+    <option name="LAST_COMMIT_MESSAGE" value="Add missing count feature and refactor workspace settings&#10;&#10;A new feature providing a total count for missing images was added to the 'FindRomCover' application. Workspace settings in the .idea directory were updated and unnecessary configurations, including breakpoints in XDebuggerManager, were removed for cleaner maintenance." />
   </component>
 </project>
