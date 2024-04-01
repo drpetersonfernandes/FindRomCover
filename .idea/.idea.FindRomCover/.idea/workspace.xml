@@ -8,8 +8,16 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="abe2b93d-c3ff-4a0a-9788-6c193805cf2c" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/FindRomCover/PlaySound.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/FindRomCover/Settings.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/.idea.FindRomCover/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.FindRomCover/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FindRomCover/App.xaml" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/App.xaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FindRomCover/App.xaml.cs" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/App.xaml.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FindRomCover/AssemblyInfo.cs" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/AssemblyInfo.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FindRomCover/MainWindow.xaml" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/MainWindow.xaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/FindRomCover/MainWindow.xaml.cs" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/MainWindow.xaml.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FindRomCover/SimilarityCalculator.cs" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/SimilarityCalculator.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FindRomCover/settings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/settings.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -38,7 +46,7 @@
   </component>
   <component name="MetaFilesCheckinStateConfiguration" checkMetaFiles="true" />
   <component name="ProblemsViewState">
-    <option name="selectedTabId" value="CurrentFile" />
+    <option name="selectedTabId" value="SWEA" />
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 8
@@ -53,7 +61,7 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
-    ".NET Project.FindRomCover.executor": "Debug",
+    ".NET Project.FindRomCover.executor": "Run",
     "Notification.DisplayName-DoNotAsk-Vcs Important Messages": "VCS important messages",
     "Notification.DoNotAsk-Vcs Important Messages": "true",
     "RunOnceActivity.OpenProjectViewOnStart": "true",
@@ -127,6 +135,7 @@
       <workItem from="1709780411798" duration="1758000" />
       <workItem from="1710292958493" duration="72000" />
       <workItem from="1710301153966" duration="516000" />
+      <workItem from="1711931618571" duration="335000" />
     </task>
     <task id="LOCAL-00001" summary="Update application logic and settings&#10;&#10;This commit modifies the logic of the 'FindRomCover' application along with its respective configuration settings. Notably, functions in the 'SimilarityCalculator' class have been modified for brevity and readability, the general application's logic (in 'MainWindow.xaml.cs') has been altered slightly, and additional file extensions have been added to the 'settings.xml' configuration file.">
       <option name="closed" value="true" />

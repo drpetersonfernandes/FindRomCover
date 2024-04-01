@@ -45,7 +45,6 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
@@ -184,7 +183,7 @@
             Grid.Column="0"
             Margin="10">
             <TextBox
-                x:Name="txtRomFolder"
+                x:Name="TxtRomFolder"
                 Width="330"
                 Height="25"
                 Margin="0,0,10,0"
@@ -204,7 +203,7 @@
             Grid.Column="0"
             Margin="10,0,10,10">
             <TextBox
-                x:Name="txtImageFolder"
+                x:Name="TxtImageFolder"
                 Width="330"
                 Height="25"
                 Margin="0,0,10,0"
@@ -225,44 +224,29 @@
             Margin="10"
             HorizontalAlignment="Center">
             <Button
-                Grid.Row="4"
-                Grid.Column="0"
                 Width="160"
                 Height="25"
                 Margin="0,0,10,0"
                 Click="BtnCheckForMissingImages_Click"
                 Content="Check for Missing Images" />
             <Button
-                x:Name="btnRemoveSelectedItem"
-                Grid.Row="4"
-                Grid.Column="0"
+                x:Name="BtnRemoveSelectedItem"
                 Width="160"
                 Height="25"
                 Margin="0,0,0,0"
                 Click="BtnRemoveSelectedItem_Click"
                 Content="Remove Selected Item" />
         </DockPanel>
-        
-        <!--  Search Query Display  -->
-        <DockPanel
-            Grid.Row="4"
-            Grid.Column="0"
-            Margin="10">
-            <Label
-                x:Name="lblMissingTotal"
-                VerticalAlignment="Center"
-                FontWeight="Normal" />
-        </DockPanel>
 
         <!--  List to Display Missing Images  -->
         <ScrollViewer
-            Grid.Row="5"
+            Grid.Row="4"
             Grid.Column="0"
             Height="Auto"
             Margin="10"
             VerticalAlignment="Top"
             VerticalScrollBarVisibility="Auto">
-            <ListBox x:Name="lstMissingImages" SelectionChanged="LstMissingImages_SelectionChanged" />
+            <ListBox x:Name="LstMissingImages" SelectionChanged="LstMissingImages_SelectionChanged" />
         </ScrollViewer>
 
         <!--  Search Query Display  -->
@@ -271,7 +255,7 @@
             Grid.Column="1"
             Margin="10">
             <Label
-                x:Name="lblSearchQuery"
+                x:Name="LblSearchQuery"
                 VerticalAlignment="Center"
                 FontWeight="Normal" />
         </DockPanel>
@@ -279,7 +263,7 @@
         <!--  Image Display  -->
         <ScrollViewer
             Grid.Row="2"
-            Grid.RowSpan="4"
+            Grid.RowSpan="3"
             Grid.Column="1"
             Margin="10,0,10,10"
             VerticalScrollBarVisibility="Auto">
@@ -295,7 +279,7 @@
                 </ItemsControl.ItemTemplate>
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
-                        <WrapPanel x:Name="panelSimilarImages" />
+                        <WrapPanel x:Name="PanelSimilarImages" />
                     </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
             </ItemsControl>

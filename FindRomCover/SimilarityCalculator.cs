@@ -26,21 +26,20 @@ namespace FindRomCover
                     {
                         string imageName = Path.GetFileNameWithoutExtension(imageFile);
 
-                        double SimilarityThreshold;
-                        SimilarityThreshold = algorithm switch
+                        var similarityThreshold2 = algorithm switch
                         {
                             "Levenshtein Distance" => await Task.Run(() => CalculateLevenshteinSimilarity(selectedFileName, imageName)),
                             "Jaccard Similarity" => await Task.Run(() => CalculateJaccardIndex(selectedFileName, imageName)),
                             "Jaro-Winkler Distance" => await Task.Run(() => CalculateJaroWinklerDistance(selectedFileName, imageName)),
                             _ => throw new NotImplementedException($"Algorithm {algorithm} is not implemented."),
                         };
-                        if (SimilarityThreshold >= similarityThreshold)
+                        if (similarityThreshold2 >= similarityThreshold)
                         {
                             tempList.Add(new ImageData
                             {
                                 ImagePath = imageFile,
                                 ImageName = imageName,
-                                SimilarityThreshold = SimilarityThreshold
+                                SimilarityThreshold = similarityThreshold2
                             });
                         }
                     }
@@ -48,8 +47,10 @@ namespace FindRomCover
 
                 tempList.Sort((x, y) => y.SimilarityThreshold.CompareTo(x.SimilarityThreshold));
             }
+
             return tempList;
         }
+
 
         private static double CalculateLevenshteinSimilarity(string a, string b)
         {
@@ -72,8 +73,7 @@ namespace FindRomCover
                 }
 
             double similarityThreshold = (1.0 - distances[lengthA, lengthB] / (double)Math.Max(a.Length, b.Length)) * 100;
-            double levenshtein = Math.Round(similarityThreshold, 2); // Round to 2 decimal places
-            return levenshtein;
+            return Math.Round(similarityThreshold, 2); // Round to 2 decimal places
         }
 
         private static double CalculateJaccardIndex(string a, string b)
@@ -87,8 +87,7 @@ namespace FindRomCover
             var union = new HashSet<char>(setA);
             union.UnionWith(setB);
 
-            double jaccard = (intersection.Count / (double)union.Count) * 100; 
-            return jaccard;
+            return (intersection.Count / (double)union.Count) * 100;
         }
 
         private static double CalculateJaroWinklerDistance(string s1, string s2)
@@ -136,6 +135,7 @@ namespace FindRomCover
                 k++;
             }
 
+            // ReSharper disable once PossibleLossOfFraction
             double jaro = ((double)matches / s1Len + (double)matches / s2Len + (double)(matches - transpositions / 2) / matches) / 3;
 
             int prefixLength = 0;
@@ -149,8 +149,8 @@ namespace FindRomCover
                 else break;
             }
 
-            double jaroWinkler = (jaro + (prefixLength * ScalingFactor * (1 - jaro))) * 100;
-            return jaroWinkler;
+            double jaroWinkler = jaro + (prefixLength * ScalingFactor * (1 - jaro));
+            return jaroWinkler * 100;
         }
 
     }
