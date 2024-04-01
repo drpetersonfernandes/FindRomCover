@@ -7,17 +7,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="abe2b93d-c3ff-4a0a-9788-6c193805cf2c" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/FindRomCover/PlaySound.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/FindRomCover/Settings.cs" afterDir="false" />
+    <list default="true" id="abe2b93d-c3ff-4a0a-9788-6c193805cf2c" name="Changes" comment="Add Settings class and improve SimilarityCalculator and UI&#10;&#10;Added a new Settings class to handle application settings. Improved handling of SimilarityCalculator by cleaning code and improving readability. Initialized code for UI to display settings values. Also implemented changes to 'settings.xml', i.e, settings loading and saving mechanism.">
       <change beforePath="$PROJECT_DIR$/.idea/.idea.FindRomCover/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.FindRomCover/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FindRomCover/App.xaml" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/App.xaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FindRomCover/App.xaml.cs" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/App.xaml.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FindRomCover/AssemblyInfo.cs" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/AssemblyInfo.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FindRomCover/MainWindow.xaml" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/MainWindow.xaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FindRomCover/MainWindow.xaml.cs" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/MainWindow.xaml.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FindRomCover/SimilarityCalculator.cs" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/SimilarityCalculator.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FindRomCover/settings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/settings.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -39,7 +30,7 @@
     </option>
   </component>
   <component name="HighlightingSettingsPerFile">
-    <setting file="mock://C:/Sincronizar/source/repos/CSharp_FindRomCover/FindRomCover/MainWindow.xaml" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock://C:/Sincronizar/source/repos/CSharp_FindRomCover/FindRomCover/App.xaml" root0="SKIP_HIGHLIGHTING" />
   </component>
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
@@ -135,7 +126,7 @@
       <workItem from="1709780411798" duration="1758000" />
       <workItem from="1710292958493" duration="72000" />
       <workItem from="1710301153966" duration="516000" />
-      <workItem from="1711931618571" duration="335000" />
+      <workItem from="1711931618571" duration="2981000" />
     </task>
     <task id="LOCAL-00001" summary="Update application logic and settings&#10;&#10;This commit modifies the logic of the 'FindRomCover' application along with its respective configuration settings. Notably, functions in the 'SimilarityCalculator' class have been modified for brevity and readability, the general application's logic (in 'MainWindow.xaml.cs') has been altered slightly, and additional file extensions have been added to the 'settings.xml' configuration file.">
       <option name="closed" value="true" />
@@ -169,7 +160,15 @@
       <option name="project" value="LOCAL" />
       <updated>1710292991613</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="Add Settings class and improve SimilarityCalculator and UI&#10;&#10;Added a new Settings class to handle application settings. Improved handling of SimilarityCalculator by cleaning code and improving readability. Initialized code for UI to display settings values. Also implemented changes to 'settings.xml', i.e, settings loading and saving mechanism.">
+      <option name="closed" value="true" />
+      <created>1711932080741</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1711932080741</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -193,6 +192,7 @@
     <MESSAGE value="Add missing total count and refactor workspace settings&#10;&#10;A new feature has been added to the 'FindRomCover' application, providing a total count for missing images. Additionally, workspace settings in the .idea directory have been updated and unnecessary configurations, including breakpoints in XDebuggerManager, have been removed for cleaner maintenance." />
     <MESSAGE value="Add missing count feature and refactor workspace settings&#10;&#10;A new feature providing a total count for missing images was added to the 'FindRomCover' application. Workspace settings in the .idea directory were updated and unnecessary configurations, including breakpoints in XDebuggerManager, were removed for cleaner maintenance." />
     <MESSAGE value="Update workspace comments and increase task counter&#10;&#10;This commit updates the comments in the ChangeListManager and the task section of the workspace.xml file in the FindRomCover project. Furthermore, it increments the localTasksCounter value indicating the number of tasks associated with the project." />
-    <option name="LAST_COMMIT_MESSAGE" value="Update workspace comments and increase task counter&#10;&#10;This commit updates the comments in the ChangeListManager and the task section of the workspace.xml file in the FindRomCover project. Furthermore, it increments the localTasksCounter value indicating the number of tasks associated with the project." />
+    <MESSAGE value="Add Settings class and improve SimilarityCalculator and UI&#10;&#10;Added a new Settings class to handle application settings. Improved handling of SimilarityCalculator by cleaning code and improving readability. Initialized code for UI to display settings values. Also implemented changes to 'settings.xml', i.e, settings loading and saving mechanism." />
+    <option name="LAST_COMMIT_MESSAGE" value="Add Settings class and improve SimilarityCalculator and UI&#10;&#10;Added a new Settings class to handle application settings. Improved handling of SimilarityCalculator by cleaning code and improving readability. Initialized code for UI to display settings values. Also implemented changes to 'settings.xml', i.e, settings loading and saving mechanism." />
   </component>
 </project>
