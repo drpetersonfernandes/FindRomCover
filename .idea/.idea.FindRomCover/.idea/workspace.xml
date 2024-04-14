@@ -7,11 +7,18 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="abe2b93d-c3ff-4a0a-9788-6c193805cf2c" name="Changes" comment="" />
+    <list default="true" id="abe2b93d-c3ff-4a0a-9788-6c193805cf2c" name="Changes" comment="Update workspace settings and application logic&#10;&#10;This commit cleans and improves the coding of workspace settings in the FindRomCover project. The main focus areas include introducing a new Settings class, refining code in SimilarityCalculator, and initializing UI to display new setting values. Additionally, a new task has been added to localTasksCounter.">
+      <change beforePath="$PROJECT_DIR$/.idea/.idea.FindRomCover/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.FindRomCover/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FindRomCover/MainWindow.xaml" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/MainWindow.xaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FindRomCover/MainWindow.xaml.cs" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/MainWindow.xaml.cs" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="DpaMonitoringSettings">
+    <option name="autoShow" value="false" />
   </component>
   <component name="GitHubPullRequestSearchHistory">{
   &quot;lastFilter&quot;: {
@@ -48,30 +55,31 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;.NET Project.FindRomCover.executor&quot;: &quot;Run&quot;,
-    &quot;Notification.DisplayName-DoNotAsk-Vcs Important Messages&quot;: &quot;VCS important messages&quot;,
-    &quot;Notification.DoNotAsk-Vcs Important Messages&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;editor.preferences.appearance&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    ".NET Project.FindRomCover.executor": "Run",
+    "Notification.DisplayName-DoNotAsk-Vcs Important Messages": "VCS important messages",
+    "Notification.DoNotAsk-Vcs Important Messages": "true",
+    "Rider.SolutionAnalysis.ShowIgnored": "true",
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "ignore.virus.scanning.warn.message": "true",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "editor.preferences.appearance",
+    "vue.rearranger.settings.migration": "true"
   },
-  &quot;keyToStringList&quot;: {
-    &quot;rider.external.source.directories&quot;: [
-      &quot;C:\\Users\\HomePC\\AppData\\Roaming\\JetBrains\\Rider2023.3\\resharper-host\\DecompilerCache&quot;,
-      &quot;C:\\Users\\HomePC\\AppData\\Roaming\\JetBrains\\Rider2023.3\\resharper-host\\SourcesCache&quot;,
-      &quot;C:\\Users\\HomePC\\AppData\\Local\\Symbols\\src&quot;
+  "keyToStringList": {
+    "rider.external.source.directories": [
+      "C:\\Users\\HomePC\\AppData\\Roaming\\JetBrains\\Rider2024.1\\resharper-host\\DecompilerCache",
+      "C:\\Users\\HomePC\\AppData\\Roaming\\JetBrains\\Rider2024.1\\resharper-host\\SourcesCache",
+      "C:\\Users\\HomePC\\AppData\\Local\\Symbols\\src"
     ]
   }
-}</component>
+}]]></component>
   <component name="RunManager">
     <configuration name="FindRomCover" type="DotNetProject" factoryName=".NET Project">
       <option name="EXE_PATH" value="$PROJECT_DIR$/FindRomCover/bin/Debug/net8.0-windows10.0.22621.0/FindRomCover.exe" />
@@ -125,6 +133,7 @@
       <workItem from="1710292958493" duration="72000" />
       <workItem from="1710301153966" duration="516000" />
       <workItem from="1711931618571" duration="3008000" />
+      <workItem from="1713049290820" duration="4721000" />
     </task>
     <task id="LOCAL-00001" summary="Update application logic and settings&#10;&#10;This commit modifies the logic of the 'FindRomCover' application along with its respective configuration settings. Notably, functions in the 'SimilarityCalculator' class have been modified for brevity and readability, the general application's logic (in 'MainWindow.xaml.cs') has been altered slightly, and additional file extensions have been added to the 'settings.xml' configuration file.">
       <option name="closed" value="true" />
@@ -174,13 +183,22 @@
       <option name="project" value="LOCAL" />
       <updated>1711940681041</updated>
     </task>
-    <option name="localTasksCounter" value="7" />
+    <task id="LOCAL-00007" summary="Update workspace settings and application logic&#10;&#10;This commit cleans and improves the coding of workspace settings in the FindRomCover project. The main focus areas include introducing a new Settings class, refining code in SimilarityCalculator, and initializing UI to display new setting values. Additionally, a new task has been added to localTasksCounter.">
+      <option name="closed" value="true" />
+      <created>1713049331525</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1713049331525</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
   </component>
   <component name="UnityCheckinConfiguration" checkUnsavedScenes="true" />
+  <component name="UnityProjectConfiguration" hasMinimizedUI="false" />
   <component name="Vcs.Log.Tabs.Properties">
     <option name="TAB_STATES">
       <map>
@@ -200,6 +218,7 @@
     <MESSAGE value="Update workspace comments and increase task counter&#10;&#10;This commit updates the comments in the ChangeListManager and the task section of the workspace.xml file in the FindRomCover project. Furthermore, it increments the localTasksCounter value indicating the number of tasks associated with the project." />
     <MESSAGE value="Add Settings class and improve SimilarityCalculator and UI&#10;&#10;Added a new Settings class to handle application settings. Improved handling of SimilarityCalculator by cleaning code and improving readability. Initialized code for UI to display settings values. Also implemented changes to 'settings.xml', i.e, settings loading and saving mechanism." />
     <MESSAGE value="Update workspace settings and improve app logic&#10;&#10;Improved the application logic and settings in FindRomCover. This includes adding a new Settings class to manage application settings, enhancing readability and code cleanliness in the SimilarityCalculator, and initializing UI to show settings values. Also introduced alterations to settings.xml for better settings loading and saving mechanism." />
-    <option name="LAST_COMMIT_MESSAGE" value="Update workspace settings and improve app logic&#10;&#10;Improved the application logic and settings in FindRomCover. This includes adding a new Settings class to manage application settings, enhancing readability and code cleanliness in the SimilarityCalculator, and initializing UI to show settings values. Also introduced alterations to settings.xml for better settings loading and saving mechanism." />
+    <MESSAGE value="Update workspace settings and application logic&#10;&#10;This commit cleans and improves the coding of workspace settings in the FindRomCover project. The main focus areas include introducing a new Settings class, refining code in SimilarityCalculator, and initializing UI to display new setting values. Additionally, a new task has been added to localTasksCounter." />
+    <option name="LAST_COMMIT_MESSAGE" value="Update workspace settings and application logic&#10;&#10;This commit cleans and improves the coding of workspace settings in the FindRomCover project. The main focus areas include introducing a new Settings class, refining code in SimilarityCalculator, and initializing UI to display new setting values. Additionally, a new task has been added to localTasksCounter." />
   </component>
 </project>

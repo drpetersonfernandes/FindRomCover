@@ -1,7 +1,8 @@
 ﻿<Window
     x:Class="FindRomCover.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="d"
     Title="Find ROM Cover"
     Width="1100"
     Height="820"
@@ -20,14 +21,14 @@
                         Width="{Binding Path=ImageWidth, RelativeSource={RelativeSource AncestorType=Window}}"
                         Height="{Binding Path=ImageHeight, RelativeSource={RelativeSource AncestorType=Window}}"
                         MouseDown="ImageCell_MouseDown"
-                        Source="{Binding ImagePath}" />
-                    <TextBlock HorizontalAlignment="Center">
+                        Source="{Binding ImagePath}" d:DataContext="{d:DesignInstance }" />
+                    <TextBlock HorizontalAlignment="Center" d:DataContext="{d:DesignInstance }">
                         <Bold>
                             <Run Text="{Binding ImageName}" />
                         </Bold>
                     </TextBlock>
 
-                    <TextBlock HorizontalAlignment="Center">
+                    <TextBlock HorizontalAlignment="Center" d:DataContext="{d:DesignInstance }">
                         <Bold>
                             <Run Text="{Binding SimilarityThreshold, StringFormat={}{0:F2}%}" />
                         </Bold>
@@ -41,6 +42,7 @@
 
     <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -237,10 +239,19 @@
                 Click="BtnRemoveSelectedItem_Click"
                 Content="Remove Selected Item" />
         </DockPanel>
+        
+        <!-- Missing Rom Covers Count -->
+        <DockPanel
+            Grid.Row="4"
+            Grid.Column="0"
+            Margin="10,0,10,0"
+            HorizontalAlignment="Center">
+            <Label Content="" x:Name="LabelMissingRoms"/>
+        </DockPanel>
 
         <!--  List to Display Missing Images  -->
         <ScrollViewer
-            Grid.Row="4"
+            Grid.Row="5"
             Grid.Column="0"
             Height="Auto"
             Margin="10"
@@ -263,7 +274,7 @@
         <!--  Image Display  -->
         <ScrollViewer
             Grid.Row="2"
-            Grid.RowSpan="3"
+            Grid.RowSpan="4"
             Grid.Column="1"
             Margin="10,0,10,10"
             VerticalScrollBarVisibility="Auto">
