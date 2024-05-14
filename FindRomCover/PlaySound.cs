@@ -12,7 +12,7 @@ public static class PlaySound
         try
         {
             MediaPlayer.MediaOpened += (_, _) => { MediaPlayer.Play(); };
-            MediaPlayer.Volume = 1.0; // Maximum volume
+            MediaPlayer.Volume = 1.0;
             MediaPlayer.Open(new Uri(SoundPath, UriKind.Relative));
         }
         catch (Exception ex)

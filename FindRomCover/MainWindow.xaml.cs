@@ -12,13 +12,13 @@ namespace FindRomCover
     public partial class MainWindow : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler? PropertyChanged;
-        private Settings _settings = new();
+        private readonly Settings _settings = new();
         private string? _imageFolderPath;
         private string? _selectedRomFileName;
-        public ObservableCollection<ImageData> SimilarImages { get; set; } = []; // need to be public
-
-       private int _imageWidth = 300;
-       public int ImageWidth
+        public ObservableCollection<ImageData> SimilarImages { get; set; } = [];
+        
+        private int _imageWidth;
+        public int ImageWidth
         {
             get => _imageWidth;
             set
@@ -31,7 +31,7 @@ namespace FindRomCover
             }
         }
 
-        private int _imageHeight = 300;
+        private int _imageHeight;
         public int ImageHeight
         {
             get => _imageHeight;
@@ -44,14 +44,25 @@ namespace FindRomCover
                 }
             }
         }
-
+        
+        private string SelectedSimilarityAlgorithm { get; set; } = "Jaro-Winkler Distance"; // Default value
+        
         public MainWindow()
         {
             InitializeComponent();
             DataContext = this;
+            
+            LoadSettings();
+            
             UpdateThumbnailSizeMenuChecks();
             UpdateSimilarityAlgorithmChecks();
             UpdateSimilarityThresholdChecks();
+        }
+        
+        private void LoadSettings()
+        {
+            ImageWidth = _settings.ImageWidth;
+            ImageHeight = _settings.ImageHeight;
         }
 
         protected virtual void OnPropertyChanged(string propertyName) =>
@@ -73,7 +84,7 @@ namespace FindRomCover
                 System.Windows.MessageBox.Show("Unable to open the link: " + ex.Message);
             }
         }
-        
+
         private void About_Click(object sender, RoutedEventArgs e)
         {
             var version1 = Assembly.GetExecutingAssembly().GetName().Version;
@@ -101,6 +112,7 @@ namespace FindRomCover
                 TxtRomFolder.Text = dialog.SelectedPath;
             }
         }
+
         private void BtnBrowseImageFolder_Click(object sender, RoutedEventArgs e)
         {
             var dialog = new FolderBrowserDialog
@@ -114,9 +126,33 @@ namespace FindRomCover
                 _imageFolderPath = dialog.SelectedPath;
             }
         }
+
         private void BtnCheckForMissingImages_Click(object sender, RoutedEventArgs e)
         {
             LoadMissingImagesList();
+        }
+        
+        private void LoadMissingImagesList()
+        {
+            if (_settings.SupportedExtensions.Length == 0)
+            {
+                System.Windows.MessageBox.Show("No supported file extensions loaded. Please check your settings.xml.");
+                return;
+            }
+
+            if (string.IsNullOrEmpty(TxtRomFolder.Text) || string.IsNullOrEmpty(TxtImageFolder.Text))
+            {
+                System.Windows.MessageBox.Show("Please select both ROM and Image folders.");
+                return;
+            }
+
+            LstMissingImages.Items.Clear();
+
+            var searchPatterns = _settings.SupportedExtensions.Select(ext => "*." + ext).ToArray();
+            var files = searchPatterns.SelectMany(ext => Directory.GetFiles(TxtRomFolder.Text, ext)).ToArray();
+
+            CheckForMissingImages(files);
+
         }
 
         private void CheckForMissingImages(string[] romFiles)
@@ -124,7 +160,6 @@ namespace FindRomCover
             foreach (string file in romFiles)
             {
                 string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(file);
-
                 string? correspondingImagePath = FindCorrespondingImage(fileNameWithoutExtension);
 
                 if (correspondingImagePath == null)
@@ -150,46 +185,12 @@ namespace FindRomCover
             return null;
         }
 
-        private void LoadMissingImagesList()
-        {
-            if (_settings.SupportedExtensions.Length == 0)
-            {
-                System.Windows.MessageBox.Show("No supported file extensions loaded. Please check your settings.xml.");
-                return;
-            }
-
-            if (string.IsNullOrEmpty(TxtRomFolder.Text) || string.IsNullOrEmpty(TxtImageFolder.Text))
-            {
-                System.Windows.MessageBox.Show("Please select both ROM and Image folders.");
-                return;
-            }
-
-            LstMissingImages.Items.Clear();
-
-            // if (_settings.SupportedExtensions.Length == 0)
-            // {
-            //     System.Windows.MessageBox.Show("No supported file extensions loaded. Please check your settings.xml.");
-            //     return;
-            // }
-
-            // Prepend wildcard and dot to each extension
-            var searchPatterns = _settings.SupportedExtensions.Select(ext => "*." + ext).ToArray();
-
-            // Get all files in the directory with supported extensions
-            var files = searchPatterns.SelectMany(ext => Directory.GetFiles(TxtRomFolder.Text, ext)).ToArray();
-
-            // Call CheckForMissingImages with the found files
-            CheckForMissingImages(files);
-            
-            
-        }
-
         private async void LstMissingImages_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (LstMissingImages.SelectedItem is string selectedFile)
             {
                 _selectedRomFileName = selectedFile;
-                var imageFolderPath = this._imageFolderPath; // Path of images
+                var imageFolderPath = this._imageFolderPath;
                 var similarityThreshold = this._settings.SimilarityThreshold;
 
                 // Call the method and await its result
@@ -269,7 +270,7 @@ namespace FindRomCover
         {
             RemoveSelectedItem();
             PlaySound.PlayClickSound();
- 
+
         }
 
         private void RemoveSelectedItem()
@@ -277,12 +278,12 @@ namespace FindRomCover
             if (LstMissingImages.SelectedItem != null)
             {
                 LstMissingImages.Items.Remove(LstMissingImages.SelectedItem);
-                UpdateMissingCount(); // Update count whenever an item is removed
+                UpdateMissingCount();
 
             }
         }
-        
-        private void UpdateMissingCount() // New method to update the missing covers count label
+
+        private void UpdateMissingCount()
         {
             LabelMissingRoms.Content = "Missing Covers: " + LstMissingImages.Items.Count;
         }
@@ -292,13 +293,11 @@ namespace FindRomCover
             if (sender is MenuItem menuItem)
             {
                 SelectedSimilarityAlgorithm = menuItem.Header.ToString() ?? "Jaro-Winkler Distance";
-                SaveSimilarityAlgorithmSetting(SelectedSimilarityAlgorithm); // Save the selected algorithm
+                SaveSimilarityAlgorithmSetting(SelectedSimilarityAlgorithm);
                 UncheckAllSimilarityAlgorithms();
                 menuItem.IsChecked = true;
             }
         }
-
-        private string SelectedSimilarityAlgorithm { get; set; } = "Jaro-Winkler Distance"; // Default value
 
         private void UpdateSimilarityAlgorithmChecks()
         {
@@ -323,19 +322,15 @@ namespace FindRomCover
             }
         }
 
-        private void SaveSimilarityAlgorithmSetting(string algorithm)
+        private static void SaveSimilarityAlgorithmSetting(string algorithm)
         {
-            _settings.SaveSetting("SimilarityAlgorithm", algorithm);
+            Settings.SaveSetting("SimilarityAlgorithm", algorithm);
         }
 
-        
-        
-        
         private void SetSimilarityThreshold_Click(object sender, RoutedEventArgs e)
         {
             if (sender is MenuItem clickedItem)
             {
-                // Remove the '%' symbol before parsing
                 string headerText = clickedItem.Header.ToString()?.Replace("%", "") ?? "70";
 
                 if (double.TryParse(headerText, out double rate))
@@ -343,8 +338,7 @@ namespace FindRomCover
                     _settings.SimilarityThreshold = rate;
                     UncheckAllSimilarityThresholds();
                     clickedItem.IsChecked = true;
-                    // Save to Settings.xml
-                    _settings.SaveSetting("SimilarityThreshold", _settings.SimilarityThreshold.ToString(CultureInfo.InvariantCulture));
+                    Settings.SaveSetting("SimilarityThreshold", _settings.SimilarityThreshold.ToString(CultureInfo.InvariantCulture));
                 }
                 else
                 {
@@ -352,14 +346,13 @@ namespace FindRomCover
                 }
             }
         }
-        
+
         private void UpdateSimilarityThresholdChecks()
         {
             foreach (var item in MySimilarityMenu.Items)
             {
                 if (item is MenuItem menuItem)
                 {
-                    // Extract the numeric value from the MenuItem's Header, remove the '%' character, and parse it
                     string thresholdString = menuItem.Header.ToString()?.Replace("%", "") ?? "70";
                     if (double.TryParse(thresholdString, NumberStyles.Any, CultureInfo.InvariantCulture, out double menuItemThreshold))
                     {
@@ -383,21 +376,16 @@ namespace FindRomCover
                 }
             }
         }
-        
-        
-        
-        
-        
+
         private void SetThumbnailSize_Click(object sender, RoutedEventArgs e)
         {
-
             if (sender is MenuItem { Header: not null } menuItem && int.TryParse(menuItem.Header.ToString()?.Split(' ')[0], out int size))
             {
                 ImageWidth = size;
                 ImageHeight = size;
 
-                _settings.SaveSetting("ImageSize/Width", size.ToString());
-                _settings.SaveSetting("ImageSize/Height", size.ToString());
+                Settings.SaveSetting("ImageSize/Width", size.ToString());
+                Settings.SaveSetting("ImageSize/Height", size.ToString());
 
                 foreach (var item in ImageSizeMenu.Items)
                 {
@@ -425,8 +413,7 @@ namespace FindRomCover
                 }
             }
         }
-        
-        
+
 
     }
 }

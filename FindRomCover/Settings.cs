@@ -6,11 +6,11 @@ namespace FindRomCover
 {
     public class Settings
     {
-        public double SimilarityThreshold { get; set; } = 30; // Default value
-        public string[] SupportedExtensions { get; private set; } = Array.Empty<string>();
-        public int ImageWidth { get; set; } = 300; // Default value
-        public int ImageHeight { get; set; } = 300; // Default value
-        public string SelectedSimilarityAlgorithm { get; private set; } = "Jaro-Winkler Distance"; // Default value
+        public double SimilarityThreshold { get; set; } = 70;
+        public string[] SupportedExtensions { get; private set; } = [];
+        public int ImageWidth { get; set; } = 300;
+        public int ImageHeight { get; set; } = 300;
+        public string SelectedSimilarityAlgorithm { get; private set; } = "Jaro-Winkler Distance";
 
         public Settings()
         {
@@ -43,7 +43,7 @@ namespace FindRomCover
                     SupportedExtensions = extensions.ToArray();
                 }
 
-                // Load image size
+                // Load thumbnail size
                 var imageSizeNode = doc.SelectSingleNode("//Settings/ImageSize");
                 if (imageSizeNode != null)
                 {
@@ -78,7 +78,7 @@ namespace FindRomCover
             }
         }
 
-        public void SaveSetting(string key, string value)
+        public static void SaveSetting(string key, string value)
         {
             var doc = new XmlDocument();
             try
@@ -97,8 +97,6 @@ namespace FindRomCover
             // Ensure the document has a root element before proceeding
             if (doc.DocumentElement == null)
             {
-                // Handle the error appropriately. For simplicity, we'll just create a new root element.
-                // In a real application, you might want to log this error or throw an exception.
                 var root = doc.CreateElement("Settings");
                 doc.AppendChild(root);
             }
@@ -107,25 +105,17 @@ namespace FindRomCover
             if (node == null)
             {
                 node = doc.CreateElement(key);
-                if (doc.DocumentElement != null)
-                {
-                    doc.DocumentElement.AppendChild(node);
-                }
-                else
-                {
-                    // This is a fallback error handling and should technically never be reached due to the above check.
-                    // Consider logging an error or throwing an exception.
-                }
+                doc.DocumentElement?.AppendChild(node);
+
             }
             node.InnerText = value;
             doc.Save("settings.xml");
         }
 
-
         private void SetDefaultSettings()
         {
-            SimilarityThreshold = 30;
-            SupportedExtensions = Array.Empty<string>();
+            SimilarityThreshold = 70;
+            SupportedExtensions = [];
             ImageWidth = 300;
             ImageHeight = 300;
             SelectedSimilarityAlgorithm = "Jaro-Winkler Distance";

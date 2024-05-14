@@ -1,6 +1,4 @@
-﻿// Ignore Spelling: Levenshtein Jaccard Jaro Winkler
-
-using System.IO;
+﻿using System.IO;
 using static FindRomCover.MainWindow;
 
 namespace FindRomCover
@@ -54,8 +52,6 @@ namespace FindRomCover
 
         private static double CalculateLevenshteinSimilarity(string a, string b)
         {
-            // Implementation of the Levenshtein distance calculation
-            // This part remains unchanged
             int lengthA = a.Length;
             int lengthB = b.Length;
             var distances = new int[lengthA + 1, lengthB + 1];
@@ -135,7 +131,6 @@ namespace FindRomCover
                 k++;
             }
 
-            // ReSharper disable once PossibleLossOfFraction
             double jaro = ((double)matches / s1Len + (double)matches / s2Len + (double)(matches - transpositions / 2) / matches) / 3;
 
             int prefixLength = 0;
