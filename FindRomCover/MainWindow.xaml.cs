@@ -74,7 +74,7 @@ namespace FindRomCover
             {
                 var psi = new System.Diagnostics.ProcessStartInfo
                 {
-                    FileName = "https://www.buymeacoffee.com/purelogiccode",
+                    FileName = "https://www.purelogiccode.com/donate",
                     UseShellExecute = true
                 };
                 System.Diagnostics.Process.Start(psi);
