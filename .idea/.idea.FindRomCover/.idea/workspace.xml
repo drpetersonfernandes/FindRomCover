@@ -7,7 +7,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="abe2b93d-c3ff-4a0a-9788-6c193805cf2c" name="Changes" comment="Refactor class properties and adjust Jaro calculation&#10;&#10;Replaced settable properties with init-only properties in ImageData for immutability. Commented out the initial Jaro calculation line and corrected the casting of transpositions in SimilarityCalculator. Updated project file to allow unsafe code." />
+    <list default="true" id="abe2b93d-c3ff-4a0a-9788-6c193805cf2c" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -32,7 +32,9 @@
   }
 }</component>
   <component name="HighlightingSettingsPerFile">
-    <setting file="mock://C:/Sincronizar/source/repos/CSharp_FindRomCover/FindRomCover/MainWindow.xaml" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock://C:/Users/Peterson/Documents/Sincronizar/source/repos/CSharp_FindRomCover/FindRomCover/MainWindow.xaml.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock://C:/Users/Peterson/Documents/Sincronizar/source/repos/CSharp_FindRomCover/FindRomCover/MainWindow.xaml.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock://C:/Users/Peterson/Documents/Sincronizar/source/repos/CSharp_FindRomCover/FindRomCover/SimilarityCalculator.cs" root0="SKIP_HIGHLIGHTING" />
   </component>
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
@@ -208,7 +210,15 @@
       <option name="project" value="LOCAL" />
       <updated>1728581818187</updated>
     </task>
-    <option name="localTasksCounter" value="11" />
+    <task id="LOCAL-00011" summary="Update donation URL in MainWindow.xaml.cs&#10;&#10;Changed the donation link from &quot;buymeacoffee&quot; to the official website's donation page. This ensures users are directed to the most appropriate and official platform for contributions.">
+      <option name="closed" value="true" />
+      <created>1728584463862</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1728584463862</updated>
+    </task>
+    <option name="localTasksCounter" value="12" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -239,6 +249,7 @@
     <MESSAGE value="Update UI, application logic and modify workspace settings&#10;&#10;This commit incorporates improvements to the application logic and employing workspace settings in FindRomCover. Adding a new Settings class provides application settings management. Code readability and cleanliness have been enhanced in SimilarityCalculator. Changes include initializing UI to present setting values and adjustments to settings.xml for optimizing settings loading and saving mechanism. A new task has also been appended to localTasksCounter." />
     <MESSAGE value="Update project settings and add global.json for .NET 8.0&#10;&#10;Added a global.json file to specify the .NET 8.0 SDK version and updated project settings for Rider. Also incremented the project version in FindRomCover.csproj to 1.4.0.0 to accommodate new changes." />
     <MESSAGE value="Refactor class properties and adjust Jaro calculation&#10;&#10;Replaced settable properties with init-only properties in ImageData for immutability. Commented out the initial Jaro calculation line and corrected the casting of transpositions in SimilarityCalculator. Updated project file to allow unsafe code." />
-    <option name="LAST_COMMIT_MESSAGE" value="Refactor class properties and adjust Jaro calculation&#10;&#10;Replaced settable properties with init-only properties in ImageData for immutability. Commented out the initial Jaro calculation line and corrected the casting of transpositions in SimilarityCalculator. Updated project file to allow unsafe code." />
+    <MESSAGE value="Update donation URL in MainWindow.xaml.cs&#10;&#10;Changed the donation link from &quot;buymeacoffee&quot; to the official website's donation page. This ensures users are directed to the most appropriate and official platform for contributions." />
+    <option name="LAST_COMMIT_MESSAGE" value="Update donation URL in MainWindow.xaml.cs&#10;&#10;Changed the donation link from &quot;buymeacoffee&quot; to the official website's donation page. This ensures users are directed to the most appropriate and official platform for contributions." />
   </component>
 </project>
