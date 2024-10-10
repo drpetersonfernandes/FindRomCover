@@ -131,7 +131,10 @@ namespace FindRomCover
                 k++;
             }
 
-            double jaro = ((double)matches / s1Len + (double)matches / s2Len + (double)(matches - transpositions / 2) / matches) / 3;
+            // double jaro = ((double)matches / s1Len + (double)matches / s2Len + (double)(matches - transpositions / 2) / matches) / 3;
+           
+            double jaro = ((double)matches / s1Len + (double)matches / s2Len + (matches - (double)transpositions / 2) / matches) / 3;
+
 
             int prefixLength = 0;
             for (int i = 0; i < Math.Min(s1Len, s2Len); i++)

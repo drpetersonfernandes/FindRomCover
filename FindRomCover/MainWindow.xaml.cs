@@ -217,9 +217,9 @@ namespace FindRomCover
 
         public class ImageData
         {
-            public string? ImagePath { get; set; }
+            public string? ImagePath { get; init; }
             public string? ImageName { get; set; }
-            public double SimilarityThreshold { get; set; }
+            public double SimilarityThreshold { get; init; }
         }
 
         private void ImageCell_MouseDown(object sender, MouseButtonEventArgs e)
