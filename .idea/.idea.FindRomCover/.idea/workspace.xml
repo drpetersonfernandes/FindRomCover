@@ -129,6 +129,7 @@
       <workItem from="1713049290820" duration="5102000" />
       <workItem from="1728575223666" duration="1382000" />
       <workItem from="1728577219809" duration="1482000" />
+      <workItem from="1728604596179" duration="302000" />
     </task>
     <task id="LOCAL-00001" summary="Update application logic and settings&#10;&#10;This commit modifies the logic of the 'FindRomCover' application along with its respective configuration settings. Notably, functions in the 'SimilarityCalculator' class have been modified for brevity and readability, the general application's logic (in 'MainWindow.xaml.cs') has been altered slightly, and additional file extensions have been added to the 'settings.xml' configuration file.">
       <option name="closed" value="true" />
@@ -218,7 +219,15 @@
       <option name="project" value="LOCAL" />
       <updated>1728584463862</updated>
     </task>
-    <option name="localTasksCounter" value="12" />
+    <task id="LOCAL-00012" summary="Update donation URL in MainWindow.xaml.cs&#10;&#10;Changed the donation link from &quot;buymeacoffee&quot; to the official website's donation page. This ensures users are directed to the most appropriate and official platform for contributions.">
+      <option name="closed" value="true" />
+      <created>1728604647485</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1728604647485</updated>
+    </task>
+    <option name="localTasksCounter" value="13" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
