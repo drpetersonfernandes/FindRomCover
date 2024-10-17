@@ -55,6 +55,12 @@
   <ItemGroup>
     <None Remove="images\theme.png" />
     <Resource Include="images\theme.png" />
+    <None Remove="images\about.png" />
+    <Resource Include="images\about.png" />
+    <None Remove="images\donate.png" />
+    <Resource Include="images\donate.png" />
+    <None Remove="images\exit.png" />
+    <Resource Include="images\exit.png" />
   </ItemGroup>
 
 </Project>

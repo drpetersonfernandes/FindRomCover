@@ -210,13 +210,29 @@
                 </MenuItem>
             </MenuItem>
             
+            <MenuItem Header="Donate">
+                <MenuItem Click="DonateButton_Click" Header="Donate">
+                    <MenuItem.Icon>
+                        <Image Source="pack://application:,,,/images/donate.png" Width="16" Height="16"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+            </MenuItem>
+            <MenuItem Header="About">
+                <MenuItem Click="About_Click" Header="About">
+                    <MenuItem.Icon>
+                        <Image Source="pack://application:,,,/images/about.png" Width="16" Height="16"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+            </MenuItem>
+            <MenuItem Header="Exit">
+                <MenuItem Click="Exit_Click" Header="Exit">
+                    <MenuItem.Icon>
+                        <Image Source="pack://application:,,,/images/exit.png" Width="16" Height="16"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+            </MenuItem>
             
-            <MenuItem Click="DonateButton_Click" Header="Donate" />
-            <MenuItem Click="About_Click" Header="About" />
-            <MenuItem Click="Exit_Click" Header="Exit" />
         </Menu>
-        
-        
 
         <!--  ROM Folder Selection  -->
         <DockPanel
