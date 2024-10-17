@@ -6,6 +6,7 @@ using System.Windows.Input;
 using System.ComponentModel;
 using System.Globalization;
 using System.Reflection;
+using ControlzEx.Theming;
 
 namespace FindRomCover
 {
@@ -63,10 +64,72 @@ namespace FindRomCover
         {
             ImageWidth = _settings.ImageWidth;
             ImageHeight = _settings.ImageHeight;
+            
+            // Load and apply the theme
+            ThemeManager.Current.ChangeThemeBaseColor(this, _settings.BaseTheme);
+            ThemeManager.Current.ChangeThemeColorScheme(this, _settings.AccentColor);
+
+            // Mark the correct menu item as checked
+            if (_settings.BaseTheme == "Light")
+            {
+                LightTheme.IsChecked = true;
+            }
+            else
+            {
+                DarkTheme.IsChecked = true;
+            }
+
+            if (FindName(_settings.AccentColor + "Accent") is MenuItem accentMenuItem)
+            {
+                accentMenuItem.IsChecked = true;
+            }
         }
 
         protected virtual void OnPropertyChanged(string propertyName) =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        
+        private void ChangeBaseTheme_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is MenuItem menuItem)
+            {
+                string theme = menuItem.Name == "LightTheme" ? "Light" : "Dark";
+                ThemeManager.Current.ChangeThemeBaseColor(this, theme);
+
+                // Save base theme to settings.xml
+                Settings.SaveSetting("BaseTheme", theme);
+
+                // Update menu item check state
+                LightTheme.IsChecked = theme == "Light";
+                DarkTheme.IsChecked = theme == "Dark";
+            }
+        }
+
+        private void ChangeAccentColor_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is MenuItem menuItem)
+            {
+                // Extract the accent color name from the selected menu item's name
+                string accent = menuItem.Name.Replace("Accent", "");
+
+                // Change the accent color of the application
+                ThemeManager.Current.ChangeThemeColorScheme(this, accent);
+
+                // Save the selected accent color to the settings.xml file
+                Settings.SaveSetting("AccentColor", accent);
+
+                // Uncheck all accent color options before checking the new one
+                foreach (var item in ((MenuItem)menuItem.Parent).Items)
+                {
+                    if (item is MenuItem accentMenuItem)
+                    {
+                        accentMenuItem.IsChecked = false;  // Uncheck all items
+                    }
+                }
+
+                // Check the currently selected accent color
+                menuItem.IsChecked = true;
+            }
+        }
         
         private void DonateButton_Click(object sender, RoutedEventArgs e)
         {

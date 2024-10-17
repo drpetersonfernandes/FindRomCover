@@ -1,124 +1,142 @@
 using System.IO;
-using System.Xml;
 using System.Windows;
+using System.Xml;
+using MessageBox = System.Windows.MessageBox;
 
-namespace FindRomCover
+
+namespace FindRomCover;
+
+public class Settings
 {
-    public class Settings
+    public double SimilarityThreshold { get; set; } = 70;
+    public string[] SupportedExtensions { get; private set; } = [];
+    public int ImageWidth { get; private set; } = 300;
+    public int ImageHeight { get; private set; } = 300;
+    public string SelectedSimilarityAlgorithm { get; private set; } = "Jaro-Winkler Distance";
+
+    // New properties for theme settings
+    public string BaseTheme { get; private set; } = "Light";
+    public string AccentColor { get; private set; } = "Blue";
+
+    public Settings()
     {
-        public double SimilarityThreshold { get; set; } = 70;
-        public string[] SupportedExtensions { get; private set; } = [];
-        public int ImageWidth { get; set; } = 300;
-        public int ImageHeight { get; set; } = 300;
-        public string SelectedSimilarityAlgorithm { get; private set; } = "Jaro-Winkler Distance";
+        LoadSettings();
+    }
 
-        public Settings()
+    private void LoadSettings()
+    {
+        var doc = new XmlDocument();
+        try
         {
-            LoadSettings();
-        }
+            doc.Load("settings.xml");
 
-        private void LoadSettings()
-        {
-            var doc = new XmlDocument();
-            try
+            // Load similarity rate
+            var similarityNode = doc.SelectSingleNode("//Settings/SimilarityThreshold");
+            if (similarityNode != null && double.TryParse(similarityNode.InnerText, out double savedRate))
             {
-                doc.Load("settings.xml");
+                SimilarityThreshold = savedRate;
+            }
 
-                // Load similarity rate
-                var similarityNode = doc.SelectSingleNode("//Settings/SimilarityThreshold");
-                if (similarityNode != null && double.TryParse(similarityNode.InnerText, out double savedRate))
+            // Load supported extensions
+            var extensionsNode = doc.SelectSingleNode("//Settings/SupportedExtensions");
+            if (extensionsNode != null)
+            {
+                var extensions = new List<string>();
+                foreach (XmlNode node in extensionsNode.ChildNodes)
                 {
-                    SimilarityThreshold = savedRate;
+                    extensions.Add(node.InnerText);
                 }
+                SupportedExtensions = extensions.ToArray();
+            }
 
-                // Load supported extensions
-                var extensionsNode = doc.SelectSingleNode("//Settings/SupportedExtensions");
-                if (extensionsNode != null)
+            // Load thumbnail size
+            var imageSizeNode = doc.SelectSingleNode("//Settings/ImageSize");
+            if (imageSizeNode != null)
+            {
+                var widthNode = imageSizeNode.SelectSingleNode("Width");
+                var heightNode = imageSizeNode.SelectSingleNode("Height");
+
+                if (widthNode != null && int.TryParse(widthNode.InnerText, out int width))
                 {
-                    var extensions = new List<string>();
-                    foreach (XmlNode node in extensionsNode.ChildNodes)
-                    {
-                        extensions.Add(node.InnerText);
-                    }
-                    SupportedExtensions = extensions.ToArray();
+                    ImageWidth = width;
                 }
-
-                // Load thumbnail size
-                var imageSizeNode = doc.SelectSingleNode("//Settings/ImageSize");
-                if (imageSizeNode != null)
+                if (heightNode != null && int.TryParse(heightNode.InnerText, out int height))
                 {
-                    var widthNode = imageSizeNode.SelectSingleNode("Width");
-                    var heightNode = imageSizeNode.SelectSingleNode("Height");
-
-                    if (widthNode != null && int.TryParse(widthNode.InnerText, out int width))
-                    {
-                        ImageWidth = width;
-                    }
-                    if (heightNode != null && int.TryParse(heightNode.InnerText, out int height))
-                    {
-                        ImageHeight = height;
-                    }
-                }
-
-                var algorithmNode = doc.SelectSingleNode("//Settings/SimilarityAlgorithm");
-                if (algorithmNode != null)
-                {
-                    SelectedSimilarityAlgorithm = algorithmNode.InnerText;
+                    ImageHeight = height;
                 }
             }
-            catch (FileNotFoundException)
+
+            // Load theme settings
+            var baseThemeNode = doc.SelectSingleNode("//Settings/BaseTheme");
+            if (baseThemeNode != null)
             {
-                System.Windows.MessageBox.Show("Settings file not found. Please ensure settings.xml is in the application directory.", "Settings File Missing", MessageBoxButton.OK, MessageBoxImage.Warning);
-                SetDefaultSettings();
+                BaseTheme = baseThemeNode.InnerText;
             }
-            catch (Exception ex)
+
+            var accentColorNode = doc.SelectSingleNode("//Settings/AccentColor");
+            if (accentColorNode != null)
             {
-                System.Windows.MessageBox.Show("Error loading settings: " + ex.Message);
-                SetDefaultSettings();
+                AccentColor = accentColorNode.InnerText;
+            }
+
+            var algorithmNode = doc.SelectSingleNode("//Settings/SimilarityAlgorithm");
+            if (algorithmNode != null)
+            {
+                SelectedSimilarityAlgorithm = algorithmNode.InnerText;
             }
         }
-
-        public static void SaveSetting(string key, string value)
+        catch (FileNotFoundException)
         {
-            var doc = new XmlDocument();
-            try
-            {
-                doc.Load("settings.xml");
-            }
-            catch (FileNotFoundException)
-            {
-                var declaration = doc.CreateXmlDeclaration("1.0", "UTF-8", null);
-                doc.AppendChild(declaration);
-
-                var root = doc.CreateElement("Settings");
-                doc.AppendChild(root);
-            }
-
-            // Ensure the document has a root element before proceeding
-            if (doc.DocumentElement == null)
-            {
-                var root = doc.CreateElement("Settings");
-                doc.AppendChild(root);
-            }
-
-            var node = doc.SelectSingleNode($"//Settings/{key}");
-            if (node == null)
-            {
-                node = doc.CreateElement(key);
-                doc.DocumentElement?.AppendChild(node);
-
-            }
-            node.InnerText = value;
-            doc.Save("settings.xml");
+            MessageBox.Show("Settings file not found. Please ensure settings.xml is in the application directory.", "Settings File Missing", MessageBoxButton.OK, MessageBoxImage.Warning);
+            SetDefaultSettings();
         }
-
-        private void SetDefaultSettings()
+        catch (Exception ex)
         {
-            SimilarityThreshold = 70;
-            SupportedExtensions = [];
-            ImageWidth = 300;
-            ImageHeight = 300;
-            SelectedSimilarityAlgorithm = "Jaro-Winkler Distance";
+            MessageBox.Show("Error loading settings: " + ex.Message);
+            SetDefaultSettings();
         }
+    }
+
+    public static void SaveSetting(string key, string value)
+    {
+        var doc = new XmlDocument();
+        try
+        {
+            doc.Load("settings.xml");
+        }
+        catch (FileNotFoundException)
+        {
+            var declaration = doc.CreateXmlDeclaration("1.0", "UTF-8", null);
+            doc.AppendChild(declaration);
+
+            var root = doc.CreateElement("Settings");
+            doc.AppendChild(root);
+        }
+
+        // Ensure the document has a root element before proceeding
+        if (doc.DocumentElement == null)
+        {
+            var root = doc.CreateElement("Settings");
+            doc.AppendChild(root);
+        }
+
+        var node = doc.SelectSingleNode($"//Settings/{key}");
+        if (node == null)
+        {
+            node = doc.CreateElement(key);
+            doc.DocumentElement?.AppendChild(node);
+        }
+        node.InnerText = value;
+        doc.Save("settings.xml");
+    }
+
+    private void SetDefaultSettings()
+    {
+        SimilarityThreshold = 70;
+        SupportedExtensions = [];
+        ImageWidth = 300;
+        ImageHeight = 300;
+        BaseTheme = "Light";
+        AccentColor = "Blue";
     }
 }

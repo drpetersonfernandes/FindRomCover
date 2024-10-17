@@ -7,7 +7,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="abe2b93d-c3ff-4a0a-9788-6c193805cf2c" name="Changes" comment="" />
+    <list default="true" id="abe2b93d-c3ff-4a0a-9788-6c193805cf2c" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/.idea.FindRomCover/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.FindRomCover/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FindRomCover/App.xaml" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/App.xaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FindRomCover/FindRomCover.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/FindRomCover.csproj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FindRomCover/MainWindow.xaml" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/MainWindow.xaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FindRomCover/MainWindow.xaml.cs" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/MainWindow.xaml.cs" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -130,6 +136,9 @@
       <workItem from="1728575223666" duration="1382000" />
       <workItem from="1728577219809" duration="1482000" />
       <workItem from="1728604596179" duration="302000" />
+      <workItem from="1729094795991" duration="1203000" />
+      <workItem from="1729174448257" duration="1423000" />
+      <workItem from="1729177072135" duration="2596000" />
     </task>
     <task id="LOCAL-00001" summary="Update application logic and settings&#10;&#10;This commit modifies the logic of the 'FindRomCover' application along with its respective configuration settings. Notably, functions in the 'SimilarityCalculator' class have been modified for brevity and readability, the general application's logic (in 'MainWindow.xaml.cs') has been altered slightly, and additional file extensions have been added to the 'settings.xml' configuration file.">
       <option name="closed" value="true" />
@@ -227,7 +236,15 @@
       <option name="project" value="LOCAL" />
       <updated>1728604647485</updated>
     </task>
-    <option name="localTasksCounter" value="13" />
+    <task id="LOCAL-00013" summary="Update workspace.xml task records&#10;&#10;Added new work items and tasks in workspace.xml. Incremented task counter to accommodate recent changes, including updates to donation URL and task summaries.">
+      <option name="closed" value="true" />
+      <created>1729094828917</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1729094828917</updated>
+    </task>
+    <option name="localTasksCounter" value="14" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -259,6 +276,7 @@
     <MESSAGE value="Update project settings and add global.json for .NET 8.0&#10;&#10;Added a global.json file to specify the .NET 8.0 SDK version and updated project settings for Rider. Also incremented the project version in FindRomCover.csproj to 1.4.0.0 to accommodate new changes." />
     <MESSAGE value="Refactor class properties and adjust Jaro calculation&#10;&#10;Replaced settable properties with init-only properties in ImageData for immutability. Commented out the initial Jaro calculation line and corrected the casting of transpositions in SimilarityCalculator. Updated project file to allow unsafe code." />
     <MESSAGE value="Update donation URL in MainWindow.xaml.cs&#10;&#10;Changed the donation link from &quot;buymeacoffee&quot; to the official website's donation page. This ensures users are directed to the most appropriate and official platform for contributions." />
-    <option name="LAST_COMMIT_MESSAGE" value="Update donation URL in MainWindow.xaml.cs&#10;&#10;Changed the donation link from &quot;buymeacoffee&quot; to the official website's donation page. This ensures users are directed to the most appropriate and official platform for contributions." />
+    <MESSAGE value="Update workspace.xml task records&#10;&#10;Added new work items and tasks in workspace.xml. Incremented task counter to accommodate recent changes, including updates to donation URL and task summaries." />
+    <option name="LAST_COMMIT_MESSAGE" value="Update workspace.xml task records&#10;&#10;Added new work items and tasks in workspace.xml. Incremented task counter to accommodate recent changes, including updates to donation URL and task summaries." />
   </component>
 </project>

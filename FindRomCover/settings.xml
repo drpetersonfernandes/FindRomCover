@@ -22,4 +22,6 @@
 		<Height>300</Height>
 	</ImageSize>
 	<SimilarityAlgorithm>Jaro-Winkler Distance</SimilarityAlgorithm>
+	<BaseTheme>Light</BaseTheme>
+	<AccentColor>Blue</AccentColor>
 </Settings>
