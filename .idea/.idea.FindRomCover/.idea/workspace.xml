@@ -134,6 +134,7 @@
       <workItem from="1729174448257" duration="1423000" />
       <workItem from="1729177072135" duration="6295000" />
       <workItem from="1730203817626" duration="1595000" />
+      <workItem from="1730210447549" duration="104000" />
     </task>
     <task id="LOCAL-00001" summary="Update application logic and settings&#10;&#10;This commit modifies the logic of the 'FindRomCover' application along with its respective configuration settings. Notably, functions in the 'SimilarityCalculator' class have been modified for brevity and readability, the general application's logic (in 'MainWindow.xaml.cs') has been altered slightly, and additional file extensions have been added to the 'settings.xml' configuration file.">
       <option name="closed" value="true" />
@@ -271,7 +272,15 @@
       <option name="project" value="LOCAL" />
       <updated>1730205556318</updated>
     </task>
-    <option name="localTasksCounter" value="18" />
+    <task id="LOCAL-00018" summary="Support command-line arguments for folder paths&#10;&#10;Added code to process command-line arguments for ImageFolder and RomFolder paths. This enhances automation and flexibility during application startup by setting folder paths dynamically. Updated workspace.xml to include new tasks and meta information.">
+      <option name="closed" value="true" />
+      <created>1730210490165</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1730210490165</updated>
+    </task>
+    <option name="localTasksCounter" value="19" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -308,6 +317,7 @@
     <MESSAGE value="Add theme.png image to FindRomCover directory&#10;&#10;Added a new file, theme.png, to the images subdirectory within FindRomCover. This image will be used as a visual theme element for the application." />
     <MESSAGE value="Add menu icons for Donate, About, and Exit options&#10;&#10;Introduced image icons to the Donate, About, and Exit menu items in MainWindow.xaml to enhance user interface aesthetics and improve navigation. Additionally, updated the project file to include the new image resources." />
     <MESSAGE value="Support command-line arguments for folder paths&#10;&#10;Added code to process command-line arguments for ImageFolder and RomFolder paths. This change sets the respective folder paths during application startup, enhancing automation and flexibility in usage." />
-    <option name="LAST_COMMIT_MESSAGE" value="Support command-line arguments for folder paths&#10;&#10;Added code to process command-line arguments for ImageFolder and RomFolder paths. This change sets the respective folder paths during application startup, enhancing automation and flexibility in usage." />
+    <MESSAGE value="Support command-line arguments for folder paths&#10;&#10;Added code to process command-line arguments for ImageFolder and RomFolder paths. This enhances automation and flexibility during application startup by setting folder paths dynamically. Updated workspace.xml to include new tasks and meta information." />
+    <option name="LAST_COMMIT_MESSAGE" value="Support command-line arguments for folder paths&#10;&#10;Added code to process command-line arguments for ImageFolder and RomFolder paths. This enhances automation and flexibility during application startup by setting folder paths dynamically. Updated workspace.xml to include new tasks and meta information." />
   </component>
 </project>
