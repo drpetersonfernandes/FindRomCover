@@ -41,7 +41,7 @@
   </component>
   <component name="MetaFilesCheckinStateConfiguration" checkMetaFiles="true" />
   <component name="ProblemsViewState">
-    <option name="selectedTabId" value="CurrentFile" />
+    <option name="selectedTabId" value="SWEA" />
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 8
@@ -133,6 +133,7 @@
       <workItem from="1729094795991" duration="1203000" />
       <workItem from="1729174448257" duration="1423000" />
       <workItem from="1729177072135" duration="6295000" />
+      <workItem from="1730203817626" duration="1595000" />
     </task>
     <task id="LOCAL-00001" summary="Update application logic and settings&#10;&#10;This commit modifies the logic of the 'FindRomCover' application along with its respective configuration settings. Notably, functions in the 'SimilarityCalculator' class have been modified for brevity and readability, the general application's logic (in 'MainWindow.xaml.cs') has been altered slightly, and additional file extensions have been added to the 'settings.xml' configuration file.">
       <option name="closed" value="true" />
@@ -262,7 +263,15 @@
       <option name="project" value="LOCAL" />
       <updated>1729183896066</updated>
     </task>
-    <option name="localTasksCounter" value="17" />
+    <task id="LOCAL-00017" summary="Support command-line arguments for folder paths&#10;&#10;Added code to process command-line arguments for ImageFolder and RomFolder paths. This change sets the respective folder paths during application startup, enhancing automation and flexibility in usage.">
+      <option name="closed" value="true" />
+      <created>1730205556318</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1730205556318</updated>
+    </task>
+    <option name="localTasksCounter" value="18" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -298,6 +307,7 @@
     <MESSAGE value="Integrate MahApps.Metro for theme support&#10;&#10;Added MahApps.Metro styling and theme support across the application. Updated App.xaml with resource dictionaries, modified MainWindow.xaml to utilize MetroWindow, and added theme change handling in MainWindow.xaml.cs. Included new properties for theme settings in Settings.cs and saved these settings to settings.xml. Updated project file to include necessary packages and updated the .NET target framework." />
     <MESSAGE value="Add theme.png image to FindRomCover directory&#10;&#10;Added a new file, theme.png, to the images subdirectory within FindRomCover. This image will be used as a visual theme element for the application." />
     <MESSAGE value="Add menu icons for Donate, About, and Exit options&#10;&#10;Introduced image icons to the Donate, About, and Exit menu items in MainWindow.xaml to enhance user interface aesthetics and improve navigation. Additionally, updated the project file to include the new image resources." />
-    <option name="LAST_COMMIT_MESSAGE" value="Add menu icons for Donate, About, and Exit options&#10;&#10;Introduced image icons to the Donate, About, and Exit menu items in MainWindow.xaml to enhance user interface aesthetics and improve navigation. Additionally, updated the project file to include the new image resources." />
+    <MESSAGE value="Support command-line arguments for folder paths&#10;&#10;Added code to process command-line arguments for ImageFolder and RomFolder paths. This change sets the respective folder paths during application startup, enhancing automation and flexibility in usage." />
+    <option name="LAST_COMMIT_MESSAGE" value="Support command-line arguments for folder paths&#10;&#10;Added code to process command-line arguments for ImageFolder and RomFolder paths. This change sets the respective folder paths during application startup, enhancing automation and flexibility in usage." />
   </component>
 </project>
