@@ -14,8 +14,10 @@
 		<Extension>wua</Extension>
 		<Extension>wad</Extension>
 		<Extension>cso</Extension>
-		<Extension>bat</Extension>
 		<Extension>nds</Extension>
+		<Extension>lnk</Extension>
+		<Extension>bat</Extension>
+		<Extension>exe</Extension>
 	</SupportedExtensions>
 	<ImageSize>
 		<Width>300</Width>
