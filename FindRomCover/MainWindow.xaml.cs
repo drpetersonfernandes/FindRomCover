@@ -53,6 +53,17 @@ namespace FindRomCover
             InitializeComponent();
             DataContext = this;
             
+            // Check for command-line arguments
+            string[] args = Environment.GetCommandLineArgs();
+            if (args.Length > 2)
+            {
+                // args[1] is expected to be ImageFolder, args[2] to be RomFolder
+                _imageFolderPath = args[1];
+                TxtImageFolder.Text = _imageFolderPath;
+        
+                TxtRomFolder.Text = args[2];
+            }
+            
             LoadSettings();
             
             UpdateThumbnailSizeMenuChecks();
