@@ -53,6 +53,8 @@ namespace FindRomCover
             InitializeComponent();
             DataContext = this;
             
+            LoadSettings();
+            
             // Check for command-line arguments
             string[] args = Environment.GetCommandLineArgs();
             if (args.Length > 2)
@@ -67,8 +69,6 @@ namespace FindRomCover
                 LoadMissingImagesList();
 
             }
-            
-            LoadSettings();
             
             UpdateThumbnailSizeMenuChecks();
             UpdateSimilarityAlgorithmChecks();
