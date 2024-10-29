@@ -46,7 +46,7 @@
         </Grid.RowDefinitions>
 
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="500" />
+            <ColumnDefinition Width="470" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
@@ -241,7 +241,7 @@
             Margin="10">
             <TextBox
                 x:Name="TxtRomFolder"
-                Width="330"
+                Width="290"
                 Height="25"
                 Margin="0,0,10,0"
                 HorizontalAlignment="Stretch" />
@@ -261,7 +261,7 @@
             Margin="10,0,10,10">
             <TextBox
                 x:Name="TxtImageFolder"
-                Width="330"
+                Width="290"
                 Height="25"
                 Margin="0,0,10,0"
                 HorizontalAlignment="Stretch" />
@@ -312,7 +312,17 @@
             Margin="10,0,10,10"
             VerticalAlignment="Stretch"
             VerticalScrollBarVisibility="Auto">
-            <ListBox x:Name="LstMissingImages" SelectionChanged="LstMissingImages_SelectionChanged" />
+            <Border BorderBrush="Gray" BorderThickness="1" Padding="2">
+                <ListBox x:Name="LstMissingImages" SelectionChanged="LstMissingImages_SelectionChanged">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Border BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="5">
+                                <TextBlock Text="{Binding}" VerticalAlignment="Center" />
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Border>
         </ScrollViewer>
 
         <!--  Search Query Display  -->

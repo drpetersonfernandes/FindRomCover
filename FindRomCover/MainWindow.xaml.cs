@@ -64,10 +64,6 @@ namespace FindRomCover
                 TxtImageFolder.Text = _imageFolderPath;
         
                 TxtRomFolder.Text = args[2];
-
-                // Automatic Load Missing Images List
-                LoadMissingImagesList();
-
             }
             
             UpdateThumbnailSizeMenuChecks();

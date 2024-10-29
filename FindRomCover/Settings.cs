@@ -1,13 +1,14 @@
 using System.IO;
-using System.Windows;
 using System.Xml;
 using MessageBox = System.Windows.MessageBox;
-
 
 namespace FindRomCover;
 
 public class Settings
 {
+    // Define the location of settings.xml in the application folder
+    private static readonly string SettingsFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.xml");
+
     public double SimilarityThreshold { get; set; } = 70;
     public string[] SupportedExtensions { get; private set; } = [];
     public int ImageWidth { get; private set; } = 300;
@@ -28,7 +29,13 @@ public class Settings
         var doc = new XmlDocument();
         try
         {
-            doc.Load("settings.xml");
+            if (!File.Exists(SettingsFilePath))
+            {
+                SetDefaultSettings();
+                return;
+            }
+
+            doc.Load(SettingsFilePath);
 
             // Load similarity rate
             var similarityNode = doc.SelectSingleNode("//Settings/SimilarityThreshold");
@@ -85,11 +92,6 @@ public class Settings
                 SelectedSimilarityAlgorithm = algorithmNode.InnerText;
             }
         }
-        catch (FileNotFoundException)
-        {
-            MessageBox.Show("Settings file not found. Please ensure settings.xml is in the application directory.", "Settings File Missing", MessageBoxButton.OK, MessageBoxImage.Warning);
-            SetDefaultSettings();
-        }
         catch (Exception ex)
         {
             MessageBox.Show("Error loading settings: " + ex.Message);
@@ -102,32 +104,39 @@ public class Settings
         var doc = new XmlDocument();
         try
         {
-            doc.Load("settings.xml");
-        }
-        catch (FileNotFoundException)
-        {
-            var declaration = doc.CreateXmlDeclaration("1.0", "UTF-8", null);
-            doc.AppendChild(declaration);
+            if (File.Exists(SettingsFilePath))
+            {
+                doc.Load(SettingsFilePath);
+            }
+            else
+            {
+                var declaration = doc.CreateXmlDeclaration("1.0", "UTF-8", null);
+                doc.AppendChild(declaration);
 
-            var root = doc.CreateElement("Settings");
-            doc.AppendChild(root);
-        }
+                var root = doc.CreateElement("Settings");
+                doc.AppendChild(root);
+            }
 
-        // Ensure the document has a root element before proceeding
-        if (doc.DocumentElement == null)
-        {
-            var root = doc.CreateElement("Settings");
-            doc.AppendChild(root);
-        }
+            // Ensure the document has a root element before proceeding
+            if (doc.DocumentElement == null)
+            {
+                var root = doc.CreateElement("Settings");
+                doc.AppendChild(root);
+            }
 
-        var node = doc.SelectSingleNode($"//Settings/{key}");
-        if (node == null)
-        {
-            node = doc.CreateElement(key);
-            doc.DocumentElement?.AppendChild(node);
+            var node = doc.SelectSingleNode($"//Settings/{key}");
+            if (node == null)
+            {
+                node = doc.CreateElement(key);
+                doc.DocumentElement?.AppendChild(node);
+            }
+            node.InnerText = value;
+            doc.Save(SettingsFilePath);
         }
-        node.InnerText = value;
-        doc.Save("settings.xml");
+        catch (Exception ex)
+        {
+            MessageBox.Show("Error saving settings: " + ex.Message);
+        }
     }
 
     private void SetDefaultSettings()

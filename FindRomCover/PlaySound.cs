@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows.Media;
 
 namespace FindRomCover;
@@ -5,7 +6,7 @@ namespace FindRomCover;
 public static class PlaySound
 {
     private static readonly MediaPlayer MediaPlayer = new();
-    private static readonly string SoundPath = "audio/click.mp3";
+    private static readonly string SoundPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "audio", "click.mp3");
 
     public static void PlayClickSound()
     {
@@ -13,7 +14,7 @@ public static class PlaySound
         {
             MediaPlayer.MediaOpened += (_, _) => { MediaPlayer.Play(); };
             MediaPlayer.Volume = 1.0;
-            MediaPlayer.Open(new Uri(SoundPath, UriKind.Relative));
+            MediaPlayer.Open(new Uri(SoundPath, UriKind.Absolute));
         }
         catch (Exception ex)
         {
