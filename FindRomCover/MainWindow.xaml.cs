@@ -52,20 +52,25 @@ namespace FindRomCover
         {
             InitializeComponent();
             DataContext = this;
-            
-            LoadSettings();
-            
+           
             // Check for command-line arguments
             string[] args = Environment.GetCommandLineArgs();
-            if (args.Length > 2)
+            if (args.Length == 3)
             {
                 // args[1] is expected to be ImageFolder, args[2] to be RomFolder
                 _imageFolderPath = args[1];
                 TxtImageFolder.Text = _imageFolderPath;
-        
                 TxtRomFolder.Text = args[2];
             }
+            else
+            {
+                // Proceed with regular execution if arguments are not as expected
+                // or no arguments are provided
+                TxtImageFolder.Text = "";  // Set to default or empty if no arguments
+                TxtRomFolder.Text = "";    // Set to default or empty if no arguments
+            }
             
+            LoadSettings();
             UpdateThumbnailSizeMenuChecks();
             UpdateSimilarityAlgorithmChecks();
             UpdateSimilarityThresholdChecks();

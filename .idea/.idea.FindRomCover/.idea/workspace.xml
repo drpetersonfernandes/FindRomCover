@@ -10,7 +10,7 @@
     <list default="true" id="abe2b93d-c3ff-4a0a-9788-6c193805cf2c" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/.idea.FindRomCover/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.FindRomCover/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/FindRomCover/FindRomCover.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/FindRomCover.csproj" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FindRomCover/settings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/settings.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FindRomCover/MainWindow.xaml.cs" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/MainWindow.xaml.cs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -43,7 +43,7 @@
   </component>
   <component name="MetaFilesCheckinStateConfiguration" checkMetaFiles="true" />
   <component name="ProblemsViewState">
-    <option name="selectedTabId" value="SWEA" />
+    <option name="selectedTabId" value="CurrentFile" />
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 8
@@ -146,6 +146,8 @@
       <workItem from="1730227592911" duration="20000" />
       <workItem from="1730230053691" duration="1727000" />
       <workItem from="1730237056361" duration="155000" />
+      <workItem from="1730242858780" duration="71000" />
+      <workItem from="1730257326648" duration="1212000" />
     </task>
     <task id="LOCAL-00001" summary="Update application logic and settings&#10;&#10;This commit modifies the logic of the 'FindRomCover' application along with its respective configuration settings. Notably, functions in the 'SimilarityCalculator' class have been modified for brevity and readability, the general application's logic (in 'MainWindow.xaml.cs') has been altered slightly, and additional file extensions have been added to the 'settings.xml' configuration file.">
       <option name="closed" value="true" />
@@ -315,7 +317,15 @@
       <option name="project" value="LOCAL" />
       <updated>1730226161682</updated>
     </task>
-    <option name="localTasksCounter" value="22" />
+    <task id="LOCAL-00022" summary="Update settings.xml and upgrade ControlzEx package&#10;&#10;Added new file extensions (lnk, exe) to settings.xml and rearranged entries. Upgraded ControlzEx package from version 5.0.2 to 6.0.0 for improved library features and stability.">
+      <option name="closed" value="true" />
+      <created>1730242873992</created>
+      <option name="number" value="00022" />
+      <option name="presentableId" value="LOCAL-00022" />
+      <option name="project" value="LOCAL" />
+      <updated>1730242873992</updated>
+    </task>
+    <option name="localTasksCounter" value="23" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -356,6 +366,7 @@
     <MESSAGE value="Automatically load missing images list at startup.&#10;&#10;This update modifies the MainWindow.xaml.cs to call the LoadMissingImagesList() function when the application starts with the proper command-line arguments. It also updates workspace.xml with new work item task entries. This addition aims to enhance the initial setup process by ensuring missing images are identified immediately." />
     <MESSAGE value="Load settings earlier in MainWindow initialization&#10;&#10;Moved LoadSettings() to execute before command-line argument processing in MainWindow.xaml.cs for improved initialization sequence. Also, updated workspace.xml with new task entries for better tracking." />
     <MESSAGE value="Refactor settings loading and improve UI layout&#10;&#10;Refactored the settings file handling by using a consistent path and simplified the file existence checks. Improved the layout of MainWindow.xaml by adjusting grid column widths and enhancing the ListBox UI for missing images. This update ensures better settings management and a more user-friendly interface." />
-    <option name="LAST_COMMIT_MESSAGE" value="Refactor settings loading and improve UI layout&#10;&#10;Refactored the settings file handling by using a consistent path and simplified the file existence checks. Improved the layout of MainWindow.xaml by adjusting grid column widths and enhancing the ListBox UI for missing images. This update ensures better settings management and a more user-friendly interface." />
+    <MESSAGE value="Update settings.xml and upgrade ControlzEx package&#10;&#10;Added new file extensions (lnk, exe) to settings.xml and rearranged entries. Upgraded ControlzEx package from version 5.0.2 to 6.0.0 for improved library features and stability." />
+    <option name="LAST_COMMIT_MESSAGE" value="Update settings.xml and upgrade ControlzEx package&#10;&#10;Added new file extensions (lnk, exe) to settings.xml and rearranged entries. Upgraded ControlzEx package from version 5.0.2 to 6.0.0 for improved library features and stability." />
   </component>
 </project>
