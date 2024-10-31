@@ -19,7 +19,12 @@
 
   <ItemGroup>
     <None Remove="audio\click.mp3" />
-    <None Remove="settings.xml" />
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="settings.xml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <ItemGroup>
@@ -29,12 +34,6 @@
   <ItemGroup>
     <Content Include="audio\click.mp3">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="settings.xml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
 
@@ -49,6 +48,7 @@
     <PackageReference Include="ControlzEx" Version="5.0.2" />
     <PackageReference Include="MahApps.Metro" Version="2.4.10" />
     <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.135" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="System.Text.Json" Version="8.0.5" />
   </ItemGroup>
 
@@ -61,6 +61,8 @@
     <Resource Include="images\donate.png" />
     <None Remove="images\exit.png" />
     <Resource Include="images\exit.png" />
+    <None Remove="images\logo.png" />
+    <Resource Include="images\logo.png" />
   </ItemGroup>
 
 </Project>

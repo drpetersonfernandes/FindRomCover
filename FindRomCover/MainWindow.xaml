@@ -46,7 +46,7 @@
         </Grid.RowDefinitions>
 
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="470" />
+            <ColumnDefinition Width="500" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
@@ -169,69 +169,72 @@
                     Header="900 pixels"
                     IsCheckable="True" />
             </MenuItem>
-            
+
             <MenuItem Header="Theme">
                 <MenuItem Header="Base Theme">
                     <MenuItem.Icon>
                         <Image Source="pack://application:,,,/images/theme.png"
                                Width="16" Height="16" />
                     </MenuItem.Icon>
-                    <MenuItem x:Name="LightTheme" Header="Light" Click="ChangeBaseTheme_Click" IsCheckable="True"/>
-                    <MenuItem x:Name="DarkTheme" Header="Dark" Click="ChangeBaseTheme_Click" IsCheckable="True"/>
+                    <MenuItem x:Name="LightTheme" Header="Light" Click="ChangeBaseTheme_Click" IsCheckable="True" />
+                    <MenuItem x:Name="DarkTheme" Header="Dark" Click="ChangeBaseTheme_Click" IsCheckable="True" />
                 </MenuItem>
                 <MenuItem Header="Accent Colors">
                     <MenuItem.Icon>
                         <Image Source="pack://application:,,,/images/theme.png"
                                Width="16" Height="16" />
                     </MenuItem.Icon>
-                    <MenuItem x:Name="RedAccent" Header="Red" Click="ChangeAccentColor_Click" IsCheckable="True"/>
-                    <MenuItem x:Name="GreenAccent" Header="Green" Click="ChangeAccentColor_Click" IsCheckable="True"/>
-                    <MenuItem x:Name="BlueAccent" Header="Blue" Click="ChangeAccentColor_Click" IsCheckable="True"/>
-                    <MenuItem x:Name="PurpleAccent" Header="Purple" Click="ChangeAccentColor_Click" IsCheckable="True"/>
-                    <MenuItem x:Name="OrangeAccent" Header="Orange" Click="ChangeAccentColor_Click" IsCheckable="True"/>
-                    <MenuItem x:Name="LimeAccent" Header="Lime" Click="ChangeAccentColor_Click" IsCheckable="True"/>
-                    <MenuItem x:Name="EmeraldAccent" Header="Emerald" Click="ChangeAccentColor_Click" IsCheckable="True"/>
-                    <MenuItem x:Name="TealAccent" Header="Teal" Click="ChangeAccentColor_Click" IsCheckable="True"/>
-                    <MenuItem x:Name="CyanAccent" Header="Cyan" Click="ChangeAccentColor_Click" IsCheckable="True"/>
-                    <MenuItem x:Name="CobaltAccent" Header="Cobalt" Click="ChangeAccentColor_Click" IsCheckable="True"/>
-                    <MenuItem x:Name="IndigoAccent" Header="Indigo" Click="ChangeAccentColor_Click" IsCheckable="True"/>
-                    <MenuItem x:Name="VioletAccent" Header="Violet" Click="ChangeAccentColor_Click" IsCheckable="True"/>
-                    <MenuItem x:Name="PinkAccent" Header="Pink" Click="ChangeAccentColor_Click" IsCheckable="True"/>
-                    <MenuItem x:Name="MagentaAccent" Header="Magenta" Click="ChangeAccentColor_Click" IsCheckable="True"/>
-                    <MenuItem x:Name="CrimsonAccent" Header="Crimson" Click="ChangeAccentColor_Click" IsCheckable="True"/>
-                    <MenuItem x:Name="AmberAccent" Header="Amber" Click="ChangeAccentColor_Click" IsCheckable="True"/>
-                    <MenuItem x:Name="YellowAccent" Header="Yellow" Click="ChangeAccentColor_Click" IsCheckable="True"/>
-                    <MenuItem x:Name="BrownAccent" Header="Brown" Click="ChangeAccentColor_Click" IsCheckable="True"/>
-                    <MenuItem x:Name="OliveAccent" Header="Olive" Click="ChangeAccentColor_Click" IsCheckable="True"/>
-                    <MenuItem x:Name="SteelAccent" Header="Steel" Click="ChangeAccentColor_Click" IsCheckable="True"/>
-                    <MenuItem x:Name="MauveAccent" Header="Mauve" Click="ChangeAccentColor_Click" IsCheckable="True"/>
-                    <MenuItem x:Name="TaupeAccent" Header="Taupe" Click="ChangeAccentColor_Click" IsCheckable="True"/>
-                    <MenuItem x:Name="SiennaAccent" Header="Sienna" Click="ChangeAccentColor_Click" IsCheckable="True"/>
+                    <MenuItem x:Name="RedAccent" Header="Red" Click="ChangeAccentColor_Click" IsCheckable="True" />
+                    <MenuItem x:Name="GreenAccent" Header="Green" Click="ChangeAccentColor_Click" IsCheckable="True" />
+                    <MenuItem x:Name="BlueAccent" Header="Blue" Click="ChangeAccentColor_Click" IsCheckable="True" />
+                    <MenuItem x:Name="PurpleAccent" Header="Purple" Click="ChangeAccentColor_Click" IsCheckable="True" />
+                    <MenuItem x:Name="OrangeAccent" Header="Orange" Click="ChangeAccentColor_Click" IsCheckable="True" />
+                    <MenuItem x:Name="LimeAccent" Header="Lime" Click="ChangeAccentColor_Click" IsCheckable="True" />
+                    <MenuItem x:Name="EmeraldAccent" Header="Emerald" Click="ChangeAccentColor_Click"
+                              IsCheckable="True" />
+                    <MenuItem x:Name="TealAccent" Header="Teal" Click="ChangeAccentColor_Click" IsCheckable="True" />
+                    <MenuItem x:Name="CyanAccent" Header="Cyan" Click="ChangeAccentColor_Click" IsCheckable="True" />
+                    <MenuItem x:Name="CobaltAccent" Header="Cobalt" Click="ChangeAccentColor_Click" IsCheckable="True" />
+                    <MenuItem x:Name="IndigoAccent" Header="Indigo" Click="ChangeAccentColor_Click" IsCheckable="True" />
+                    <MenuItem x:Name="VioletAccent" Header="Violet" Click="ChangeAccentColor_Click" IsCheckable="True" />
+                    <MenuItem x:Name="PinkAccent" Header="Pink" Click="ChangeAccentColor_Click" IsCheckable="True" />
+                    <MenuItem x:Name="MagentaAccent" Header="Magenta" Click="ChangeAccentColor_Click"
+                              IsCheckable="True" />
+                    <MenuItem x:Name="CrimsonAccent" Header="Crimson" Click="ChangeAccentColor_Click"
+                              IsCheckable="True" />
+                    <MenuItem x:Name="AmberAccent" Header="Amber" Click="ChangeAccentColor_Click" IsCheckable="True" />
+                    <MenuItem x:Name="YellowAccent" Header="Yellow" Click="ChangeAccentColor_Click" IsCheckable="True" />
+                    <MenuItem x:Name="BrownAccent" Header="Brown" Click="ChangeAccentColor_Click" IsCheckable="True" />
+                    <MenuItem x:Name="OliveAccent" Header="Olive" Click="ChangeAccentColor_Click" IsCheckable="True" />
+                    <MenuItem x:Name="SteelAccent" Header="Steel" Click="ChangeAccentColor_Click" IsCheckable="True" />
+                    <MenuItem x:Name="MauveAccent" Header="Mauve" Click="ChangeAccentColor_Click" IsCheckable="True" />
+                    <MenuItem x:Name="TaupeAccent" Header="Taupe" Click="ChangeAccentColor_Click" IsCheckable="True" />
+                    <MenuItem x:Name="SiennaAccent" Header="Sienna" Click="ChangeAccentColor_Click" IsCheckable="True" />
                 </MenuItem>
             </MenuItem>
-            
+
             <MenuItem Header="Donate">
                 <MenuItem Click="DonateButton_Click" Header="Donate">
                     <MenuItem.Icon>
-                        <Image Source="pack://application:,,,/images/donate.png" Width="16" Height="16"/>
+                        <Image Source="pack://application:,,,/images/donate.png" Width="16" Height="16" />
                     </MenuItem.Icon>
                 </MenuItem>
             </MenuItem>
             <MenuItem Header="About">
                 <MenuItem Click="About_Click" Header="About">
                     <MenuItem.Icon>
-                        <Image Source="pack://application:,,,/images/about.png" Width="16" Height="16"/>
+                        <Image Source="pack://application:,,,/images/about.png" Width="16" Height="16" />
                     </MenuItem.Icon>
                 </MenuItem>
             </MenuItem>
             <MenuItem Header="Exit">
                 <MenuItem Click="Exit_Click" Header="Exit">
                     <MenuItem.Icon>
-                        <Image Source="pack://application:,,,/images/exit.png" Width="16" Height="16"/>
+                        <Image Source="pack://application:,,,/images/exit.png" Width="16" Height="16" />
                     </MenuItem.Icon>
                 </MenuItem>
             </MenuItem>
-            
+
         </Menu>
 
         <!--  ROM Folder Selection  -->
@@ -241,7 +244,7 @@
             Margin="10">
             <TextBox
                 x:Name="TxtRomFolder"
-                Width="290"
+                Width="330"
                 Height="25"
                 Margin="0,0,10,0"
                 HorizontalAlignment="Stretch" />
@@ -261,7 +264,7 @@
             Margin="10,0,10,10">
             <TextBox
                 x:Name="TxtImageFolder"
-                Width="290"
+                Width="330"
                 Height="25"
                 Margin="0,0,10,0"
                 HorizontalAlignment="Stretch" />
@@ -278,7 +281,7 @@
         <DockPanel
             Grid.Row="3"
             Grid.Column="0"
-            Margin="10,0,10,10"
+            Margin="10,10,10,10"
             HorizontalAlignment="Center">
             <Button
                 Width="160"
@@ -324,40 +327,41 @@
                 </ListBox>
             </Border>
         </ScrollViewer>
+        
+        <Grid Grid.Row="1" Grid.Column="1" Grid.RowSpan="5" Margin="0,10,10,10">
+            <!-- Define row heights for the nested grid -->
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" /> <!-- For Search Query Display -->
+                <RowDefinition Height="*" />    <!-- For Image Display -->
+            </Grid.RowDefinitions>
 
-        <!--  Search Query Display  -->
-        <DockPanel
-            Grid.Row="1"
-            Grid.Column="1"
-            Margin="0,10,10,10">
-            <Label
-                x:Name="LblSearchQuery" />
-        </DockPanel>
+            <!-- Search Query Display -->
+            <DockPanel Grid.Row="0" Margin="0,0,0,10">
+                <Label x:Name="LblSearchQuery" />
+            </DockPanel>
 
-        <!--  Image Display  -->
-        <ScrollViewer
-            Grid.Row="2"
-            Grid.RowSpan="4"
-            Grid.Column="1"
-            Margin="0,0,10,10"
-            VerticalScrollBarVisibility="Auto">
-            <ScrollViewer.Background>
-                <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
-                    <GradientStop Color="#FF545454" />
-                    <GradientStop Offset="1" Color="#FFD2D2D2" />
-                </LinearGradientBrush>
-            </ScrollViewer.Background>
-            <ItemsControl ItemsSource="{Binding SimilarImages}">
-                <ItemsControl.ItemTemplate>
-                    <StaticResource ResourceKey="ImageCellTemplate" />
-                </ItemsControl.ItemTemplate>
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <WrapPanel x:Name="PanelSimilarImages" />
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-            </ItemsControl>
-
-        </ScrollViewer>
+            <!-- Image Display -->
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <ScrollViewer.Background>
+                    <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
+                        <GradientStop Color="#FF545454" />
+                        <GradientStop Offset="1" Color="#FFD2D2D2" />
+                    </LinearGradientBrush>
+                </ScrollViewer.Background>
+        
+                <!-- ItemsControl for displaying similar images -->
+                <ItemsControl ItemsSource="{Binding SimilarImages}">
+                    <ItemsControl.ItemTemplate>
+                        <StaticResource ResourceKey="ImageCellTemplate" />
+                    </ItemsControl.ItemTemplate>
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel x:Name="PanelSimilarImages" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+            </ScrollViewer>
+        </Grid>
+        
     </Grid>
 </controls:MetroWindow>

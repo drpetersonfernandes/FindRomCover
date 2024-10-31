@@ -18,7 +18,7 @@ public static class PlaySound
         }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show("Error playing sound: " + ex.Message);
+            System.Windows.MessageBox.Show($"Error playing sound: {ex.Message}", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
         }
     }
 }

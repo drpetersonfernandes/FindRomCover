@@ -5,250 +5,255 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.ComponentModel;
 using System.Globalization;
-using System.Reflection;
+using System.Windows.Documents;
 using ControlzEx.Theming;
 
-namespace FindRomCover
+namespace FindRomCover;
+
+public partial class MainWindow : INotifyPropertyChanged
 {
-    public partial class MainWindow : INotifyPropertyChanged
+    public event PropertyChangedEventHandler? PropertyChanged;
+    private readonly Settings _settings = new();
+    private string _imageFolderPath;
+    private string _selectedRomFileName = string.Empty;
+    public ObservableCollection<ImageData> SimilarImages { get; set; } = new ObservableCollection<ImageData>();
+    private const string DefaultSimilarityAlgorithm = "Jaro-Winkler Distance";
+        
+    private int _imageWidth;
+    public int ImageWidth
     {
-        public event PropertyChangedEventHandler? PropertyChanged;
-        private readonly Settings _settings = new();
-        private string? _imageFolderPath;
-        private string? _selectedRomFileName;
-        public ObservableCollection<ImageData> SimilarImages { get; set; } = [];
-        
-        private int _imageWidth;
-        public int ImageWidth
+        get => _imageWidth;
+        set
         {
-            get => _imageWidth;
-            set
+            if (_imageWidth != value)
             {
-                if (_imageWidth != value)
-                {
-                    _imageWidth = value;
-                    OnPropertyChanged(nameof(ImageWidth));
-                }
+                _imageWidth = value;
+                OnPropertyChanged(nameof(ImageWidth));
             }
         }
+    }
 
-        private int _imageHeight;
-        public int ImageHeight
+    private int _imageHeight;
+    public int ImageHeight
+    {
+        get => _imageHeight;
+        set
         {
-            get => _imageHeight;
-            set
+            if (_imageHeight != value)
             {
-                if (_imageHeight != value)
-                {
-                    _imageHeight = value;
-                    OnPropertyChanged(nameof(ImageHeight));
-                }
+                _imageHeight = value;
+                OnPropertyChanged(nameof(ImageHeight));
             }
         }
+    }
         
-        private string SelectedSimilarityAlgorithm { get; set; } = "Jaro-Winkler Distance"; // Default value
+    private string SelectedSimilarityAlgorithm { get; set; } = DefaultSimilarityAlgorithm;
         
-        public MainWindow()
-        {
-            InitializeComponent();
-            DataContext = this;
+    public MainWindow()
+    {
+        InitializeComponent();
+        DataContext = this;
            
-            // Check for command-line arguments
-            string[] args = Environment.GetCommandLineArgs();
-            if (args.Length == 3)
-            {
-                // args[1] is expected to be ImageFolder, args[2] to be RomFolder
-                _imageFolderPath = args[1];
-                TxtImageFolder.Text = _imageFolderPath;
-                TxtRomFolder.Text = args[2];
-            }
-            else
-            {
-                // Proceed with regular execution if arguments are not as expected
-                // or no arguments are provided
-                TxtImageFolder.Text = "";  // Set to default or empty if no arguments
-                TxtRomFolder.Text = "";    // Set to default or empty if no arguments
-            }
+        // Check for command-line arguments
+        string[] args = Environment.GetCommandLineArgs();
+        if (args.Length == 3)
+        {
+            // args[1] is expected to be ImageFolder, args[2] to be RomFolder
+            _imageFolderPath = args[1];
+            TxtImageFolder.Text = _imageFolderPath;
+            TxtRomFolder.Text = args[2];
+        }
+        else
+        {
+            // Proceed with regular execution if arguments are not as expected
+            // or no arguments are provided
+            _imageFolderPath = "";
+            TxtImageFolder.Text = ""; // Set to default or empty if no arguments
+            TxtRomFolder.Text = "";    // Set to default or empty if no arguments
+        }
             
-            LoadSettings();
-            UpdateThumbnailSizeMenuChecks();
-            UpdateSimilarityAlgorithmChecks();
-            UpdateSimilarityThresholdChecks();
-        }
+        LoadSettings();
+        UpdateThumbnailSizeMenuChecks();
+        UpdateSimilarityAlgorithmChecks();
+        UpdateSimilarityThresholdChecks();
+    }
         
-        private void LoadSettings()
-        {
-            ImageWidth = _settings.ImageWidth;
-            ImageHeight = _settings.ImageHeight;
+    private void LoadSettings()
+    {
+        ImageWidth = _settings.ImageWidth;
+        ImageHeight = _settings.ImageHeight;
             
-            // Load and apply the theme
-            ThemeManager.Current.ChangeThemeBaseColor(this, _settings.BaseTheme);
-            ThemeManager.Current.ChangeThemeColorScheme(this, _settings.AccentColor);
+        // Load and apply the theme
+        ThemeManager.Current.ChangeThemeBaseColor(this, _settings.BaseTheme);
+        ThemeManager.Current.ChangeThemeColorScheme(this, _settings.AccentColor);
 
-            // Mark the correct menu item as checked
-            if (_settings.BaseTheme == "Light")
-            {
-                LightTheme.IsChecked = true;
-            }
-            else
-            {
-                DarkTheme.IsChecked = true;
-            }
-
-            if (FindName(_settings.AccentColor + "Accent") is MenuItem accentMenuItem)
-            {
-                accentMenuItem.IsChecked = true;
-            }
+        // Mark the correct menu item as checked
+        if (_settings.BaseTheme == "Light")
+        {
+            LightTheme.IsChecked = true;
+        }
+        else
+        {
+            DarkTheme.IsChecked = true;
         }
 
-        protected virtual void OnPropertyChanged(string propertyName) =>
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        if (FindName(_settings.AccentColor + "Accent") is MenuItem accentMenuItem)
+        {
+            accentMenuItem.IsChecked = true;
+        }
+    }
+
+    private void OnPropertyChanged(string propertyName) =>
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         
-        private void ChangeBaseTheme_Click(object sender, RoutedEventArgs e)
+    private void ChangeBaseTheme_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem menuItem)
         {
-            if (sender is MenuItem menuItem)
-            {
-                string theme = menuItem.Name == "LightTheme" ? "Light" : "Dark";
-                ThemeManager.Current.ChangeThemeBaseColor(this, theme);
+            string theme = menuItem.Name == "LightTheme" ? "Light" : "Dark";
+            ThemeManager.Current.ChangeThemeBaseColor(this, theme);
 
-                // Save base theme to settings.xml
-                Settings.SaveSetting("BaseTheme", theme);
+            // Save base theme to settings.xml
+            _settings.BaseTheme = theme;
+            _settings.SaveSettings();
 
-                // Update menu item check state
-                LightTheme.IsChecked = theme == "Light";
-                DarkTheme.IsChecked = theme == "Dark";
-            }
+            // Update menu item check state
+            LightTheme.IsChecked = theme == "Light";
+            DarkTheme.IsChecked = theme == "Dark";
         }
+    }
 
-        private void ChangeAccentColor_Click(object sender, RoutedEventArgs e)
+    private void ChangeAccentColor_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem menuItem)
         {
-            if (sender is MenuItem menuItem)
+            // Extract the accent color name from the selected menu item's name
+            string accent = menuItem.Name.Replace("Accent", "");
+
+            // Change the accent color of the application
+            ThemeManager.Current.ChangeThemeColorScheme(this, accent);
+
+            // Save the selected accent color to the settings.xml file
+            _settings.AccentColor = accent;
+            _settings.SaveSettings();
+
+            // Uncheck all accent color options before checking the new one
+            foreach (var item in ((MenuItem)menuItem.Parent).Items)
             {
-                // Extract the accent color name from the selected menu item's name
-                string accent = menuItem.Name.Replace("Accent", "");
-
-                // Change the accent color of the application
-                ThemeManager.Current.ChangeThemeColorScheme(this, accent);
-
-                // Save the selected accent color to the settings.xml file
-                Settings.SaveSetting("AccentColor", accent);
-
-                // Uncheck all accent color options before checking the new one
-                foreach (var item in ((MenuItem)menuItem.Parent).Items)
+                if (item is MenuItem accentMenuItem)
                 {
-                    if (item is MenuItem accentMenuItem)
-                    {
-                        accentMenuItem.IsChecked = false;  // Uncheck all items
-                    }
-                }
-
-                // Check the currently selected accent color
-                menuItem.IsChecked = true;
-            }
-        }
-        
-        private void DonateButton_Click(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                var psi = new System.Diagnostics.ProcessStartInfo
-                {
-                    FileName = "https://www.purelogiccode.com/donate",
-                    UseShellExecute = true
-                };
-                System.Diagnostics.Process.Start(psi);
-            }
-            catch (Exception ex)
-            {
-                System.Windows.MessageBox.Show("Unable to open the link: " + ex.Message);
-            }
-        }
-
-        private void About_Click(object sender, RoutedEventArgs e)
-        {
-            var version1 = Assembly.GetExecutingAssembly().GetName().Version;
-            if (version1 != null)
-            {
-                string version = version1.ToString();
-                System.Windows.MessageBox.Show($"Find Rom Cover\n\nVersion {version}\n\nhttps://purelogiccode.com", "About");
-            }
-        }
-
-        private void Exit_Click(object sender, RoutedEventArgs e)
-        {
-            this.Close();
-        }
-
-        private void BtnBrowseRomFolder_Click(object sender, RoutedEventArgs e)
-        {
-            var dialog = new FolderBrowserDialog
-            {
-                Description = "Select the folder where your ROM files are stored."
-            };
-
-            if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
-            {
-                TxtRomFolder.Text = dialog.SelectedPath;
-            }
-        }
-
-        private void BtnBrowseImageFolder_Click(object sender, RoutedEventArgs e)
-        {
-            var dialog = new FolderBrowserDialog
-            {
-                Description = "Select the folder where your image files are stored."
-            };
-
-            if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
-            {
-                TxtImageFolder.Text = dialog.SelectedPath;
-                _imageFolderPath = dialog.SelectedPath;
-            }
-        }
-
-        private void BtnCheckForMissingImages_Click(object sender, RoutedEventArgs e)
-        {
-            LoadMissingImagesList();
-        }
-        
-        private void LoadMissingImagesList()
-        {
-            if (_settings.SupportedExtensions.Length == 0)
-            {
-                System.Windows.MessageBox.Show("No supported file extensions loaded. Please check your settings.xml.");
-                return;
-            }
-
-            if (string.IsNullOrEmpty(TxtRomFolder.Text) || string.IsNullOrEmpty(TxtImageFolder.Text))
-            {
-                System.Windows.MessageBox.Show("Please select both ROM and Image folders.");
-                return;
-            }
-
-            LstMissingImages.Items.Clear();
-
-            var searchPatterns = _settings.SupportedExtensions.Select(ext => "*." + ext).ToArray();
-            var files = searchPatterns.SelectMany(ext => Directory.GetFiles(TxtRomFolder.Text, ext)).ToArray();
-
-            CheckForMissingImages(files);
-
-        }
-
-        private void CheckForMissingImages(string[] romFiles)
-        {
-            foreach (string file in romFiles)
-            {
-                string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(file);
-                string? correspondingImagePath = FindCorrespondingImage(fileNameWithoutExtension);
-
-                if (correspondingImagePath == null)
-                {
-                    LstMissingImages.Items.Add(fileNameWithoutExtension);
+                    accentMenuItem.IsChecked = false;  // Uncheck all items
                 }
             }
-            UpdateMissingCount(); // Update count whenever the check is performed
 
+            // Check the currently selected accent color
+            menuItem.IsChecked = true;
         }
+    }
+        
+    private void DonateButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var psi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "https://www.purelogiccode.com/donate",
+                UseShellExecute = true
+            };
+            System.Diagnostics.Process.Start(psi);
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show($"Unable to open the donation link: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            
+            string formattedException = $"Unable to open the donation link.\n\nException type: {ex.GetType().Name}\nException details: {ex.Message}";
+            Task logTask = LogErrors.LogErrorAsync(ex, formattedException);
+            logTask.Wait(TimeSpan.FromSeconds(2));
+        }
+    }
+
+    private void About_Click(object sender, RoutedEventArgs e)
+    {
+        About aboutWindow = new();
+        aboutWindow.ShowDialog();
+    }
+
+    private void Exit_Click(object sender, RoutedEventArgs e)
+    {
+        Close();
+    }
+
+    private void BtnBrowseRomFolder_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new FolderBrowserDialog
+        {
+            Description = "Select the folder where your ROM or ISO files are stored."
+        };
+
+        if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+        {
+            TxtRomFolder.Text = dialog.SelectedPath;
+        }
+    }
+
+    private void BtnBrowseImageFolder_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new FolderBrowserDialog
+        {
+            Description = "Select the folder where your image files are stored."
+        };
+
+        if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+        {
+            TxtImageFolder.Text = dialog.SelectedPath;
+            _imageFolderPath = dialog.SelectedPath;
+        }
+    }
+
+    private void BtnCheckForMissingImages_Click(object sender, RoutedEventArgs e)
+    {
+        LoadMissingImagesList();
+    }
+        
+    private void LoadMissingImagesList()
+    {
+        if (_settings.SupportedExtensions.Length == 0)
+        {
+            System.Windows.MessageBox.Show("No supported file extensions loaded. Please check file 'settings.xml'", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        if (string.IsNullOrEmpty(TxtRomFolder.Text) || string.IsNullOrEmpty(TxtImageFolder.Text))
+        {
+            System.Windows.MessageBox.Show("Please select both ROM and Image folders.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        // Clear list before setting new values
+        LstMissingImages.Items.Clear();
+        
+        var searchPatterns = _settings.SupportedExtensions.Select(ext => "*." + ext).ToArray();
+        var files = searchPatterns.SelectMany(ext => Directory.GetFiles(TxtRomFolder.Text, ext)).ToArray();
+            
+        CheckForMissingImages(files);
+    }
+
+    private void CheckForMissingImages(string[] romFiles)
+    {
+        foreach (string file in romFiles)
+        {
+            string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(file);
+            string? correspondingImagePath = FindCorrespondingImage(fileNameWithoutExtension);
+
+            if (correspondingImagePath == null)
+            {
+                LstMissingImages.Items.Add(fileNameWithoutExtension);
+            }
+        }
+        // Update count whenever the check is performed
+        UpdateMissingCount(); 
+
+    }
 
         private string? FindCorrespondingImage(string fileNameWithoutExtension)
         {
@@ -264,235 +269,248 @@ namespace FindRomCover
             return null;
         }
 
-        private async void LstMissingImages_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private async void LstMissingImages_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (LstMissingImages.SelectedItem is string selectedFile)
         {
-            if (LstMissingImages.SelectedItem is string selectedFile)
+            _selectedRomFileName = selectedFile;
+            var imageFolderPath = _imageFolderPath;
+            var similarityThreshold = _settings.SimilarityThreshold;
+
+            // Call the method and await its result
+            var similarImages = await SimilarityCalculator.CalculateSimilarityAsync(selectedFile, imageFolderPath, similarityThreshold, SelectedSimilarityAlgorithm);
+
+            // Update the UI accordingly
+            // Assuming SimilarImages is an ObservableCollection bound to a UI control
+            await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
             {
-                _selectedRomFileName = selectedFile;
-                var imageFolderPath = this._imageFolderPath;
-                var similarityThreshold = this._settings.SimilarityThreshold;
+                // Update the label to display the search query
+                var textBlock = new TextBlock();
+                textBlock.Inlines.Add(new Run("Search Query") { FontWeight = FontWeights.Bold });
+                textBlock.Inlines.Add(new Run($"\nSimilarity Algorithm: {SelectedSimilarityAlgorithm}\nFilename: {selectedFile}"));
+                LblSearchQuery.Content = textBlock;
 
-                // Call the method and await its result
-                if (imageFolderPath != null)
+                SimilarImages.Clear();
+                foreach (var imageData in similarImages)
                 {
-                    var similarImages = await SimilarityCalculator.CalculateSimilarityAsync(selectedFile, imageFolderPath, similarityThreshold, SelectedSimilarityAlgorithm);
-
-                    // Update the UI accordingly
-                    // Assuming SimilarImages is an ObservableCollection bound to a UI control
-                    System.Windows.Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        // Update the label to display the search query
-                        LblSearchQuery.Content = "Similarity Algorithm: " + SelectedSimilarityAlgorithm + "\nSearch Query: " + selectedFile;
-
-                        SimilarImages.Clear();
-                        foreach (var imageData in similarImages)
-                        {
-                            SimilarImages.Add(imageData);
-                        }
-                    });
+                    SimilarImages.Add(imageData);
                 }
-            }
+            });
         }
+    }
 
-        public class ImageData
-        {
-            public string? ImagePath { get; init; }
-            public string? ImageName { get; set; }
-            public double SimilarityThreshold { get; init; }
-        }
+    public class ImageData
+    {
+        public string? ImagePath { get; init; }
+        public string? ImageName { get; set; }
+        public double SimilarityThreshold { get; init; }
+    }
 
-        private void ImageCell_MouseDown(object sender, MouseButtonEventArgs e)
+    private void ImageCell_MouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: ImageData imageData })
         {
-            if (sender is FrameworkElement { DataContext: ImageData imageData })
+            if (!string.IsNullOrEmpty(_selectedRomFileName) &&
+                !string.IsNullOrEmpty(imageData.ImagePath) &&
+                !string.IsNullOrEmpty(_imageFolderPath))
             {
-                if (!string.IsNullOrEmpty(_selectedRomFileName) &&
-                    !string.IsNullOrEmpty(imageData.ImagePath) &&
-                    !string.IsNullOrEmpty(_imageFolderPath))
+                string newFileName = Path.Combine(_imageFolderPath, _selectedRomFileName + ".png");
+                if (ConvertAndSaveImage(imageData.ImagePath, newFileName))
                 {
-                    string newFileName = Path.Combine(_imageFolderPath, _selectedRomFileName + ".png");
-                    if (ConvertAndSaveImage(imageData.ImagePath, newFileName))
-                    {
-                        PlaySound.PlayClickSound();
-                        RemoveSelectedItem();
-                        SimilarImages.Clear();
-                        UpdateMissingCount(); // Update count whenever an item is removed
-                    }
-                    else
-                    {
-                        System.Windows.MessageBox.Show("Failed to save the image. Please try again.");
-                    }
-                }
-            }
-        }
-
-        private static bool ConvertAndSaveImage(string sourcePath, string targetPath)
-        {
-            try
-            {
-                using (var image = System.Drawing.Image.FromFile(sourcePath))
-                {
-                    using var bitmap = new Bitmap(image);
-                    bitmap.Save(targetPath, System.Drawing.Imaging.ImageFormat.Png);
-                }
-
-                // Check if the file was saved successfully
-                return File.Exists(targetPath);
-            }
-            catch (Exception ex)
-            {
-                System.Windows.MessageBox.Show($"Error saving file: {ex.Message}");
-                return false;
-            }
-        }
-
-        private void BtnRemoveSelectedItem_Click(object sender, RoutedEventArgs e)
-        {
-            RemoveSelectedItem();
-            PlaySound.PlayClickSound();
-
-        }
-
-        private void RemoveSelectedItem()
-        {
-            if (LstMissingImages.SelectedItem != null)
-            {
-                LstMissingImages.Items.Remove(LstMissingImages.SelectedItem);
-                UpdateMissingCount();
-
-            }
-        }
-
-        private void UpdateMissingCount()
-        {
-            LabelMissingRoms.Content = "Missing Covers: " + LstMissingImages.Items.Count;
-        }
-
-        private void SetSimilarityAlgorithm_Click(object sender, RoutedEventArgs e)
-        {
-            if (sender is MenuItem menuItem)
-            {
-                SelectedSimilarityAlgorithm = menuItem.Header.ToString() ?? "Jaro-Winkler Distance";
-                SaveSimilarityAlgorithmSetting(SelectedSimilarityAlgorithm);
-                UncheckAllSimilarityAlgorithms();
-                menuItem.IsChecked = true;
-            }
-        }
-
-        private void UpdateSimilarityAlgorithmChecks()
-        {
-            foreach (var item in MenuSimilarityAlgorithms.Items)
-            {
-                if (item is MenuItem menuItem)
-                {
-                    menuItem.IsChecked = menuItem.Header.ToString() == _settings.SelectedSimilarityAlgorithm;
-                }
-            }
-        }
-
-        private void UncheckAllSimilarityAlgorithms()
-        {
-            foreach (var item in MenuSimilarityAlgorithms.Items)
-            {
-                if (item is MenuItem menuItem)
-                {
-                    // Check if the menuItem's header matches the SelectedSimilarityAlgorithm
-                    menuItem.IsChecked = menuItem.Header.ToString() == SelectedSimilarityAlgorithm;
-                }
-            }
-        }
-
-        private static void SaveSimilarityAlgorithmSetting(string algorithm)
-        {
-            Settings.SaveSetting("SimilarityAlgorithm", algorithm);
-        }
-
-        private void SetSimilarityThreshold_Click(object sender, RoutedEventArgs e)
-        {
-            if (sender is MenuItem clickedItem)
-            {
-                string headerText = clickedItem.Header.ToString()?.Replace("%", "") ?? "70";
-
-                if (double.TryParse(headerText, out double rate))
-                {
-                    _settings.SimilarityThreshold = rate;
-                    UncheckAllSimilarityThresholds();
-                    clickedItem.IsChecked = true;
-                    Settings.SaveSetting("SimilarityThreshold", _settings.SimilarityThreshold.ToString(CultureInfo.InvariantCulture));
+                    PlaySound.PlayClickSound();
+                    RemoveSelectedItem();
+                    SimilarImages.Clear();
+                    UpdateMissingCount(); // Update count whenever an item is removed
                 }
                 else
                 {
-                    System.Windows.MessageBox.Show("Invalid similarity rate selected.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    System.Windows.MessageBox.Show("Failed to save the image.\n\nMaybe the application could not download the image file.","Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    
+                    string formattedException = "Failed to save the image.\n\nMaybe the application could not download the image file.";
+                    Exception ex = new Exception(formattedException);
+                    Task logTask = LogErrors.LogErrorAsync(ex, formattedException);
+                    logTask.Wait(TimeSpan.FromSeconds(2));
                 }
             }
         }
+    }
 
-        private void UpdateSimilarityThresholdChecks()
+    private static bool ConvertAndSaveImage(string sourcePath, string targetPath)
+    {
+        try
         {
-            foreach (var item in MySimilarityMenu.Items)
+            using (var image = System.Drawing.Image.FromFile(sourcePath))
             {
-                if (item is MenuItem menuItem)
-                {
-                    string thresholdString = menuItem.Header.ToString()?.Replace("%", "") ?? "70";
-                    if (double.TryParse(thresholdString, NumberStyles.Any, CultureInfo.InvariantCulture, out double menuItemThreshold))
-                    {
-                        // Check if this menu item's threshold matches the current setting
-                        menuItem.IsChecked = Math.Abs(menuItemThreshold - _settings.SimilarityThreshold) < 0.01;
-                    }
-                }
+                using var bitmap = new Bitmap(image);
+                bitmap.Save(targetPath, System.Drawing.Imaging.ImageFormat.Png);
             }
-        }
 
-        private void UncheckAllSimilarityThresholds()
+            // Check if the file was saved successfully
+            return File.Exists(targetPath);
+        }
+        catch (Exception ex)
         {
-            foreach (var item in MySimilarityMenu.Items)
+            System.Windows.MessageBox.Show($"Error saving image file\n\nMaybe the application does not have write privileges.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            
+            string formattedException = $"Error saving image file\n\nMaybe the application does not have write privileges.\n\nException type: {ex.GetType().Name}\nException details: {ex.Message}";
+            Task logTask = LogErrors.LogErrorAsync(ex, formattedException);
+            logTask.Wait(TimeSpan.FromSeconds(2));
+            
+            return false;
+        }
+    }
+
+    private void BtnRemoveSelectedItem_Click(object sender, RoutedEventArgs e)
+    {
+        RemoveSelectedItem();
+        PlaySound.PlayClickSound();
+    }
+
+    private void RemoveSelectedItem()
+    {
+        if (LstMissingImages.SelectedItem != null)
+        {
+            LstMissingImages.Items.Remove(LstMissingImages.SelectedItem);
+            UpdateMissingCount();
+        }
+    }
+
+    private void UpdateMissingCount()
+    {
+        LabelMissingRoms.Content = "Missing Covers: " + LstMissingImages.Items.Count;
+    }
+
+    private void SetSimilarityAlgorithm_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem menuItem)
+        {
+            SelectedSimilarityAlgorithm = menuItem.Header.ToString() ?? DefaultSimilarityAlgorithm;
+            SaveSimilarityAlgorithmSetting(SelectedSimilarityAlgorithm);
+            UncheckAllSimilarityAlgorithms();
+            menuItem.IsChecked = true;
+        }
+    }
+
+    private void UpdateSimilarityAlgorithmChecks()
+    {
+        foreach (var item in MenuSimilarityAlgorithms.Items)
+        {
+            if (item is MenuItem menuItem)
             {
-                if (item is MenuItem menuItem)
-                {
-                    if (double.TryParse(menuItem.Header.ToString()?.Replace("%", ""), out double rate))
-                    {
-                        menuItem.IsChecked = Math.Abs(rate - _settings.SimilarityThreshold) < 0.01; // Checking for equality in double
-                    }
-                }
+                menuItem.IsChecked = menuItem.Header.ToString() == _settings.SelectedSimilarityAlgorithm;
             }
         }
+    }
 
-        private void SetThumbnailSize_Click(object sender, RoutedEventArgs e)
+    private void UncheckAllSimilarityAlgorithms()
+    {
+        foreach (var item in MenuSimilarityAlgorithms.Items)
         {
-            if (sender is MenuItem { Header: not null } menuItem && int.TryParse(menuItem.Header.ToString()?.Split(' ')[0], out int size))
+            if (item is MenuItem menuItem)
             {
-                ImageWidth = size;
-                ImageHeight = size;
+                // Check if the menuItem's header matches the SelectedSimilarityAlgorithm
+                menuItem.IsChecked = menuItem.Header.ToString() == SelectedSimilarityAlgorithm;
+            }
+        }
+    }
 
-                Settings.SaveSetting("ImageSize/Width", size.ToString());
-                Settings.SaveSetting("ImageSize/Height", size.ToString());
+    private void SaveSimilarityAlgorithmSetting(string algorithm)
+    {
+        _settings.SelectedSimilarityAlgorithm = algorithm;
+        _settings.SaveSettings();
+    }
 
-                foreach (var item in ImageSizeMenu.Items)
+    private void SetSimilarityThreshold_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem clickedItem)
+        {
+            string headerText = clickedItem.Header.ToString()?.Replace("%", "") ?? "70";
+
+            if (double.TryParse(headerText, out double rate))
+            {
+                _settings.SimilarityThreshold = rate;
+                UncheckAllSimilarityThresholds();
+                clickedItem.IsChecked = true;
+                _settings.SaveSettings();
+            }
+            else
+            {
+                System.Windows.MessageBox.Show("Invalid similarity threshold selected.\n\nThe error was reported to the developer that will try to fix the issue.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                
+                string formattedException = "Invalid similarity threshold selected.";
+                Exception ex = new Exception(formattedException);
+                Task logTask = LogErrors.LogErrorAsync(ex, formattedException);
+                logTask.Wait(TimeSpan.FromSeconds(2));
+            }
+        }
+    }
+
+    private void UpdateSimilarityThresholdChecks()
+    {
+        foreach (var item in MySimilarityMenu.Items)
+        {
+            if (item is MenuItem menuItem)
+            {
+                string thresholdString = menuItem.Header.ToString()?.Replace("%", "") ?? "70";
+                if (double.TryParse(thresholdString, NumberStyles.Any, CultureInfo.InvariantCulture, out double menuItemThreshold))
                 {
-                    if (item is MenuItem sizeMenuItem)
-                    {
-                        sizeMenuItem.IsChecked = sizeMenuItem == menuItem;
-                    }
+                    // Check if this menu item's threshold matches the current setting
+                    menuItem.IsChecked = Math.Abs(menuItemThreshold - _settings.SimilarityThreshold) < 0.01;
                 }
             }
         }
+    }
 
-        private void UpdateThumbnailSizeMenuChecks()
+    private void UncheckAllSimilarityThresholds()
+    {
+        foreach (var item in MySimilarityMenu.Items)
         {
-            int currentSize = ImageWidth;
+            if (item is MenuItem menuItem)
+            {
+                if (double.TryParse(menuItem.Header.ToString()?.Replace("%", ""), out double rate))
+                {
+                    menuItem.IsChecked = Math.Abs(rate - _settings.SimilarityThreshold) < 0.01; // Checking for equality in double
+                }
+            }
+        }
+    }
+
+    private void SetThumbnailSize_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem { Header: not null } menuItem && int.TryParse(menuItem.Header.ToString()?.Split(' ')[0], out int size))
+        {
+            ImageWidth = size;
+            ImageHeight = size;
+
+            _settings.ImageWidth = size;
+            _settings.ImageHeight = size;
+            _settings.SaveSettings();
 
             foreach (var item in ImageSizeMenu.Items)
             {
-                if (item is MenuItem menuItem)
+                if (item is MenuItem sizeMenuItem)
                 {
-                    // Assuming the header format is "{size} pixels", extract the number
-                    if (int.TryParse(menuItem.Header.ToString()?.Split(' ')[0], out int size))
-                    {
-                        menuItem.IsChecked = size == currentSize;
-                    }
+                    sizeMenuItem.IsChecked = sizeMenuItem == menuItem;
                 }
             }
         }
-
-
     }
+
+    private void UpdateThumbnailSizeMenuChecks()
+    {
+        int currentSize = ImageWidth;
+
+        foreach (var item in ImageSizeMenu.Items)
+        {
+            if (item is MenuItem menuItem)
+            {
+                // Assuming the header format is "{size} pixels", extract the number
+                if (int.TryParse(menuItem.Header.ToString()?.Split(' ')[0], out int size))
+                {
+                    menuItem.IsChecked = size == currentSize;
+                }
+            }
+        }
+    }
+
 }

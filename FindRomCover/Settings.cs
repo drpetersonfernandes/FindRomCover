@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO;
 using System.Xml;
 using MessageBox = System.Windows.MessageBox;
@@ -10,14 +11,14 @@ public class Settings
     private static readonly string SettingsFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.xml");
 
     public double SimilarityThreshold { get; set; } = 70;
-    public string[] SupportedExtensions { get; private set; } = [];
-    public int ImageWidth { get; private set; } = 300;
-    public int ImageHeight { get; private set; } = 300;
-    public string SelectedSimilarityAlgorithm { get; private set; } = "Jaro-Winkler Distance";
+    public string[] SupportedExtensions { get; private set; } = Array.Empty<string>();
+    public int ImageWidth { get; set; } = 300;
+    public int ImageHeight { get; set; } = 300;
+    public string SelectedSimilarityAlgorithm { get; set; } = "Jaro-Winkler Distance";
 
     // New properties for theme settings
-    public string BaseTheme { get; private set; } = "Light";
-    public string AccentColor { get; private set; } = "Blue";
+    public string BaseTheme { get; set; } = "Light";
+    public string AccentColor { get; set; } = "Blue";
 
     public Settings()
     {
@@ -99,7 +100,7 @@ public class Settings
         }
     }
 
-    public static void SaveSetting(string key, string value)
+    public void SaveSettings()
     {
         var doc = new XmlDocument();
         try
@@ -124,19 +125,32 @@ public class Settings
                 doc.AppendChild(root);
             }
 
-            var node = doc.SelectSingleNode($"//Settings/{key}");
-            if (node == null)
-            {
-                node = doc.CreateElement(key);
-                doc.DocumentElement?.AppendChild(node);
-            }
-            node.InnerText = value;
+            // Save each setting
+            SaveOrUpdateNode(doc, "SimilarityThreshold", SimilarityThreshold.ToString(CultureInfo.InvariantCulture));
+            SaveOrUpdateNode(doc, "SupportedExtensions", string.Join(",", SupportedExtensions));
+            SaveOrUpdateNode(doc, "ImageWidth", ImageWidth.ToString());
+            SaveOrUpdateNode(doc, "ImageHeight", ImageHeight.ToString());
+            SaveOrUpdateNode(doc, "BaseTheme", BaseTheme);
+            SaveOrUpdateNode(doc, "AccentColor", AccentColor);
+            SaveOrUpdateNode(doc, "SimilarityAlgorithm", SelectedSimilarityAlgorithm);
+
             doc.Save(SettingsFilePath);
         }
         catch (Exception ex)
         {
             MessageBox.Show("Error saving settings: " + ex.Message);
         }
+    }
+
+    private void SaveOrUpdateNode(XmlDocument doc, string key, string value)
+    {
+        var node = doc.SelectSingleNode($"//Settings/{key}");
+        if (node == null)
+        {
+            node = doc.CreateElement(key);
+            doc.DocumentElement?.AppendChild(node);
+        }
+        node.InnerText = value;
     }
 
     private void SetDefaultSettings()
