@@ -286,8 +286,11 @@ public partial class MainWindow : INotifyPropertyChanged
             {
                 // Update the label to display the search query
                 var textBlock = new TextBlock();
-                textBlock.Inlines.Add(new Run("Search Query") { FontWeight = FontWeights.Bold });
-                textBlock.Inlines.Add(new Run($"\nSimilarity Algorithm: {SelectedSimilarityAlgorithm}\nFilename: {selectedFile}"));
+                textBlock.Inlines.Add(new Run("Search Query: "));
+                textBlock.Inlines.Add(new Run($"{selectedFile} ") { FontWeight = FontWeights.Bold });
+                textBlock.Inlines.Add(new Run($"with "));
+                textBlock.Inlines.Add(new Run($"{SelectedSimilarityAlgorithm} ") { FontWeight = FontWeights.Bold });
+                textBlock.Inlines.Add(new Run($"algorithm"));
                 LblSearchQuery.Content = textBlock;
 
                 SimilarImages.Clear();
