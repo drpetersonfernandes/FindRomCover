@@ -39,7 +39,7 @@
   </component>
   <component name="MetaFilesCheckinStateConfiguration" checkMetaFiles="true" />
   <component name="ProblemsViewState">
-    <option name="selectedTabId" value="CurrentFile" />
+    <option name="selectedTabId" value="SWEA" />
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 8
@@ -146,6 +146,7 @@
       <workItem from="1730257326648" duration="1212000" />
       <workItem from="1730260862488" duration="986000" />
       <workItem from="1730400461499" duration="4117000" />
+      <workItem from="1730425733399" duration="1910000" />
     </task>
     <task id="LOCAL-00001" summary="Update application logic and settings&#10;&#10;This commit modifies the logic of the 'FindRomCover' application along with its respective configuration settings. Notably, functions in the 'SimilarityCalculator' class have been modified for brevity and readability, the general application's logic (in 'MainWindow.xaml.cs') has been altered slightly, and additional file extensions have been added to the 'settings.xml' configuration file.">
       <option name="closed" value="true" />
@@ -339,7 +340,15 @@
       <option name="project" value="LOCAL" />
       <updated>1730404619136</updated>
     </task>
-    <option name="localTasksCounter" value="25" />
+    <task id="LOCAL-00025" summary="Update XML save logic and UI labels&#10;&#10;Refactored XML saving logic to handle supported extensions and image size separately. Revised the search query label updating in MainWindow.xaml.cs to improve clarity and emphasize the selected file and algorithm.">
+      <option name="closed" value="true" />
+      <created>1730431267669</created>
+      <option name="number" value="00025" />
+      <option name="presentableId" value="LOCAL-00025" />
+      <option name="project" value="LOCAL" />
+      <updated>1730431267669</updated>
+    </task>
+    <option name="localTasksCounter" value="26" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -384,25 +393,7 @@
     <MESSAGE value="Fix argument handling and order of settings loading&#10;&#10;Adjusted argument handling to check for exactly two arguments. Moved the LoadSettings function to ensure it executes correctly and revert ControlzEx package version. This ensures proper initialization and configuration." />
     <MESSAGE value="Add About page, error logging, and theme support.&#10;&#10;Implemented an About dialog with application version and hyperlinks. Introduced error logging with file and API reporting capabilities. Enhanced the app with dynamic theme and accent color settings." />
     <MESSAGE value="Add About dialog, error logging, and theme management.&#10;&#10;Implemented an &quot;About&quot; dialog with app info and navigation hyperlinks. Introduced comprehensive error logging with API integration for error reports. Enhanced theme management allowing dynamic theme changes and saving settings." />
-    <option name="LAST_COMMIT_MESSAGE" value="Add About dialog, error logging, and theme management.&#10;&#10;Implemented an &quot;About&quot; dialog with app info and navigation hyperlinks. Introduced comprehensive error logging with API integration for error reports. Enhanced theme management allowing dynamic theme changes and saving settings." />
-  </component>
-  <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" type="DotNet Breakpoints">
-          <url>file://$PROJECT_DIR$/FindRomCover/MainWindow.xaml.cs</url>
-          <line>235</line>
-          <properties documentPath="C:\Users\Peterson\Documents\Sincronizar\source\repos\CSharp_FindRomCover\FindRomCover\MainWindow.xaml.cs" containingFunctionPresentation="Method 'LoadMissingImagesList'">
-            <startOffsets>
-              <option value="7736" />
-            </startOffsets>
-            <endOffsets>
-              <option value="7835" />
-            </endOffsets>
-          </properties>
-          <option name="timeStamp" value="1" />
-        </line-breakpoint>
-      </breakpoints>
-    </breakpoint-manager>
+    <MESSAGE value="Update XML save logic and UI labels&#10;&#10;Refactored XML saving logic to handle supported extensions and image size separately. Revised the search query label updating in MainWindow.xaml.cs to improve clarity and emphasize the selected file and algorithm." />
+    <option name="LAST_COMMIT_MESSAGE" value="Update XML save logic and UI labels&#10;&#10;Refactored XML saving logic to handle supported extensions and image size separately. Revised the search query label updating in MainWindow.xaml.cs to improve clarity and emphasize the selected file and algorithm." />
   </component>
 </project>
