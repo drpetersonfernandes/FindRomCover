@@ -148,6 +148,7 @@
       <workItem from="1730400461499" duration="4117000" />
       <workItem from="1730425733399" duration="1910000" />
       <workItem from="1730433642581" duration="120000" />
+      <workItem from="1730497511841" duration="60000" />
     </task>
     <task id="LOCAL-00001" summary="Update application logic and settings&#10;&#10;This commit modifies the logic of the 'FindRomCover' application along with its respective configuration settings. Notably, functions in the 'SimilarityCalculator' class have been modified for brevity and readability, the general application's logic (in 'MainWindow.xaml.cs') has been altered slightly, and additional file extensions have been added to the 'settings.xml' configuration file.">
       <option name="closed" value="true" />
@@ -357,7 +358,15 @@
       <option name="project" value="LOCAL" />
       <updated>1730433664531</updated>
     </task>
-    <option name="localTasksCounter" value="27" />
+    <task id="LOCAL-00027" summary="Update workspace settings and task management&#10;&#10;Adjusted local tasks, added recent work item, and refined commit message details. This improves task tracking and clarity in project progress indicators.">
+      <option name="closed" value="true" />
+      <created>1730497565789</created>
+      <option name="number" value="00027" />
+      <option name="presentableId" value="LOCAL-00027" />
+      <option name="project" value="LOCAL" />
+      <updated>1730497565789</updated>
+    </task>
+    <option name="localTasksCounter" value="28" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -378,7 +387,6 @@
   </component>
   <component name="VcsManagerConfiguration">
     <option name="CLEAR_INITIAL_COMMIT_MESSAGE" value="true" />
-    <MESSAGE value="Add missing total count and refactor workspace settings&#10;&#10;A new feature has been added to the 'FindRomCover' application, providing a total count for missing images. Additionally, workspace settings in the .idea directory have been updated and unnecessary configurations, including breakpoints in XDebuggerManager, have been removed for cleaner maintenance." />
     <MESSAGE value="Add missing count feature and refactor workspace settings&#10;&#10;A new feature providing a total count for missing images was added to the 'FindRomCover' application. Workspace settings in the .idea directory were updated and unnecessary configurations, including breakpoints in XDebuggerManager, were removed for cleaner maintenance." />
     <MESSAGE value="Update workspace comments and increase task counter&#10;&#10;This commit updates the comments in the ChangeListManager and the task section of the workspace.xml file in the FindRomCover project. Furthermore, it increments the localTasksCounter value indicating the number of tasks associated with the project." />
     <MESSAGE value="Add Settings class and improve SimilarityCalculator and UI&#10;&#10;Added a new Settings class to handle application settings. Improved handling of SimilarityCalculator by cleaning code and improving readability. Initialized code for UI to display settings values. Also implemented changes to 'settings.xml', i.e, settings loading and saving mechanism." />
@@ -403,6 +411,7 @@
     <MESSAGE value="Add About dialog, error logging, and theme management.&#10;&#10;Implemented an &quot;About&quot; dialog with app info and navigation hyperlinks. Introduced comprehensive error logging with API integration for error reports. Enhanced theme management allowing dynamic theme changes and saving settings." />
     <MESSAGE value="Update XML save logic and UI labels&#10;&#10;Refactored XML saving logic to handle supported extensions and image size separately. Revised the search query label updating in MainWindow.xaml.cs to improve clarity and emphasize the selected file and algorithm." />
     <MESSAGE value="Update workspace settings and task management&#10;&#10;Changed the selected tab in the Problems view and added a recent work item for improved task tracking. Updated the local tasks counter and enhanced the commit message details for better clarity in the project progress." />
-    <option name="LAST_COMMIT_MESSAGE" value="Update workspace settings and task management&#10;&#10;Changed the selected tab in the Problems view and added a recent work item for improved task tracking. Updated the local tasks counter and enhanced the commit message details for better clarity in the project progress." />
+    <MESSAGE value="Update workspace settings and task management&#10;&#10;Adjusted local tasks, added recent work item, and refined commit message details. This improves task tracking and clarity in project progress indicators." />
+    <option name="LAST_COMMIT_MESSAGE" value="Update workspace settings and task management&#10;&#10;Adjusted local tasks, added recent work item, and refined commit message details. This improves task tracking and clarity in project progress indicators." />
   </component>
 </project>
