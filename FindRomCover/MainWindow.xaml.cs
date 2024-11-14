@@ -366,6 +366,7 @@ public partial class MainWindow : INotifyPropertyChanged
     private void BtnRemoveSelectedItem_Click(object sender, RoutedEventArgs e)
     {
         RemoveSelectedItem();
+        SimilarImages.Clear();
         PlaySound.PlayClickSound();
     }
 
