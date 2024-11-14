@@ -5,10 +5,6 @@ namespace FindRomCover;
 
 public static class SimilarityCalculator
 {
-    // The scaling factor is typically set between 0.1 and 0.25. 
-    // The effect of the scaling factor is to give more importance to strings that match from the beginning.
-    private const double ScalingFactor = 0.1;
-
     public static async Task<List<ImageData>> CalculateSimilarityAsync(string selectedFileName, string imageFolderPath, double similarityThreshold, string algorithm)
     {
         List<ImageData> tempList = [];
@@ -86,6 +82,10 @@ public static class SimilarityCalculator
 
     private static double CalculateJaroWinklerDistance(string s1, string s2)
     {
+        // The scaling factor is typically set between 0.1 and 0.25. 
+        // The effect of the scaling factor is to give more importance to strings that match from the beginning.
+        const double scalingFactor = 0.2;  // Typical scaling factor for Jaro-Winkler
+        
         int s1Len = s1.Length;
         int s2Len = s2.Length;
 
@@ -129,7 +129,6 @@ public static class SimilarityCalculator
             k++;
         }
 
-        // double jaro = ((double)matches / s1Len + (double)matches / s2Len + (double)(matches - transpositions / 2) / matches) / 3;
         double jaro = ((double)matches / s1Len + (double)matches / s2Len + (matches - (double)transpositions / 2) / matches) / 3;
 
         int prefixLength = 0;
@@ -143,8 +142,9 @@ public static class SimilarityCalculator
             else break;
         }
 
-        double jaroWinkler = jaro + (prefixLength * ScalingFactor * (1 - jaro));
-        return jaroWinkler * 100;
+        double jaroWinkler = jaro + (prefixLength * scalingFactor * (1 - jaro));
+        return jaroWinkler * 100;  // Return as a percentage
     }
+
 
 }
