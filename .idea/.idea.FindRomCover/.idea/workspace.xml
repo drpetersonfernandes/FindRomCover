@@ -7,8 +7,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5d0ced43-e166-4f78-8f62-bd8a5015c137" name="Changes" comment="">
+    <list default="true" id="5d0ced43-e166-4f78-8f62-bd8a5015c137" name="Changes" comment="Update workspace configurations and MainWindow behavior&#10;&#10;Streamlined workspace.xml by removing unnecessary components and updating configurations for better project maintenance. Additionally, modified MainWindow.xaml.cs to clear SimilarImages when an item is removed. Added .idea/ to .gitignore.">
+      <change afterPath="$PROJECT_DIR$/FindRomCover/ButtonFactory.cs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/FindRomCover/ImageData.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/.idea.FindRomCover/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.FindRomCover/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FindRomCover/FindRomCover.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/FindRomCover.csproj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FindRomCover/MainWindow.xaml.cs" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/MainWindow.xaml.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FindRomCover/SimilarityCalculator.cs" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/SimilarityCalculator.cs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -27,35 +32,60 @@
   <component name="GithubPullRequestsUISettings">{
   &quot;selectedUrlAndAccountId&quot;: {
     &quot;url&quot;: &quot;https://github.com/drpetersonfernandes/FindRomCover.git&quot;,
-    &quot;accountId&quot;: &quot;0ca63fb6-f8a0-4c61-971c-3146fb7e3d95&quot;
+    &quot;accountId&quot;: &quot;112a40f8-fef6-4c48-82f0-745835eb88f6&quot;
   }
 }</component>
   <component name="MetaFilesCheckinStateConfiguration" checkMetaFiles="false" />
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
+  </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 1
 }</component>
   <component name="ProjectId" id="2oqitJTUihVmYnEKrfPGj08zBoz" />
   <component name="ProjectLevelVcsManager" settingsEditedManually="true">
     <OptionsSetting value="false" id="Update" />
+    <ConfirmationsSetting value="2" id="Add" />
   </component>
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
-    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    ".NET Project.FindRomCover.executor": "Debug",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "master",
+    "ignore.virus.scanning.warn.message": "true",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
+  <component name="RunManager">
+    <configuration name="FindRomCover" type="DotNetProject" factoryName=".NET Project">
+      <option name="EXE_PATH" value="$PROJECT_DIR$/FindRomCover/bin/Debug/net8.0-windows/FindRomCover.exe" />
+      <option name="PROGRAM_PARAMETERS" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/FindRomCover/bin/Debug/net8.0-windows" />
+      <option name="PASS_PARENT_ENVS" value="1" />
+      <option name="USE_EXTERNAL_CONSOLE" value="0" />
+      <option name="USE_MONO" value="0" />
+      <option name="RUNTIME_ARGUMENTS" value="" />
+      <option name="PROJECT_PATH" value="$PROJECT_DIR$/FindRomCover/FindRomCover.csproj" />
+      <option name="PROJECT_EXE_PATH_TRACKING" value="1" />
+      <option name="PROJECT_ARGUMENTS_TRACKING" value="1" />
+      <option name="PROJECT_WORKING_DIRECTORY_TRACKING" value="1" />
+      <option name="PROJECT_KIND" value="DotNetCore" />
+      <option name="PROJECT_TFM" value="net8.0-windows" />
+      <method v="2">
+        <option name="Build" />
+      </method>
+    </configuration>
+  </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task id="LOCAL-00001" summary="Simplify workspace.xml and update configurations&#10;&#10;Removed unnecessary components and old task records to streamline workspace.xml. Also updated various configuration settings for better project maintenance and clarity.">
@@ -75,6 +105,8 @@
       <workItem from="1731603725000" duration="1811000" />
       <workItem from="1731792250675" duration="272000" />
       <workItem from="1731978400087" duration="63000" />
+      <workItem from="1732645178131" duration="2878000" />
+      <workItem from="1732649809042" duration="154000" />
     </task>
     <task id="LOCAL-00002" summary="Improve workspace configurations and enhance MainWindow behavior&#10;&#10;Streamlined the workspace.xml by removing unnecessary components and updating various configuration settings for better project maintenance and clarity. Additionally, modified MainWindow.xaml.cs to clear SimilarImages when an item is removed.">
       <option name="closed" value="true" />
@@ -92,7 +124,15 @@
       <option name="project" value="LOCAL" />
       <updated>1731792470446</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="Update workspace configurations and MainWindow behavior&#10;&#10;Streamlined workspace.xml by removing unnecessary components and updating configurations for better project maintenance. Additionally, modified MainWindow.xaml.cs to clear SimilarImages when an item is removed. Added .idea/ to .gitignore.">
+      <option name="closed" value="true" />
+      <created>1732645219377</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1732645219377</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

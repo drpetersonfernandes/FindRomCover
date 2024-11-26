@@ -7,6 +7,8 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Windows.Documents;
 using ControlzEx.Theming;
+using Application = System.Windows.Application;
+using MessageBox = System.Windows.MessageBox;
 
 namespace FindRomCover;
 
@@ -16,7 +18,7 @@ public partial class MainWindow : INotifyPropertyChanged
     private readonly Settings _settings = new();
     private string _imageFolderPath;
     private string _selectedRomFileName = string.Empty;
-    public ObservableCollection<ImageData> SimilarImages { get; set; } = new ObservableCollection<ImageData>();
+    public ObservableCollection<ImageData> SimilarImages { get; set; } = [];
     private const string DefaultSimilarityAlgorithm = "Jaro-Winkler Distance";
         
     private int _imageWidth;
@@ -164,7 +166,7 @@ public partial class MainWindow : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show($"Unable to open the donation link: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show($"Unable to open the donation link: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             
             string formattedException = $"Unable to open the donation link.\n\nException type: {ex.GetType().Name}\nException details: {ex.Message}";
             Task logTask = LogErrors.LogErrorAsync(ex, formattedException);
@@ -219,13 +221,13 @@ public partial class MainWindow : INotifyPropertyChanged
     {
         if (_settings.SupportedExtensions.Length == 0)
         {
-            System.Windows.MessageBox.Show("No supported file extensions loaded. Please check file 'settings.xml'", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show("No supported file extensions loaded. Please check file 'settings.xml'", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
         if (string.IsNullOrEmpty(TxtRomFolder.Text) || string.IsNullOrEmpty(TxtImageFolder.Text))
         {
-            System.Windows.MessageBox.Show("Please select both ROM and Image folders.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show("Please select both ROM and Image folders.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
@@ -255,88 +257,101 @@ public partial class MainWindow : INotifyPropertyChanged
 
     }
 
-        private string? FindCorrespondingImage(string fileNameWithoutExtension)
+    private string? FindCorrespondingImage(string fileNameWithoutExtension)
+    {
+        string[] imageExtensions = [".png", ".jpg", ".jpeg"];
+        foreach (var ext in imageExtensions)
         {
-            string[] imageExtensions = [".png", ".jpg", ".jpeg"];
-            foreach (var ext in imageExtensions)
+            string imagePath = Path.Combine(TxtImageFolder.Text, fileNameWithoutExtension + ext);
+            if (File.Exists(imagePath))
             {
-                string imagePath = Path.Combine(TxtImageFolder.Text, fileNameWithoutExtension + ext);
-                if (File.Exists(imagePath))
-                {
-                    return imagePath;
-                }
+                return imagePath;
             }
-            return null;
         }
+        return null;
+    }
 
     private async void LstMissingImages_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (LstMissingImages.SelectedItem is string selectedFile)
+        try
         {
-            _selectedRomFileName = selectedFile;
-            var imageFolderPath = _imageFolderPath;
-            var similarityThreshold = _settings.SimilarityThreshold;
-
-            // Call the method and await its result
-            var similarImages = await SimilarityCalculator.CalculateSimilarityAsync(selectedFile, imageFolderPath, similarityThreshold, SelectedSimilarityAlgorithm);
-
-            // Update the UI accordingly
-            // Assuming SimilarImages is an ObservableCollection bound to a UI control
-            await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+            if (LstMissingImages.SelectedItem is string selectedFile)
             {
-                // Update the label to display the search query
-                var textBlock = new TextBlock();
-                textBlock.Inlines.Add(new Run("Search Query: "));
-                textBlock.Inlines.Add(new Run($"{selectedFile} ") { FontWeight = FontWeights.Bold });
-                textBlock.Inlines.Add(new Run($"with "));
-                textBlock.Inlines.Add(new Run($"{SelectedSimilarityAlgorithm} ") { FontWeight = FontWeights.Bold });
-                textBlock.Inlines.Add(new Run($"algorithm"));
-                LblSearchQuery.Content = textBlock;
+                _selectedRomFileName = selectedFile;
 
-                SimilarImages.Clear();
-                foreach (var imageData in similarImages)
+                // Use ButtonFactory to create the SimilarImages collection
+                var buttonFactory = new ButtonFactory();
+                var newSimilarImages = await buttonFactory.CreateSimilarImagesCollection(
+                    selectedFile,
+                    _imageFolderPath,
+                    _settings.SimilarityThreshold,
+                    SelectedSimilarityAlgorithm
+                );
+
+                // Update the UI
+                await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    SimilarImages.Add(imageData);
-                }
-            });
-        }
-    }
+                    // Display the search query
+                    var textBlock = new TextBlock();
+                    textBlock.Inlines.Add(new Run("Search Query: "));
+                    textBlock.Inlines.Add(new Run($"{selectedFile} ") { FontWeight = FontWeights.Bold });
+                    textBlock.Inlines.Add(new Run($"with "));
+                    textBlock.Inlines.Add(new Run($"{SelectedSimilarityAlgorithm} ") { FontWeight = FontWeights.Bold });
+                    textBlock.Inlines.Add(new Run($"algorithm"));
+                    LblSearchQuery.Content = textBlock;
 
-    public class ImageData
-    {
-        public string? ImagePath { get; init; }
-        public string? ImageName { get; set; }
-        public double SimilarityThreshold { get; init; }
+                    // Clear and update the SimilarImages collection
+                    SimilarImages.Clear();
+                    foreach (var imageData in newSimilarImages)
+                    {
+                        SimilarImages.Add(imageData);
+                    }
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            // Handle exception
+            MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private void ImageCell_MouseDown(object sender, MouseButtonEventArgs e)
     {
-        if (sender is FrameworkElement { DataContext: ImageData imageData })
-        {
-            if (!string.IsNullOrEmpty(_selectedRomFileName) &&
-                !string.IsNullOrEmpty(imageData.ImagePath) &&
-                !string.IsNullOrEmpty(_imageFolderPath))
+        // Ensure the click is a left mouse button click
+        if (e.ChangedButton == MouseButton.Left && sender is FrameworkElement { DataContext: ImageData
             {
-                string newFileName = Path.Combine(_imageFolderPath, _selectedRomFileName + ".png");
-                if (ConvertAndSaveImage(imageData.ImagePath, newFileName))
-                {
-                    PlaySound.PlayClickSound();
-                    RemoveSelectedItem();
-                    SimilarImages.Clear();
-                    UpdateMissingCount(); // Update count whenever an item is removed
-                }
-                else
-                {
-                    System.Windows.MessageBox.Show("Failed to save the image.\n\nMaybe the application could not download the image file.","Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    
-                    string formattedException = "Failed to save the image.\n\nMaybe the application could not download the image file.";
-                    Exception ex = new Exception(formattedException);
-                    Task logTask = LogErrors.LogErrorAsync(ex, formattedException);
-                    logTask.Wait(TimeSpan.FromSeconds(2));
-                }
+                ImagePath: not null
+            } imageData })
+            UseImage(imageData.ImagePath);
+    }
+
+    public void UseImage(string imagePath)
+    {
+        if (!string.IsNullOrEmpty(_selectedRomFileName) &&
+            !string.IsNullOrEmpty(imagePath) &&
+            !string.IsNullOrEmpty(_imageFolderPath))
+        {
+            string newFileName = Path.Combine(_imageFolderPath, _selectedRomFileName + ".png");
+            if (ConvertAndSaveImage(imagePath, newFileName))
+            {
+                PlaySound.PlayClickSound();
+                RemoveSelectedItem();
+                SimilarImages.Clear();
+                UpdateMissingCount(); // Update count whenever an item is removed
+            }
+            else
+            {
+                MessageBox.Show("Failed to save the image.\n\nMaybe the application could not download the image file.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+
+                string formattedException = "Failed to save the image.\n\nMaybe the application could not download the image file.";
+                Exception ex = new Exception(formattedException);
+                Task logTask = LogErrors.LogErrorAsync(ex, formattedException);
+                logTask.Wait(TimeSpan.FromSeconds(2));
             }
         }
     }
+
 
     private static bool ConvertAndSaveImage(string sourcePath, string targetPath)
     {
@@ -353,7 +368,7 @@ public partial class MainWindow : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show($"Error saving image file\n\nMaybe the application does not have write privileges.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show($"Error saving image file\n\nMaybe the application does not have write privileges.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             
             string formattedException = $"Error saving image file\n\nMaybe the application does not have write privileges.\n\nException type: {ex.GetType().Name}\nException details: {ex.Message}";
             Task logTask = LogErrors.LogErrorAsync(ex, formattedException);
@@ -439,7 +454,7 @@ public partial class MainWindow : INotifyPropertyChanged
             }
             else
             {
-                System.Windows.MessageBox.Show("Invalid similarity threshold selected.\n\nThe error was reported to the developer that will try to fix the issue.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("Invalid similarity threshold selected.\n\nThe error was reported to the developer that will try to fix the issue.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 
                 string formattedException = "Invalid similarity threshold selected.";
                 Exception ex = new Exception(formattedException);
@@ -515,6 +530,13 @@ public partial class MainWindow : INotifyPropertyChanged
                 }
             }
         }
+    }
+
+    private void Image_ContextMenuOpening(object sender, ContextMenuEventArgs e)
+    {
+        if (sender is not FrameworkElement { DataContext: ImageData imageData } element) return;
+        // Create and assign the context menu using ButtonFactory
+        if (imageData.ImagePath != null) element.ContextMenu = ButtonFactory.CreateContextMenu(imageData.ImagePath);
     }
 
 }

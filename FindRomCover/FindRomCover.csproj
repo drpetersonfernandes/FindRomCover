@@ -10,8 +10,8 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ApplicationIcon>images\icon.ico</ApplicationIcon>
     <PackageIcon>icon2.png</PackageIcon>
-    <AssemblyVersion>1.5.0</AssemblyVersion>
-    <FileVersion>1.5.0</FileVersion>
+    <AssemblyVersion>1.6</AssemblyVersion>
+    <FileVersion>1.6</FileVersion>
     <SupportedOSPlatformVersion>7.0</SupportedOSPlatformVersion>
     <StartupObject>FindRomCover.App</StartupObject>
     <IsPackable>false</IsPackable>
@@ -63,6 +63,8 @@
     <Resource Include="images\exit.png" />
     <None Remove="images\logo.png" />
     <Resource Include="images\logo.png" />
+    <None Remove="images\copy.png" />
+    <Resource Include="images\copy.png" />
   </ItemGroup>
 
 </Project>

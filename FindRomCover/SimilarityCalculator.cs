@@ -1,5 +1,4 @@
 ﻿using System.IO;
-using static FindRomCover.MainWindow;
 
 namespace FindRomCover;
 
@@ -7,7 +6,7 @@ public static class SimilarityCalculator
 {
     public static async Task<List<ImageData>> CalculateSimilarityAsync(string selectedFileName, string imageFolderPath, double similarityThreshold, string algorithm)
     {
-        List<ImageData> tempList = [];
+        List<ImageData> tempList = new List<ImageData>();
 
         if (!string.IsNullOrEmpty(imageFolderPath))
         {
@@ -15,7 +14,16 @@ public static class SimilarityCalculator
 
             foreach (var ext in imageExtensions)
             {
-                string[] imageFiles = Directory.GetFiles(imageFolderPath, ext);
+                string[] imageFiles;
+                try
+                {
+                    imageFiles = Directory.GetFiles(imageFolderPath, ext);
+                }
+                catch (Exception ex)
+                {
+                    throw new IOException($"Failed to access the directory: {imageFolderPath}", ex);
+                }
+
                 foreach (string imageFile in imageFiles)
                 {
                     string imageName = Path.GetFileNameWithoutExtension(imageFile);
@@ -27,6 +35,7 @@ public static class SimilarityCalculator
                         "Jaro-Winkler Distance" => await Task.Run(() => CalculateJaroWinklerDistance(selectedFileName, imageName)),
                         _ => throw new NotImplementedException($"Algorithm {algorithm} is not implemented."),
                     };
+
                     if (similarityThreshold2 >= similarityThreshold)
                     {
                         tempList.Add(new ImageData
@@ -63,7 +72,7 @@ public static class SimilarityCalculator
         }
 
         double similarityThreshold = (1.0 - distances[lengthA, lengthB] / (double)Math.Max(a.Length, b.Length)) * 100;
-        return Math.Round(similarityThreshold, 2); // Round to 2 decimal places
+        return Math.Round(similarityThreshold, 2);
     }
 
     private static double CalculateJaccardIndex(string a, string b)
@@ -77,15 +86,13 @@ public static class SimilarityCalculator
         var union = new HashSet<char>(setA);
         union.UnionWith(setB);
 
-        return (intersection.Count / (double)union.Count) * 100;
+        return union.Count == 0 ? 0 : (intersection.Count / (double)union.Count) * 100;
     }
 
     private static double CalculateJaroWinklerDistance(string s1, string s2)
     {
-        // The scaling factor is typically set between 0.1 and 0.25. 
-        // The effect of the scaling factor is to give more importance to strings that match from the beginning.
-        const double scalingFactor = 0.2;  // Typical scaling factor for Jaro-Winkler
-        
+        const double scalingFactor = 0.2;
+
         int s1Len = s1.Length;
         int s2Len = s2.Length;
 
@@ -143,8 +150,6 @@ public static class SimilarityCalculator
         }
 
         double jaroWinkler = jaro + (prefixLength * scalingFactor * (1 - jaro));
-        return jaroWinkler * 100;  // Return as a percentage
+        return jaroWinkler * 100;
     }
-
-
 }
