@@ -7,18 +7,16 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5d0ced43-e166-4f78-8f62-bd8a5015c137" name="Changes" comment="Update workspace configurations and MainWindow behavior&#10;&#10;Streamlined workspace.xml by removing unnecessary components and updating configurations for better project maintenance. Additionally, modified MainWindow.xaml.cs to clear SimilarImages when an item is removed. Added .idea/ to .gitignore.">
-      <change afterPath="$PROJECT_DIR$/FindRomCover/ButtonFactory.cs" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/FindRomCover/ImageData.cs" afterDir="false" />
+    <list default="true" id="5d0ced43-e166-4f78-8f62-bd8a5015c137" name="Changes" comment="Add image similarity feature and context menu commands&#10;&#10;Implemented image similarity calculations and added a dynamic context menu with commands for image handling. Updated settings, introduced new classes for command and UI functionality, and refined MainWindow behavior for better user interaction.">
       <change beforePath="$PROJECT_DIR$/.idea/.idea.FindRomCover/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.FindRomCover/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FindRomCover/FindRomCover.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/FindRomCover.csproj" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FindRomCover/MainWindow.xaml.cs" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/MainWindow.xaml.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FindRomCover/SimilarityCalculator.cs" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/SimilarityCalculator.cs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="DpaMonitoringSettings">
+    <option name="firstShow" value="false" />
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -29,12 +27,12 @@
     &quot;assignee&quot;: &quot;drpetersonfernandes&quot;
   }
 }</component>
-  <component name="GithubPullRequestsUISettings">{
-  &quot;selectedUrlAndAccountId&quot;: {
-    &quot;url&quot;: &quot;https://github.com/drpetersonfernandes/FindRomCover.git&quot;,
-    &quot;accountId&quot;: &quot;112a40f8-fef6-4c48-82f0-745835eb88f6&quot;
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/drpetersonfernandes/FindRomCover.git",
+    "accountId": "0ca63fb6-f8a0-4c61-971c-3146fb7e3d95"
   }
-}</component>
+}]]></component>
   <component name="MetaFilesCheckinStateConfiguration" checkMetaFiles="false" />
   <component name="ProblemsViewState">
     <option name="selectedTabId" value="CurrentFile" />
@@ -51,21 +49,21 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    ".NET Project.FindRomCover.executor": "Debug",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "master",
-    "ignore.virus.scanning.warn.message": "true",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;.NET Project.FindRomCover.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RunManager">
     <configuration name="FindRomCover" type="DotNetProject" factoryName=".NET Project">
       <option name="EXE_PATH" value="$PROJECT_DIR$/FindRomCover/bin/Debug/net8.0-windows/FindRomCover.exe" />
@@ -106,7 +104,8 @@
       <workItem from="1731792250675" duration="272000" />
       <workItem from="1731978400087" duration="63000" />
       <workItem from="1732645178131" duration="2878000" />
-      <workItem from="1732649809042" duration="154000" />
+      <workItem from="1732649809042" duration="8799000" />
+      <workItem from="1732663233141" duration="656000" />
     </task>
     <task id="LOCAL-00002" summary="Improve workspace configurations and enhance MainWindow behavior&#10;&#10;Streamlined the workspace.xml by removing unnecessary components and updating various configuration settings for better project maintenance and clarity. Additionally, modified MainWindow.xaml.cs to clear SimilarImages when an item is removed.">
       <option name="closed" value="true" />
@@ -132,7 +131,15 @@
       <option name="project" value="LOCAL" />
       <updated>1732645219377</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="Add image similarity feature and context menu commands&#10;&#10;Implemented image similarity calculations and added a dynamic context menu with commands for image handling. Updated settings, introduced new classes for command and UI functionality, and refined MainWindow behavior for better user interaction.">
+      <option name="closed" value="true" />
+      <created>1732657884646</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1732657884646</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -144,6 +151,8 @@
     <MESSAGE value="Simplify workspace.xml and update configurations&#10;&#10;Removed unnecessary components and old task records to streamline workspace.xml. Also updated various configuration settings for better project maintenance and clarity." />
     <MESSAGE value="Improve workspace configurations and enhance MainWindow behavior&#10;&#10;Streamlined the workspace.xml by removing unnecessary components and updating various configuration settings for better project maintenance and clarity. Additionally, modified MainWindow.xaml.cs to clear SimilarImages when an item is removed." />
     <MESSAGE value="Update workspace configurations and MainWindow behavior&#10;&#10;Streamlined workspace.xml by removing unnecessary components and updating configurations for better project maintenance. Additionally, modified MainWindow.xaml.cs to clear SimilarImages when an item is removed. Added .idea/ to .gitignore." />
-    <option name="LAST_COMMIT_MESSAGE" value="Update workspace configurations and MainWindow behavior&#10;&#10;Streamlined workspace.xml by removing unnecessary components and updating configurations for better project maintenance. Additionally, modified MainWindow.xaml.cs to clear SimilarImages when an item is removed. Added .idea/ to .gitignore." />
+    <MESSAGE value="Increase similarity threshold to 80 and add new features&#10;&#10;Updated the similarity threshold from 70 to 80 in settings.xml to improve image matching accuracy. Added new classes ImageData, DelegateCommand, and ButtonFactory to enhance functionality. Enhanced MainWindow behavior and improved the SimilarityCalculator for better error handling and performance." />
+    <MESSAGE value="Add image similarity feature and context menu commands&#10;&#10;Implemented image similarity calculations and added a dynamic context menu with commands for image handling. Updated settings, introduced new classes for command and UI functionality, and refined MainWindow behavior for better user interaction." />
+    <option name="LAST_COMMIT_MESSAGE" value="Add image similarity feature and context menu commands&#10;&#10;Implemented image similarity calculations and added a dynamic context menu with commands for image handling. Updated settings, introduced new classes for command and UI functionality, and refined MainWindow behavior for better user interaction." />
   </component>
 </project>
