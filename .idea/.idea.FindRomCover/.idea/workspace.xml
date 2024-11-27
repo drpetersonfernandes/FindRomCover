@@ -7,12 +7,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5d0ced43-e166-4f78-8f62-bd8a5015c137" name="Changes" comment="Add image similarity feature and context menu commands&#10;&#10;Implemented image similarity calculations and added a dynamic context menu with commands for image handling. Updated settings, introduced new classes for command and UI functionality, and refined MainWindow behavior for better user interaction.">
-      <change beforePath="$PROJECT_DIR$/.idea/.idea.FindRomCover/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.FindRomCover/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FindRomCover/ButtonFactory.cs" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/ButtonFactory.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FindRomCover/FindRomCover.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/FindRomCover.csproj" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FindRomCover/MainWindow.xaml" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/MainWindow.xaml" afterDir="false" />
-    </list>
+    <list default="true" id="5d0ced43-e166-4f78-8f62-bd8a5015c137" name="Changes" comment="Add new images to resources and update UI references&#10;&#10;Updated the project to include 'usethis.png' and 'folder.png' images, reflecting these changes in the resource definitions. Adjusted UI references in MainWindow.xaml and ButtonFactory.cs to use the new images. Additionally, enhanced MainWindow.xaml with more thumbnail size options." />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -36,6 +31,9 @@
     "accountId": "0ca63fb6-f8a0-4c61-971c-3146fb7e3d95"
   }
 }]]></component>
+  <component name="HighlightingSettingsPerFile">
+    <setting file="mock://C:/Sincronizar/source/repos/CSharp_FindRomCover/FindRomCover/ButtonFactory.cs" root0="SKIP_HIGHLIGHTING" />
+  </component>
   <component name="MetaFilesCheckinStateConfiguration" checkMetaFiles="false" />
   <component name="ProblemsViewState">
     <option name="selectedTabId" value="CurrentFile" />
@@ -108,7 +106,7 @@
       <workItem from="1731978400087" duration="63000" />
       <workItem from="1732645178131" duration="2878000" />
       <workItem from="1732649809042" duration="8799000" />
-      <workItem from="1732663233141" duration="1554000" />
+      <workItem from="1732663233141" duration="2943000" />
     </task>
     <task id="LOCAL-00002" summary="Improve workspace configurations and enhance MainWindow behavior&#10;&#10;Streamlined the workspace.xml by removing unnecessary components and updating various configuration settings for better project maintenance and clarity. Additionally, modified MainWindow.xaml.cs to clear SimilarImages when an item is removed.">
       <option name="closed" value="true" />
@@ -150,7 +148,15 @@
       <option name="project" value="LOCAL" />
       <updated>1732664392996</updated>
     </task>
-    <option name="localTasksCounter" value="7" />
+    <task id="LOCAL-00007" summary="Add new images to resources and update UI references&#10;&#10;Updated the project to include 'usethis.png' and 'folder.png' images, reflecting these changes in the resource definitions. Adjusted UI references in MainWindow.xaml and ButtonFactory.cs to use the new images. Additionally, enhanced MainWindow.xaml with more thumbnail size options.">
+      <option name="closed" value="true" />
+      <created>1732667338538</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1732667338538</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -164,6 +170,7 @@
     <MESSAGE value="Update workspace configurations and MainWindow behavior&#10;&#10;Streamlined workspace.xml by removing unnecessary components and updating configurations for better project maintenance. Additionally, modified MainWindow.xaml.cs to clear SimilarImages when an item is removed. Added .idea/ to .gitignore." />
     <MESSAGE value="Increase similarity threshold to 80 and add new features&#10;&#10;Updated the similarity threshold from 70 to 80 in settings.xml to improve image matching accuracy. Added new classes ImageData, DelegateCommand, and ButtonFactory to enhance functionality. Enhanced MainWindow behavior and improved the SimilarityCalculator for better error handling and performance." />
     <MESSAGE value="Add image similarity feature and context menu commands&#10;&#10;Implemented image similarity calculations and added a dynamic context menu with commands for image handling. Updated settings, introduced new classes for command and UI functionality, and refined MainWindow behavior for better user interaction." />
-    <option name="LAST_COMMIT_MESSAGE" value="Add image similarity feature and context menu commands&#10;&#10;Implemented image similarity calculations and added a dynamic context menu with commands for image handling. Updated settings, introduced new classes for command and UI functionality, and refined MainWindow behavior for better user interaction." />
+    <MESSAGE value="Add new images to resources and update UI references&#10;&#10;Updated the project to include 'usethis.png' and 'folder.png' images, reflecting these changes in the resource definitions. Adjusted UI references in MainWindow.xaml and ButtonFactory.cs to use the new images. Additionally, enhanced MainWindow.xaml with more thumbnail size options." />
+    <option name="LAST_COMMIT_MESSAGE" value="Add new images to resources and update UI references&#10;&#10;Updated the project to include 'usethis.png' and 'folder.png' images, reflecting these changes in the resource definitions. Adjusted UI references in MainWindow.xaml and ButtonFactory.cs to use the new images. Additionally, enhanced MainWindow.xaml with more thumbnail size options." />
   </component>
 </project>
