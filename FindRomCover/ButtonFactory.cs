@@ -45,7 +45,7 @@ public class ButtonFactory
         // "Use This Image" menu item
         var useThisImageIcon = new Image
         {
-            Source = new BitmapImage(new Uri("pack://application:,,,/images/copy.png")),
+            Source = new BitmapImage(new Uri("pack://application:,,,/images/usethis.png")),
             Width = 16,
             Height = 16,
             Margin = new Thickness(2)
@@ -79,7 +79,7 @@ public class ButtonFactory
         // "Open File Location" menu item
         var openLocationIcon = new Image
         {
-            Source = new BitmapImage(new Uri("pack://application:,,,/images/copy.png")),
+            Source = new BitmapImage(new Uri("pack://application:,,,/images/folder.png")),
             Width = 16,
             Height = 16,
             Margin = new Thickness(2)

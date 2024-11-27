@@ -342,9 +342,12 @@ public partial class MainWindow : INotifyPropertyChanged
             }
             else
             {
-                MessageBox.Show("Failed to save the image.\n\nMaybe the application could not download the image file.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("Failed to save the image.\n\n" +
+                                "Maybe the application could not download the image file.",
+                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
-                string formattedException = "Failed to save the image.\n\nMaybe the application could not download the image file.";
+                string formattedException = "Failed to save the image.\n\n" +
+                                            "Maybe the application could not download the image file.";
                 Exception ex = new Exception(formattedException);
                 Task logTask = LogErrors.LogErrorAsync(ex, formattedException);
                 logTask.Wait(TimeSpan.FromSeconds(2));
@@ -368,9 +371,14 @@ public partial class MainWindow : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error saving image file\n\nMaybe the application does not have write privileges.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show($"Error saving image file\n\n" +
+                            $"Maybe the application does not have write privileges.",
+                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             
-            string formattedException = $"Error saving image file\n\nMaybe the application does not have write privileges.\n\nException type: {ex.GetType().Name}\nException details: {ex.Message}";
+            string formattedException = $"Error saving image file\n\n" +
+                                        $"Maybe the application does not have write privileges.\n\n" +
+                                        $"Exception type: {ex.GetType().Name}\n" +
+                                        $"Exception details: {ex.Message}";
             Task logTask = LogErrors.LogErrorAsync(ex, formattedException);
             logTask.Wait(TimeSpan.FromSeconds(2));
             
@@ -454,7 +462,9 @@ public partial class MainWindow : INotifyPropertyChanged
             }
             else
             {
-                MessageBox.Show("Invalid similarity threshold selected.\n\nThe error was reported to the developer that will try to fix the issue.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("Invalid similarity threshold selected.\n\n" +
+                                "The error was reported to the developer that will try to fix the issue.",
+                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 
                 string formattedException = "Invalid similarity threshold selected.";
                 Exception ex = new Exception(formattedException);

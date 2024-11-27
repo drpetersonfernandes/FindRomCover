@@ -129,9 +129,19 @@
                     Header="100 pixels"
                     IsCheckable="True" />
                 <MenuItem
+                    x:Name="Thumbnail150"
+                    Click="SetThumbnailSize_Click"
+                    Header="150 pixels"
+                    IsCheckable="True" />
+                <MenuItem
                     x:Name="Thumbnail200"
                     Click="SetThumbnailSize_Click"
                     Header="200 pixels"
+                    IsCheckable="True" />
+                <MenuItem
+                    x:Name="Thumbnail250"
+                    Click="SetThumbnailSize_Click"
+                    Header="250 pixels"
                     IsCheckable="True" />
                 <MenuItem
                     x:Name="Thumbnail300"
@@ -139,9 +149,19 @@
                     Header="300 pixels"
                     IsCheckable="True" />
                 <MenuItem
+                    x:Name="Thumbnail350"
+                    Click="SetThumbnailSize_Click"
+                    Header="350 pixels"
+                    IsCheckable="True" />
+                <MenuItem
                     x:Name="Thumbnail400"
                     Click="SetThumbnailSize_Click"
                     Header="400 pixels"
+                    IsCheckable="True" />
+                <MenuItem
+                    x:Name="Thumbnail450"
+                    Click="SetThumbnailSize_Click"
+                    Header="450 pixels"
                     IsCheckable="True" />
                 <MenuItem
                     x:Name="Thumbnail500"
@@ -149,9 +169,19 @@
                     Header="500 pixels"
                     IsCheckable="True" />
                 <MenuItem
+                    x:Name="Thumbnail550"
+                    Click="SetThumbnailSize_Click"
+                    Header="550 pixels"
+                    IsCheckable="True" />
+                <MenuItem
                     x:Name="Thumbnail600"
                     Click="SetThumbnailSize_Click"
                     Header="600 pixels"
+                    IsCheckable="True" />
+                <MenuItem
+                    x:Name="Thumbnail650"
+                    Click="SetThumbnailSize_Click"
+                    Header="650 pixels"
                     IsCheckable="True" />
                 <MenuItem
                     x:Name="Thumbnail700"
@@ -159,14 +189,34 @@
                     Header="700 pixels"
                     IsCheckable="True" />
                 <MenuItem
+                    x:Name="Thumbnail750"
+                    Click="SetThumbnailSize_Click"
+                    Header="750 pixels"
+                    IsCheckable="True" />
+                <MenuItem
                     x:Name="Thumbnail800"
                     Click="SetThumbnailSize_Click"
                     Header="800 pixels"
                     IsCheckable="True" />
                 <MenuItem
+                    x:Name="Thumbnail850"
+                    Click="SetThumbnailSize_Click"
+                    Header="850 pixels"
+                    IsCheckable="True" />
+                <MenuItem
                     x:Name="Thumbnail900"
                     Click="SetThumbnailSize_Click"
                     Header="900 pixels"
+                    IsCheckable="True" />
+                <MenuItem
+                    x:Name="Thumbnail950"
+                    Click="SetThumbnailSize_Click"
+                    Header="950 pixels"
+                    IsCheckable="True" />
+                <MenuItem
+                    x:Name="Thumbnail1000"
+                    Click="SetThumbnailSize_Click"
+                    Header="1000 pixels"
                     IsCheckable="True" />
             </MenuItem>
 

@@ -65,6 +65,10 @@
     <Resource Include="images\logo.png" />
     <None Remove="images\copy.png" />
     <Resource Include="images\copy.png" />
+    <None Remove="images\usethis.png" />
+    <Resource Include="images\usethis.png" />
+    <None Remove="images\folder.png" />
+    <Resource Include="images\folder.png" />
   </ItemGroup>
 
 </Project>
