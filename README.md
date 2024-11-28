@@ -1,11 +1,11 @@
 # Find ROM Cover
 
-Find ROM Cover is an easy-to-use application designed to help you effortlessly rename and organize cover images for your ROM collection. There's no need to manually rename your images to match the filenames of your ROMs.
+Find ROM Cover is an easy-to-use application designed to help you effortlessly rename and organize cover images for your ROM collection. It helps you rename your images to match the filenames of your ROMs.
 
-## Screenshots:
-
+Main window showing the right-click context menu:
 ![Screenshot](screenshot1.png)
 
+Another screenshot showing the dark theme:
 ![Screenshot](screenshot2.png)
 
 ## How It Works:
@@ -20,14 +20,13 @@ Find ROM Cover is an easy-to-use application designed to help you effortlessly r
 
 - **Organize:** Manually select the best cover images from the suggestions provided.
 
-- **Copy:** Click on the image to copy it to the Cover Image folder, renaming the image to match the ROM file name.
-
+- **Copy:** Click on the image to copy it to the Cover Image folder, renaming the image to match the ROM filename.
 
 ## Features:
 
 - **Easy ROM and Cover Image Matching:** Automatically matches your ROM files with their corresponding cover images based on name similarity.
 
-- **Adjustable Similarity Threshold:** Fine-tune how strict the matching criteria should be. Whether you prefer exact matches or broader suggestions, you have the control.
+- **Adjustable Similarity Threshold:** Fine-tune how strict the matching criteria should be, whether you prefer exact matches or broader suggestions.
 
 - **Thumbnail Size Customization:** Choose how large or small you want the cover image thumbnails to appear, making it easier to view and select the right covers.
 
@@ -35,7 +34,7 @@ Find ROM Cover is an easy-to-use application designed to help you effortlessly r
 
 - **Missing Image Finder:** Quickly identify which ROMs are missing cover images, helping you complete your collection.
 
-- **Simple Interface:** Designed for ease of use, making it accessible to everyone, regardless of tech-savviness.
+- **Simple Interface:** Designed for ease of use, making it accessible to everyone.
 
 ## Where can I find ROM Cover Images?
 
@@ -43,15 +42,15 @@ You can find cover images on websites such as [Libretro Thumbnails](https://gith
 
 ## Support the Project:
 
-Did you enjoy using Find ROM Cover? Consider [donating](https://www.buymeacoffee.com/purelogiccode) to support the project or simply to say thanks!
+Did you enjoy using Find ROM Cover? Consider [donating](https://www.purelogiccode.com/donate) to support the project or simply to say thanks!
 
 ## Developer:
 
 This project was developed by a [Simple Launcher](https://github.com/drpetersonfernandes/SimpleLauncher) developer to assist in organizing his cover image collection.
 
-Peterson Fernandes - [Github Profile](https://github.com/drpetersonfernandes)
+Peterson Fernandes - [GitHub Profile](https://github.com/drpetersonfernandes)
 
 ## Technical Details:
 
-Find ROM Cover was written in C# using Microsoft Visual Studio Community 2022 (64-bit) and the Windows Presentation Foundation (WPF) framework with Microsoft .NET 8.0.<br>
+Find ROM Cover was written in C# using the Windows Presentation Foundation (WPF) framework with Microsoft .NET 8.0.<br>
 This program is designed exclusively for Windows, with compatibility expected from Windows 7 and later versions. It has been tested on Windows 11.
