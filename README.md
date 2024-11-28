@@ -8,12 +8,6 @@ Find ROM Cover is an easy-to-use application designed to help you effortlessly r
 
 ![Screenshot](screenshot2.png)
 
-![Screenshot](screenshot3.png)
-
-![Screenshot](screenshot4.png)
-
-![Screenshot](screenshot5.png)
-
 ## How It Works:
 
 - **Browse:** Select the folders where your ROMs and cover images are stored.
