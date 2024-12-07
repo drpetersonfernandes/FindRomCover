@@ -7,15 +7,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5d0ced43-e166-4f78-8f62-bd8a5015c137" name="Changes" comment="&#10;Update workspace and image configurations&#10;&#10;Revised workspace.xml to improve project maintenance and updated task duration for accuracy. Adjusted image references and enhanced UI in MainWindow.xaml for more functionality.&#10;```">
+    <list default="true" id="5d0ced43-e166-4f78-8f62-bd8a5015c137" name="Changes" comment="Refine README.md for clarity and consistency&#10;&#10;Improved the explanation of the application's functionality and adjusted minor wording for consistency. Updated the donation link and corrected typographical errors. These changes aim to enhance the clarity and ease of understanding for readers.">
       <change beforePath="$PROJECT_DIR$/.idea/.idea.FindRomCover/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.FindRomCover/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FindRomCover.sln" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover.sln" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/screenshot1.png" beforeDir="false" afterPath="$PROJECT_DIR$/screenshot1.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/screenshot2.png" beforeDir="false" afterPath="$PROJECT_DIR$/screenshot2.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/screenshot3.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/screenshot4.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/screenshot5.png" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -116,7 +109,8 @@
       <workItem from="1732645178131" duration="2878000" />
       <workItem from="1732649809042" duration="8799000" />
       <workItem from="1732663233141" duration="3271000" />
-      <workItem from="1732825620448" duration="714000" />
+      <workItem from="1732825620448" duration="1248000" />
+      <workItem from="1733024576577" duration="34000" />
     </task>
     <task id="LOCAL-00002" summary="Improve workspace configurations and enhance MainWindow behavior&#10;&#10;Streamlined the workspace.xml by removing unnecessary components and updating various configuration settings for better project maintenance and clarity. Additionally, modified MainWindow.xaml.cs to clear SimilarImages when an item is removed.">
       <option name="closed" value="true" />
@@ -182,7 +176,23 @@
       <option name="project" value="LOCAL" />
       <updated>1732825916053</updated>
     </task>
-    <option name="localTasksCounter" value="10" />
+    <task id="LOCAL-00010" summary="Remove obsolete screenshots and update configurations&#10;&#10;Deleted unused screenshots from the repository to declutter files and improve management. Revised workspace.xml to enhance project maintenance and updated the README to reflect these changes. Adjusted image references to ensure the UI functions optimally with the current set of assets.">
+      <option name="closed" value="true" />
+      <created>1732826361507</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1732826361507</updated>
+    </task>
+    <task id="LOCAL-00011" summary="Refine README.md for clarity and consistency&#10;&#10;Improved the explanation of the application's functionality and adjusted minor wording for consistency. Updated the donation link and corrected typographical errors. These changes aim to enhance the clarity and ease of understanding for readers.">
+      <option name="closed" value="true" />
+      <created>1732826863356</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1732826863356</updated>
+    </task>
+    <option name="localTasksCounter" value="12" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -199,6 +209,8 @@
     <MESSAGE value="Add new images to resources and update UI references&#10;&#10;Updated the project to include 'usethis.png' and 'folder.png' images, reflecting these changes in the resource definitions. Adjusted UI references in MainWindow.xaml and ButtonFactory.cs to use the new images. Additionally, enhanced MainWindow.xaml with more thumbnail size options." />
     <MESSAGE value="Update images and UI references in project&#10;&#10;Included 'usethis.png' and 'folder.png' images in the resource definitions and updated UI references in MainWindow.xaml and ButtonFactory.cs to reflect these changes. Additionally, enhanced MainWindow.xaml with more thumbnail size options." />
     <MESSAGE value="&#10;Update workspace and image configurations&#10;&#10;Revised workspace.xml to improve project maintenance and updated task duration for accuracy. Adjusted image references and enhanced UI in MainWindow.xaml for more functionality.&#10;```" />
-    <option name="LAST_COMMIT_MESSAGE" value="&#10;Update workspace and image configurations&#10;&#10;Revised workspace.xml to improve project maintenance and updated task duration for accuracy. Adjusted image references and enhanced UI in MainWindow.xaml for more functionality.&#10;```" />
+    <MESSAGE value="Remove obsolete screenshots and update configurations&#10;&#10;Deleted unused screenshots from the repository to declutter files and improve management. Revised workspace.xml to enhance project maintenance and updated the README to reflect these changes. Adjusted image references to ensure the UI functions optimally with the current set of assets." />
+    <MESSAGE value="Refine README.md for clarity and consistency&#10;&#10;Improved the explanation of the application's functionality and adjusted minor wording for consistency. Updated the donation link and corrected typographical errors. These changes aim to enhance the clarity and ease of understanding for readers." />
+    <option name="LAST_COMMIT_MESSAGE" value="Refine README.md for clarity and consistency&#10;&#10;Improved the explanation of the application's functionality and adjusted minor wording for consistency. Updated the donation link and corrected typographical errors. These changes aim to enhance the clarity and ease of understanding for readers." />
   </component>
 </project>

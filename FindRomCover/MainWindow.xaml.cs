@@ -235,7 +235,10 @@ public partial class MainWindow : INotifyPropertyChanged
         LstMissingImages.Items.Clear();
         
         var searchPatterns = _settings.SupportedExtensions.Select(ext => "*." + ext).ToArray();
-        var files = searchPatterns.SelectMany(ext => Directory.GetFiles(TxtRomFolder.Text, ext)).ToArray();
+        var files = searchPatterns
+            .SelectMany(ext => Directory.GetFiles(TxtRomFolder.Text, ext))
+            .OrderBy(file => file) // This will order the files alphabetically
+            .ToArray();
             
         CheckForMissingImages(files);
     }
@@ -354,7 +357,6 @@ public partial class MainWindow : INotifyPropertyChanged
             }
         }
     }
-
 
     private static bool ConvertAndSaveImage(string sourcePath, string targetPath)
     {
