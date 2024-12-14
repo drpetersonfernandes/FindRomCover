@@ -7,10 +7,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5d0ced43-e166-4f78-8f62-bd8a5015c137" name="Changes" comment="Sort files alphabetically in MainWindow file search&#10;&#10;The file retrieval process in MainWindow.xaml.cs has been updated to sort files alphabetically, enhancing consistency and predictability in file handling. Additionally, the workspace.xml comments and tasks have been updated to refine project documentation and task descriptions, focusing on clarity and consistency of the README.">
-      <change beforePath="$PROJECT_DIR$/.idea/.idea.FindRomCover/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.FindRomCover/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FindRomCover/FindRomCover.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/FindRomCover.csproj" afterDir="false" />
-    </list>
+    <list default="true" id="5d0ced43-e166-4f78-8f62-bd8a5015c137" name="Changes" comment="Update version to 1.7.0 in project configuration&#10;&#10;The AssemblyVersion and FileVersion in FindRomCover.csproj have been updated to 1.7.0, reflecting a new version release. This change ensures proper version tracking and aligns with the latest project updates." />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -115,6 +112,7 @@
       <workItem from="1733024576577" duration="34000" />
       <workItem from="1733603460552" duration="605000" />
       <workItem from="1733698953238" duration="374000" />
+      <workItem from="1734066178550" duration="111000" />
     </task>
     <task id="LOCAL-00002" summary="Improve workspace configurations and enhance MainWindow behavior&#10;&#10;Streamlined the workspace.xml by removing unnecessary components and updating various configuration settings for better project maintenance and clarity. Additionally, modified MainWindow.xaml.cs to clear SimilarImages when an item is removed.">
       <option name="closed" value="true" />
@@ -204,7 +202,15 @@
       <option name="project" value="LOCAL" />
       <updated>1733604033121</updated>
     </task>
-    <option name="localTasksCounter" value="13" />
+    <task id="LOCAL-00013" summary="Update version to 1.7.0 in project configuration&#10;&#10;The AssemblyVersion and FileVersion in FindRomCover.csproj have been updated to 1.7.0, reflecting a new version release. This change ensures proper version tracking and aligns with the latest project updates.">
+      <option name="closed" value="true" />
+      <created>1734066257977</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1734066257977</updated>
+    </task>
+    <option name="localTasksCounter" value="14" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -224,6 +230,7 @@
     <MESSAGE value="Remove obsolete screenshots and update configurations&#10;&#10;Deleted unused screenshots from the repository to declutter files and improve management. Revised workspace.xml to enhance project maintenance and updated the README to reflect these changes. Adjusted image references to ensure the UI functions optimally with the current set of assets." />
     <MESSAGE value="Refine README.md for clarity and consistency&#10;&#10;Improved the explanation of the application's functionality and adjusted minor wording for consistency. Updated the donation link and corrected typographical errors. These changes aim to enhance the clarity and ease of understanding for readers." />
     <MESSAGE value="Sort files alphabetically in MainWindow file search&#10;&#10;The file retrieval process in MainWindow.xaml.cs has been updated to sort files alphabetically, enhancing consistency and predictability in file handling. Additionally, the workspace.xml comments and tasks have been updated to refine project documentation and task descriptions, focusing on clarity and consistency of the README." />
-    <option name="LAST_COMMIT_MESSAGE" value="Sort files alphabetically in MainWindow file search&#10;&#10;The file retrieval process in MainWindow.xaml.cs has been updated to sort files alphabetically, enhancing consistency and predictability in file handling. Additionally, the workspace.xml comments and tasks have been updated to refine project documentation and task descriptions, focusing on clarity and consistency of the README." />
+    <MESSAGE value="Update version to 1.7.0 in project configuration&#10;&#10;The AssemblyVersion and FileVersion in FindRomCover.csproj have been updated to 1.7.0, reflecting a new version release. This change ensures proper version tracking and aligns with the latest project updates." />
+    <option name="LAST_COMMIT_MESSAGE" value="Update version to 1.7.0 in project configuration&#10;&#10;The AssemblyVersion and FileVersion in FindRomCover.csproj have been updated to 1.7.0, reflecting a new version release. This change ensures proper version tracking and aligns with the latest project updates." />
   </component>
 </project>

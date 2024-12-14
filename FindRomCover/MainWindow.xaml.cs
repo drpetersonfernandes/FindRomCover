@@ -345,12 +345,10 @@ public partial class MainWindow : INotifyPropertyChanged
             }
             else
             {
-                MessageBox.Show("Failed to save the image.\n\n" +
-                                "Maybe the application could not download the image file.",
+                MessageBox.Show("Failed to save the image.",
                     "Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
-                string formattedException = "Failed to save the image.\n\n" +
-                                            "Maybe the application could not download the image file.";
+                string formattedException = "Failed to save the image.";
                 Exception ex = new Exception(formattedException);
                 Task logTask = LogErrors.LogErrorAsync(ex, formattedException);
                 logTask.Wait(TimeSpan.FromSeconds(2));

@@ -106,8 +106,8 @@ public class ButtonFactory
         
             // Copy to clipboard
             Clipboard.SetText(filenameWithoutExtension);
-        
-            MessageBox.Show($"Filename '{filenameWithoutExtension}' copied to clipboard!", "Copied", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show($"Filename '{filenameWithoutExtension}' copied to clipboard!",
+                "Copied", MessageBoxButton.OK, MessageBoxImage.Information);
         }
     });
     
