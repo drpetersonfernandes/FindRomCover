@@ -7,7 +7,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5d0ced43-e166-4f78-8f62-bd8a5015c137" name="Changes" comment="Update version to 1.7.0 in project configuration&#10;&#10;The AssemblyVersion and FileVersion in FindRomCover.csproj have been updated to 1.7.0, reflecting a new version release. This change ensures proper version tracking and aligns with the latest project updates." />
+    <list default="true" id="5d0ced43-e166-4f78-8f62-bd8a5015c137" name="Changes" comment="Simplify error messages and update version to 1.7.0.&#10;&#10;Refined error message text in MainWindow.xaml.cs for clarity. Updated workspace configurations to reflect version 1.7.0, ensuring proper version tracking and alignment with project changes. Adjusted ButtonFactory formatting for improved readability." />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -32,8 +32,7 @@
   }
 }</component>
   <component name="HighlightingSettingsPerFile">
-    <setting file="mock:///AIAssistantSnippet." root0="SKIP_HIGHLIGHTING" />
-    <setting file="mock:///AIAssistantSnippet." root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/54ffc5696b7246f3f612cf6e92f7637f0cc1e551590644c8d2531b87a873ad1/WrapPanel.cs" root0="FORCE_HIGHLIGHTING" />
   </component>
   <component name="MetaFilesCheckinStateConfiguration" checkMetaFiles="false" />
   <component name="ProblemsViewState">
@@ -113,6 +112,7 @@
       <workItem from="1733603460552" duration="605000" />
       <workItem from="1733698953238" duration="374000" />
       <workItem from="1734066178550" duration="111000" />
+      <workItem from="1734215475799" duration="677000" />
     </task>
     <task id="LOCAL-00002" summary="Improve workspace configurations and enhance MainWindow behavior&#10;&#10;Streamlined the workspace.xml by removing unnecessary components and updating various configuration settings for better project maintenance and clarity. Additionally, modified MainWindow.xaml.cs to clear SimilarImages when an item is removed.">
       <option name="closed" value="true" />
@@ -210,7 +210,15 @@
       <option name="project" value="LOCAL" />
       <updated>1734066257977</updated>
     </task>
-    <option name="localTasksCounter" value="14" />
+    <task id="LOCAL-00014" summary="Simplify error messages and update version to 1.7.0.&#10;&#10;Refined error message text in MainWindow.xaml.cs for clarity. Updated workspace configurations to reflect version 1.7.0, ensuring proper version tracking and alignment with project changes. Adjusted ButtonFactory formatting for improved readability.">
+      <option name="closed" value="true" />
+      <created>1734216137339</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1734216137339</updated>
+    </task>
+    <option name="localTasksCounter" value="15" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -231,6 +239,7 @@
     <MESSAGE value="Refine README.md for clarity and consistency&#10;&#10;Improved the explanation of the application's functionality and adjusted minor wording for consistency. Updated the donation link and corrected typographical errors. These changes aim to enhance the clarity and ease of understanding for readers." />
     <MESSAGE value="Sort files alphabetically in MainWindow file search&#10;&#10;The file retrieval process in MainWindow.xaml.cs has been updated to sort files alphabetically, enhancing consistency and predictability in file handling. Additionally, the workspace.xml comments and tasks have been updated to refine project documentation and task descriptions, focusing on clarity and consistency of the README." />
     <MESSAGE value="Update version to 1.7.0 in project configuration&#10;&#10;The AssemblyVersion and FileVersion in FindRomCover.csproj have been updated to 1.7.0, reflecting a new version release. This change ensures proper version tracking and aligns with the latest project updates." />
-    <option name="LAST_COMMIT_MESSAGE" value="Update version to 1.7.0 in project configuration&#10;&#10;The AssemblyVersion and FileVersion in FindRomCover.csproj have been updated to 1.7.0, reflecting a new version release. This change ensures proper version tracking and aligns with the latest project updates." />
+    <MESSAGE value="Simplify error messages and update version to 1.7.0.&#10;&#10;Refined error message text in MainWindow.xaml.cs for clarity. Updated workspace configurations to reflect version 1.7.0, ensuring proper version tracking and alignment with project changes. Adjusted ButtonFactory formatting for improved readability." />
+    <option name="LAST_COMMIT_MESSAGE" value="Simplify error messages and update version to 1.7.0.&#10;&#10;Refined error message text in MainWindow.xaml.cs for clarity. Updated workspace configurations to reflect version 1.7.0, ensuring proper version tracking and alignment with project changes. Adjusted ButtonFactory formatting for improved readability." />
   </component>
 </project>
