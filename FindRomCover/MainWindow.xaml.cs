@@ -166,9 +166,12 @@ public partial class MainWindow : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Unable to open the donation link: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show($"Unable to open the donation link: {ex.Message}",
+                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             
-            string formattedException = $"Unable to open the donation link.\n\nException type: {ex.GetType().Name}\nException details: {ex.Message}";
+            string formattedException = $"Unable to open the donation link.\n\n" +
+                                        $"Exception type: {ex.GetType().Name}\n" +
+                                        $"Exception details: {ex.Message}";
             Task logTask = LogErrors.LogErrorAsync(ex, formattedException);
             logTask.Wait(TimeSpan.FromSeconds(2));
         }
@@ -221,26 +224,43 @@ public partial class MainWindow : INotifyPropertyChanged
     {
         if (_settings.SupportedExtensions.Length == 0)
         {
-            MessageBox.Show("No supported file extensions loaded. Please check file 'settings.xml'", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show("No supported file extensions loaded. Please check file 'settings.xml'",
+                "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
         if (string.IsNullOrEmpty(TxtRomFolder.Text) || string.IsNullOrEmpty(TxtImageFolder.Text))
         {
-            MessageBox.Show("Please select both ROM and Image folders.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show("Please select both ROM and Image folders.",
+                "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
-        // Clear list before setting new values
-        LstMissingImages.Items.Clear();
+        try
+        {
+            // Clear list before setting new values
+            LstMissingImages.Items.Clear();
         
-        var searchPatterns = _settings.SupportedExtensions.Select(ext => "*." + ext).ToArray();
-        var files = searchPatterns
-            .SelectMany(ext => Directory.GetFiles(TxtRomFolder.Text, ext))
-            .OrderBy(file => file) // This will order the files alphabetically
-            .ToArray();
+            var searchPatterns = _settings.SupportedExtensions.Select(ext => "*." + ext).ToArray();
+            var files = searchPatterns
+                .SelectMany(ext => Directory.GetFiles(TxtRomFolder.Text, ext))
+                .OrderBy(file => file) // This will order the files alphabetically
+                .ToArray();
             
-        CheckForMissingImages(files);
+            CheckForMissingImages(files);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"There was an error checking for the missing image files.\n\n" +
+                            $"Check if the provided folders are valid.",
+                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            
+            string formattedException = $"There was an error checking for the missing image files.\n\n" +
+                                        $"Exception type: {ex.GetType().Name}\n" +
+                                        $"Exception details: {ex.Message}";
+            Task logTask = LogErrors.LogErrorAsync(ex, formattedException);
+            logTask.Wait(TimeSpan.FromSeconds(2));
+        }
     }
 
     private void CheckForMissingImages(string[] romFiles)
