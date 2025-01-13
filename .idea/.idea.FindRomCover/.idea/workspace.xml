@@ -7,10 +7,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5d0ced43-e166-4f78-8f62-bd8a5015c137" name="Changes" comment="Simplify error messages and update version to 1.7.0.&#10;&#10;Refined error messages in MainWindow.xaml.cs for better clarity. Updated workspace configurations to align with version 1.7.0 for accurate tracking. Adjusted ButtonFactory formatting to improve readability and maintainability.">
-      <change beforePath="$PROJECT_DIR$/.idea/.idea.FindRomCover/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.FindRomCover/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FindRomCover/MainWindow.xaml.cs" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/MainWindow.xaml.cs" afterDir="false" />
-    </list>
+    <list default="true" id="5d0ced43-e166-4f78-8f62-bd8a5015c137" name="Changes" comment="Simplify error handling and improve project configurations.&#10;&#10;Refined error handling in MainWindow.xaml.cs by adding exception type details and improving message clarity. Updated workspace configurations to align with version 1.7.0, enabling accurate version tracking. Enhanced code readability and maintainability with updated formatting." />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -39,7 +36,7 @@
   </component>
   <component name="MetaFilesCheckinStateConfiguration" checkMetaFiles="false" />
   <component name="ProblemsViewState">
-    <option name="selectedTabId" value="CurrentFile" />
+    <option name="selectedTabId" value="SWEA" />
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 1
@@ -116,7 +113,7 @@
       <workItem from="1733698953238" duration="374000" />
       <workItem from="1734066178550" duration="111000" />
       <workItem from="1734215475799" duration="677000" />
-      <workItem from="1735968586314" duration="573000" />
+      <workItem from="1735968586314" duration="679000" />
     </task>
     <task id="LOCAL-00002" summary="Improve workspace configurations and enhance MainWindow behavior&#10;&#10;Streamlined the workspace.xml by removing unnecessary components and updating various configuration settings for better project maintenance and clarity. Additionally, modified MainWindow.xaml.cs to clear SimilarImages when an item is removed.">
       <option name="closed" value="true" />
@@ -230,7 +227,15 @@
       <option name="project" value="LOCAL" />
       <updated>1735968663163</updated>
     </task>
-    <option name="localTasksCounter" value="16" />
+    <task id="LOCAL-00016" summary="Simplify error handling and improve project configurations.&#10;&#10;Refined error handling in MainWindow.xaml.cs by adding exception type details and improving message clarity. Updated workspace configurations to align with version 1.7.0, enabling accurate version tracking. Enhanced code readability and maintainability with updated formatting.">
+      <option name="closed" value="true" />
+      <created>1735969256670</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1735969256670</updated>
+    </task>
+    <option name="localTasksCounter" value="17" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -253,6 +258,7 @@
     <MESSAGE value="Update version to 1.7.0 in project configuration&#10;&#10;The AssemblyVersion and FileVersion in FindRomCover.csproj have been updated to 1.7.0, reflecting a new version release. This change ensures proper version tracking and aligns with the latest project updates." />
     <MESSAGE value="Simplify error messages and update version to 1.7.0.&#10;&#10;Refined error message text in MainWindow.xaml.cs for clarity. Updated workspace configurations to reflect version 1.7.0, ensuring proper version tracking and alignment with project changes. Adjusted ButtonFactory formatting for improved readability." />
     <MESSAGE value="Simplify error messages and update version to 1.7.0.&#10;&#10;Refined error messages in MainWindow.xaml.cs for better clarity. Updated workspace configurations to align with version 1.7.0 for accurate tracking. Adjusted ButtonFactory formatting to improve readability and maintainability." />
-    <option name="LAST_COMMIT_MESSAGE" value="Simplify error messages and update version to 1.7.0.&#10;&#10;Refined error messages in MainWindow.xaml.cs for better clarity. Updated workspace configurations to align with version 1.7.0 for accurate tracking. Adjusted ButtonFactory formatting to improve readability and maintainability." />
+    <MESSAGE value="Simplify error handling and improve project configurations.&#10;&#10;Refined error handling in MainWindow.xaml.cs by adding exception type details and improving message clarity. Updated workspace configurations to align with version 1.7.0, enabling accurate version tracking. Enhanced code readability and maintainability with updated formatting." />
+    <option name="LAST_COMMIT_MESSAGE" value="Simplify error handling and improve project configurations.&#10;&#10;Refined error handling in MainWindow.xaml.cs by adding exception type details and improving message clarity. Updated workspace configurations to align with version 1.7.0, enabling accurate version tracking. Enhanced code readability and maintainability with updated formatting." />
   </component>
 </project>
