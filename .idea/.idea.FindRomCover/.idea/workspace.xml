@@ -7,7 +7,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5d0ced43-e166-4f78-8f62-bd8a5015c137" name="Changes" comment="Simplify error handling and improve project configurations.&#10;&#10;Refined error handling in MainWindow.xaml.cs by adding exception type details and improving message clarity. Updated workspace configurations to align with version 1.7.0, enabling accurate version tracking. Enhanced code readability and maintainability with updated formatting." />
+    <list default="true" id="5d0ced43-e166-4f78-8f62-bd8a5015c137" name="Changes" comment="Simplify error handling and improve project configurations.&#10;&#10;Refined error handling in MainWindow.xaml.cs by adding exception type details and improving message clarity. Updated workspace configurations to align with version 1.7.0, enabling accurate version tracking. Enhanced code readability and maintainability with updated formatting.">
+      <change beforePath="$PROJECT_DIR$/.idea/.idea.FindRomCover/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.FindRomCover/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FindRomCover/FindRomCover.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/FindRomCover.csproj" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -114,6 +117,7 @@
       <workItem from="1734066178550" duration="111000" />
       <workItem from="1734215475799" duration="677000" />
       <workItem from="1735968586314" duration="679000" />
+      <workItem from="1736736976821" duration="349000" />
     </task>
     <task id="LOCAL-00002" summary="Improve workspace configurations and enhance MainWindow behavior&#10;&#10;Streamlined the workspace.xml by removing unnecessary components and updating various configuration settings for better project maintenance and clarity. Additionally, modified MainWindow.xaml.cs to clear SimilarImages when an item is removed.">
       <option name="closed" value="true" />
@@ -235,7 +239,15 @@
       <option name="project" value="LOCAL" />
       <updated>1735969256670</updated>
     </task>
-    <option name="localTasksCounter" value="17" />
+    <task id="LOCAL-00017" summary="Simplify error handling and improve project configurations.&#10;&#10;Refined error handling in MainWindow.xaml.cs by adding exception type details and improving message clarity. Updated workspace configurations to align with version 1.7.0, enabling accurate version tracking. Enhanced code readability and maintainability with updated formatting.">
+      <option name="closed" value="true" />
+      <created>1736737042200</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1736737042200</updated>
+    </task>
+    <option name="localTasksCounter" value="18" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
