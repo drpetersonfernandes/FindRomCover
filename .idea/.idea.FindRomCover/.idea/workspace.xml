@@ -7,9 +7,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5d0ced43-e166-4f78-8f62-bd8a5015c137" name="Changes" comment="Simplify error handling and improve project configurations.&#10;&#10;Refined error handling in MainWindow.xaml.cs by adding exception type details and improving message clarity. Updated workspace configurations to align with version 1.7.0, enabling accurate version tracking. Enhanced code readability and maintainability with updated formatting.">
+    <list default="true" id="5d0ced43-e166-4f78-8f62-bd8a5015c137" name="Changes" comment="Update version to 1.9 in project file&#10;&#10;Updated AssemblyVersion and FileVersion from 1.8 to 1.9 in the FindRomCover.csproj file. This prepares the project for the next release or deployment iteration. No other changes were introduced.">
       <change beforePath="$PROJECT_DIR$/.idea/.idea.FindRomCover/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.FindRomCover/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/FindRomCover/FindRomCover.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/FindRomCover.csproj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/FindRomCover/settings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/FindRomCover/settings.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -28,12 +28,12 @@
     &quot;assignee&quot;: &quot;drpetersonfernandes&quot;
   }
 }</component>
-  <component name="GithubPullRequestsUISettings">{
-  &quot;selectedUrlAndAccountId&quot;: {
-    &quot;url&quot;: &quot;https://github.com/drpetersonfernandes/FindRomCover.git&quot;,
-    &quot;accountId&quot;: &quot;0ca63fb6-f8a0-4c61-971c-3146fb7e3d95&quot;
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/drpetersonfernandes/FindRomCover.git",
+    "accountId": "112a40f8-fef6-4c48-82f0-745835eb88f6"
   }
-}</component>
+}]]></component>
   <component name="HighlightingSettingsPerFile">
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/54ffc5696b7246f3f612cf6e92f7637f0cc1e551590644c8d2531b87a873ad1/WrapPanel.cs" root0="FORCE_HIGHLIGHTING" />
   </component>
@@ -118,6 +118,9 @@
       <workItem from="1734215475799" duration="677000" />
       <workItem from="1735968586314" duration="679000" />
       <workItem from="1736736976821" duration="349000" />
+      <workItem from="1738893017812" duration="1625000" />
+      <workItem from="1738900460992" duration="23000" />
+      <workItem from="1738935099652" duration="52000" />
     </task>
     <task id="LOCAL-00002" summary="Improve workspace configurations and enhance MainWindow behavior&#10;&#10;Streamlined the workspace.xml by removing unnecessary components and updating various configuration settings for better project maintenance and clarity. Additionally, modified MainWindow.xaml.cs to clear SimilarImages when an item is removed.">
       <option name="closed" value="true" />
@@ -247,7 +250,31 @@
       <option name="project" value="LOCAL" />
       <updated>1736737042200</updated>
     </task>
-    <option name="localTasksCounter" value="18" />
+    <task id="LOCAL-00018" summary="Update target framework to .NET 9 and bump version to 1.8.&#10;&#10;Upgraded project to target .NET 9.0, ensuring compatibility with newer features. Updated assembly and file versions to 1.8, added LangVersion 13, and adjusted project configurations for improved clarity and maintainability.">
+      <option name="closed" value="true" />
+      <created>1738893108811</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1738893108811</updated>
+    </task>
+    <task id="LOCAL-00019" summary="Expand supported file extensions in settings.xml&#10;&#10;Added multiple new file extensions to the SupportedExtensions list in settings.xml to improve compatibility with various file types. This change enhances the tool's versatility and ensures broader support for diverse formats.">
+      <option name="closed" value="true" />
+      <created>1738894398052</created>
+      <option name="number" value="00019" />
+      <option name="presentableId" value="LOCAL-00019" />
+      <option name="project" value="LOCAL" />
+      <updated>1738894398052</updated>
+    </task>
+    <task id="LOCAL-00020" summary="Update version to 1.9 in project file&#10;&#10;Updated AssemblyVersion and FileVersion from 1.8 to 1.9 in the FindRomCover.csproj file. This prepares the project for the next release or deployment iteration. No other changes were introduced.">
+      <option name="closed" value="true" />
+      <created>1738894637866</created>
+      <option name="number" value="00020" />
+      <option name="presentableId" value="LOCAL-00020" />
+      <option name="project" value="LOCAL" />
+      <updated>1738894637866</updated>
+    </task>
+    <option name="localTasksCounter" value="21" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -271,6 +298,9 @@
     <MESSAGE value="Simplify error messages and update version to 1.7.0.&#10;&#10;Refined error message text in MainWindow.xaml.cs for clarity. Updated workspace configurations to reflect version 1.7.0, ensuring proper version tracking and alignment with project changes. Adjusted ButtonFactory formatting for improved readability." />
     <MESSAGE value="Simplify error messages and update version to 1.7.0.&#10;&#10;Refined error messages in MainWindow.xaml.cs for better clarity. Updated workspace configurations to align with version 1.7.0 for accurate tracking. Adjusted ButtonFactory formatting to improve readability and maintainability." />
     <MESSAGE value="Simplify error handling and improve project configurations.&#10;&#10;Refined error handling in MainWindow.xaml.cs by adding exception type details and improving message clarity. Updated workspace configurations to align with version 1.7.0, enabling accurate version tracking. Enhanced code readability and maintainability with updated formatting." />
-    <option name="LAST_COMMIT_MESSAGE" value="Simplify error handling and improve project configurations.&#10;&#10;Refined error handling in MainWindow.xaml.cs by adding exception type details and improving message clarity. Updated workspace configurations to align with version 1.7.0, enabling accurate version tracking. Enhanced code readability and maintainability with updated formatting." />
+    <MESSAGE value="Update target framework to .NET 9 and bump version to 1.8.&#10;&#10;Upgraded project to target .NET 9.0, ensuring compatibility with newer features. Updated assembly and file versions to 1.8, added LangVersion 13, and adjusted project configurations for improved clarity and maintainability." />
+    <MESSAGE value="Expand supported file extensions in settings.xml&#10;&#10;Added multiple new file extensions to the SupportedExtensions list in settings.xml to improve compatibility with various file types. This change enhances the tool's versatility and ensures broader support for diverse formats." />
+    <MESSAGE value="Update version to 1.9 in project file&#10;&#10;Updated AssemblyVersion and FileVersion from 1.8 to 1.9 in the FindRomCover.csproj file. This prepares the project for the next release or deployment iteration. No other changes were introduced." />
+    <option name="LAST_COMMIT_MESSAGE" value="Update version to 1.9 in project file&#10;&#10;Updated AssemblyVersion and FileVersion from 1.8 to 1.9 in the FindRomCover.csproj file. This prepares the project for the next release or deployment iteration. No other changes were introduced." />
   </component>
 </project>
