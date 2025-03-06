@@ -38,7 +38,7 @@ public class Settings
 
             // Load similarity rate
             var similarityNode = doc.SelectSingleNode("//Settings/SimilarityThreshold");
-            if (similarityNode != null && double.TryParse(similarityNode.InnerText, out double savedRate))
+            if (similarityNode != null && double.TryParse(similarityNode.InnerText, out var savedRate))
             {
                 SimilarityThreshold = savedRate;
             }
@@ -62,11 +62,11 @@ public class Settings
                 var widthNode = imageSizeNode.SelectSingleNode("Width");
                 var heightNode = imageSizeNode.SelectSingleNode("Height");
 
-                if (widthNode != null && int.TryParse(widthNode.InnerText, out int width))
+                if (widthNode != null && int.TryParse(widthNode.InnerText, out var width))
                 {
                     ImageWidth = width;
                 }
-                if (heightNode != null && int.TryParse(heightNode.InnerText, out int height))
+                if (heightNode != null && int.TryParse(heightNode.InnerText, out var height))
                 {
                     ImageHeight = height;
                 }

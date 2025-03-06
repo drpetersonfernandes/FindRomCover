@@ -102,7 +102,7 @@ public class ButtonFactory
         if (param is string imagePath)
         {
             // Get filename without extension
-            string filenameWithoutExtension = Path.GetFileNameWithoutExtension(imagePath);
+            var filenameWithoutExtension = Path.GetFileNameWithoutExtension(imagePath);
         
             // Copy to clipboard
             Clipboard.SetText(filenameWithoutExtension);

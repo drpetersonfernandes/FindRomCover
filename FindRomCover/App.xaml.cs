@@ -29,8 +29,8 @@ public partial class App
 
     public static void ApplyThemeToWindow(Window window)
     {
-        string baseTheme = Settings.BaseTheme;
-        string accentColor = Settings.AccentColor;
+        var baseTheme = Settings.BaseTheme;
+        var accentColor = Settings.AccentColor;
         ThemeManager.Current.ChangeTheme(window, $"{baseTheme}.{accentColor}");
     }
 }

@@ -2,6 +2,8 @@
                       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                       xmlns:controls="http://metro.mahapps.com/winfx/xaml/controls"
+                      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="d"
                       Title="Find ROM Cover"
                       MinWidth="900"
                       MinHeight="500">
@@ -13,13 +15,11 @@
                 Padding="5"
                 BorderBrush="Gray"
                 BorderThickness="1">
-                <StackPanel>
+                <StackPanel d:DataContext="{d:DesignInstance }">
                     <Image
                         Width="{Binding Path=ImageWidth, RelativeSource={RelativeSource AncestorType=Window}}"
                         Height="{Binding Path=ImageHeight, RelativeSource={RelativeSource AncestorType=Window}}"
-                        Source="{Binding ImagePath}"
-                        MouseDown="ImageCell_MouseDown"
-                        ContextMenuOpening="Image_ContextMenuOpening" />
+                        Source="{Binding ImagePath}" MouseDown="ImageCell_MouseDown" ContextMenuOpening="Image_ContextMenuOpening" />
                     <TextBlock HorizontalAlignment="Center">
                         <Bold>
                             <Run Text="{Binding ImageName}" />

@@ -18,6 +18,7 @@ public partial class MainWindow : INotifyPropertyChanged
     private readonly Settings _settings = new();
     private string _imageFolderPath;
     private string _selectedRomFileName = string.Empty;
+    // ReSharper disable once MemberCanBePrivate.Global
     public ObservableCollection<ImageData> SimilarImages { get; set; } = [];
     private const string DefaultSimilarityAlgorithm = "Jaro-Winkler Distance";
         
@@ -112,7 +113,7 @@ public partial class MainWindow : INotifyPropertyChanged
     {
         if (sender is MenuItem menuItem)
         {
-            string theme = menuItem.Name == "LightTheme" ? "Light" : "Dark";
+            var theme = menuItem.Name == "LightTheme" ? "Light" : "Dark";
             ThemeManager.Current.ChangeThemeBaseColor(this, theme);
 
             // Save base theme to settings.xml
@@ -130,7 +131,7 @@ public partial class MainWindow : INotifyPropertyChanged
         if (sender is MenuItem menuItem)
         {
             // Extract the accent color name from the selected menu item's name
-            string accent = menuItem.Name.Replace("Accent", "");
+            var accent = menuItem.Name.Replace("Accent", "");
 
             // Change the accent color of the application
             ThemeManager.Current.ChangeThemeColorScheme(this, accent);
@@ -169,11 +170,10 @@ public partial class MainWindow : INotifyPropertyChanged
             MessageBox.Show($"Unable to open the donation link: {ex.Message}",
                 "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             
-            string formattedException = $"Unable to open the donation link.\n\n" +
-                                        $"Exception type: {ex.GetType().Name}\n" +
-                                        $"Exception details: {ex.Message}";
-            Task logTask = LogErrors.LogErrorAsync(ex, formattedException);
-            logTask.Wait(TimeSpan.FromSeconds(2));
+            var formattedException = $"Unable to open the donation link.\n\n" +
+                                     $"Exception type: {ex.GetType().Name}\n" +
+                                     $"Exception details: {ex.Message}";
+            _ = LogErrors.LogErrorAsync(ex, formattedException);
         }
     }
 
@@ -255,20 +255,19 @@ public partial class MainWindow : INotifyPropertyChanged
                             $"Check if the provided folders are valid.",
                 "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             
-            string formattedException = $"There was an error checking for the missing image files.\n\n" +
-                                        $"Exception type: {ex.GetType().Name}\n" +
-                                        $"Exception details: {ex.Message}";
-            Task logTask = LogErrors.LogErrorAsync(ex, formattedException);
-            logTask.Wait(TimeSpan.FromSeconds(2));
+            var formattedException = $"There was an error checking for the missing image files.\n\n" +
+                                     $"Exception type: {ex.GetType().Name}\n" +
+                                     $"Exception details: {ex.Message}";
+            _ = LogErrors.LogErrorAsync(ex, formattedException);
         }
     }
 
     private void CheckForMissingImages(string[] romFiles)
     {
-        foreach (string file in romFiles)
+        foreach (var file in romFiles)
         {
-            string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(file);
-            string? correspondingImagePath = FindCorrespondingImage(fileNameWithoutExtension);
+            var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(file);
+            var correspondingImagePath = FindCorrespondingImage(fileNameWithoutExtension);
 
             if (correspondingImagePath == null)
             {
@@ -285,7 +284,7 @@ public partial class MainWindow : INotifyPropertyChanged
         string[] imageExtensions = [".png", ".jpg", ".jpeg"];
         foreach (var ext in imageExtensions)
         {
-            string imagePath = Path.Combine(TxtImageFolder.Text, fileNameWithoutExtension + ext);
+            var imagePath = Path.Combine(TxtImageFolder.Text, fileNameWithoutExtension + ext);
             if (File.Exists(imagePath))
             {
                 return imagePath;
@@ -355,8 +354,8 @@ public partial class MainWindow : INotifyPropertyChanged
             !string.IsNullOrEmpty(imagePath) &&
             !string.IsNullOrEmpty(_imageFolderPath))
         {
-            string newFileName = Path.Combine(_imageFolderPath, _selectedRomFileName + ".png");
-            if (ConvertAndSaveImage(imagePath, newFileName))
+            var newFileName = Path.Combine(_imageFolderPath, _selectedRomFileName + ".png");
+            if (ImageProcessor.ConvertAndSaveImage(imagePath, newFileName))
             {
                 PlaySound.PlayClickSound();
                 RemoveSelectedItem();
@@ -368,41 +367,10 @@ public partial class MainWindow : INotifyPropertyChanged
                 MessageBox.Show("Failed to save the image.",
                     "Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
-                string formattedException = "Failed to save the image.";
-                Exception ex = new Exception(formattedException);
-                Task logTask = LogErrors.LogErrorAsync(ex, formattedException);
-                logTask.Wait(TimeSpan.FromSeconds(2));
+                var formattedException = "Failed to save the image.";
+                var ex = new Exception(formattedException);
+                _ = LogErrors.LogErrorAsync(ex, formattedException);
             }
-        }
-    }
-
-    private static bool ConvertAndSaveImage(string sourcePath, string targetPath)
-    {
-        try
-        {
-            using (var image = System.Drawing.Image.FromFile(sourcePath))
-            {
-                using var bitmap = new Bitmap(image);
-                bitmap.Save(targetPath, System.Drawing.Imaging.ImageFormat.Png);
-            }
-
-            // Check if the file was saved successfully
-            return File.Exists(targetPath);
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"Error saving image file\n\n" +
-                            $"Maybe the application does not have write privileges.",
-                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            
-            string formattedException = $"Error saving image file\n\n" +
-                                        $"Maybe the application does not have write privileges.\n\n" +
-                                        $"Exception type: {ex.GetType().Name}\n" +
-                                        $"Exception details: {ex.Message}";
-            Task logTask = LogErrors.LogErrorAsync(ex, formattedException);
-            logTask.Wait(TimeSpan.FromSeconds(2));
-            
-            return false;
         }
     }
 
@@ -471,9 +439,9 @@ public partial class MainWindow : INotifyPropertyChanged
     {
         if (sender is MenuItem clickedItem)
         {
-            string headerText = clickedItem.Header.ToString()?.Replace("%", "") ?? "70";
+            var headerText = clickedItem.Header.ToString()?.Replace("%", "") ?? "70";
 
-            if (double.TryParse(headerText, out double rate))
+            if (double.TryParse(headerText, out var rate))
             {
                 _settings.SimilarityThreshold = rate;
                 UncheckAllSimilarityThresholds();
@@ -486,10 +454,10 @@ public partial class MainWindow : INotifyPropertyChanged
                                 "The error was reported to the developer that will try to fix the issue.",
                     "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 
-                string formattedException = "Invalid similarity threshold selected.";
-                Exception ex = new Exception(formattedException);
-                Task logTask = LogErrors.LogErrorAsync(ex, formattedException);
-                logTask.Wait(TimeSpan.FromSeconds(2));
+                const string formattedException = "Invalid similarity threshold selected.";
+                var ex = new Exception(formattedException);
+                _ = LogErrors.LogErrorAsync(ex, formattedException);
+                
             }
         }
     }
@@ -500,8 +468,8 @@ public partial class MainWindow : INotifyPropertyChanged
         {
             if (item is MenuItem menuItem)
             {
-                string thresholdString = menuItem.Header.ToString()?.Replace("%", "") ?? "70";
-                if (double.TryParse(thresholdString, NumberStyles.Any, CultureInfo.InvariantCulture, out double menuItemThreshold))
+                var thresholdString = menuItem.Header.ToString()?.Replace("%", "") ?? "70";
+                if (double.TryParse(thresholdString, NumberStyles.Any, CultureInfo.InvariantCulture, out var menuItemThreshold))
                 {
                     // Check if this menu item's threshold matches the current setting
                     menuItem.IsChecked = Math.Abs(menuItemThreshold - _settings.SimilarityThreshold) < 0.01;
@@ -516,7 +484,7 @@ public partial class MainWindow : INotifyPropertyChanged
         {
             if (item is MenuItem menuItem)
             {
-                if (double.TryParse(menuItem.Header.ToString()?.Replace("%", ""), out double rate))
+                if (double.TryParse(menuItem.Header.ToString()?.Replace("%", ""), out var rate))
                 {
                     menuItem.IsChecked = Math.Abs(rate - _settings.SimilarityThreshold) < 0.01; // Checking for equality in double
                 }
@@ -526,7 +494,7 @@ public partial class MainWindow : INotifyPropertyChanged
 
     private void SetThumbnailSize_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is MenuItem { Header: not null } menuItem && int.TryParse(menuItem.Header.ToString()?.Split(' ')[0], out int size))
+        if (sender is MenuItem { Header: not null } menuItem && int.TryParse(menuItem.Header.ToString()?.Split(' ')[0], out var size))
         {
             ImageWidth = size;
             ImageHeight = size;
@@ -547,14 +515,14 @@ public partial class MainWindow : INotifyPropertyChanged
 
     private void UpdateThumbnailSizeMenuChecks()
     {
-        int currentSize = ImageWidth;
+        var currentSize = ImageWidth;
 
         foreach (var item in ImageSizeMenu.Items)
         {
             if (item is MenuItem menuItem)
             {
                 // Assuming the header format is "{size} pixels", extract the number
-                if (int.TryParse(menuItem.Header.ToString()?.Split(' ')[0], out int size))
+                if (int.TryParse(menuItem.Header.ToString()?.Split(' ')[0], out var size))
                 {
                     menuItem.IsChecked = size == currentSize;
                 }

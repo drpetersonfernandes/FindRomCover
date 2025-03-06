@@ -17,7 +17,7 @@ public static class LogErrors
         
     private static void LoadConfiguration()
     {
-        string configFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
+        var configFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
         if (File.Exists(configFile))
         {
             var config = JObject.Parse(File.ReadAllText(configFile));
@@ -27,12 +27,12 @@ public static class LogErrors
 
     public static async Task LogErrorAsync(Exception ex, string? contextMessage = null)
     {
-        string baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
-        string errorLogPath = Path.Combine(baseDirectory, "error.log");
-        string userLogPath = Path.Combine(baseDirectory, "error_user.log");
+        var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+        var errorLogPath = Path.Combine(baseDirectory, "error.log");
+        var userLogPath = Path.Combine(baseDirectory, "error_user.log");
         var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString();
         version = version ?? "Unknown";
-        string errorMessage = $"Date: {DateTime.Now}\nVersion: {version}\n\n{contextMessage}\n\n\n";
+        var errorMessage = $"Date: {DateTime.Now}\nVersion: {version}\n\n{contextMessage}\n\n\n";
 
         try
         {
@@ -40,7 +40,7 @@ public static class LogErrors
             await File.AppendAllTextAsync(errorLogPath, errorMessage);
 
             // Append the error message to the user-specific log
-            string userErrorMessage = errorMessage + "--------------------------------------------------------------------------------------------------------------\n\n\n";
+            var userErrorMessage = errorMessage + "--------------------------------------------------------------------------------------------------------------\n\n\n";
             await File.AppendAllTextAsync(userLogPath, userErrorMessage);
 
             // Attempt to send the error log content to the API.
@@ -58,35 +58,27 @@ public static class LogErrors
         
     private static async Task<bool> SendLogToApiAsync(string logContent)
     {
-        if (string.IsNullOrEmpty(ApiKey))
-        {
-            // Log or handle the missing API key appropriately
-            return false;
-        }
-            
-        // Prepare the content to be sent via HTTP POST.
-        var formData = new MultipartFormDataContent
-        {
-            { new StringContent("contact@purelogiccode.com"), "recipient" },
-            { new StringContent("Error Log from FindRomCover"), "subject" },
-            { new StringContent("FindRomCover User"), "name" },
-            { new StringContent(logContent), "message" }
-        };
-
-        var request = new HttpRequestMessage(HttpMethod.Post, "https://www.purelogiccode.com/simplelauncher/send_email.php")
-        {
-            Content = formData
-        };
-        request.Headers.Add("X-API-KEY", ApiKey);
-
+        if (string.IsNullOrEmpty(ApiKey)) return false;
+    
         try
         {
-            HttpResponseMessage response = await HttpClient.SendAsync(request);
+            using var content = new MultipartFormDataContent();
+            content.Add(new StringContent("contact@purelogiccode.com"), "recipient");
+            content.Add(new StringContent("Error Log from FindRomCover"), "subject");
+            content.Add(new StringContent("FindRomCover User"), "name");
+            content.Add(new StringContent(logContent), "message");
+
+            using var request = new HttpRequestMessage(HttpMethod.Post, 
+                "https://www.purelogiccode.com/simplelauncher/send_email.php");
+            request.Content = content;
+            request.Headers.Add("X-API-KEY", ApiKey);
+
+            using var response = await HttpClient.SendAsync(request);
             return response.IsSuccessStatusCode;
         }
-        catch (Exception)
+        catch
         {
-            return false;
+            return false; // Silently fail for logging system
         }
     }
         
