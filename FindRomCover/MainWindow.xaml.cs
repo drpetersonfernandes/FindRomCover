@@ -61,7 +61,7 @@ public partial class MainWindow : INotifyPropertyChanged
         DataContext = this;
 
         // Check for command-line arguments
-        string[] args = Environment.GetCommandLineArgs();
+        var args = Environment.GetCommandLineArgs();
         if (args.Length == 3)
         {
             // args[1] is expected to be ImageFolder, args[2] to be RomFolder
@@ -244,13 +244,25 @@ public partial class MainWindow : INotifyPropertyChanged
             // Clear list before setting new values
             LstMissingImages.Items.Clear();
 
-            var searchPatterns = _settings.SupportedExtensions.Select(ext => "*." + ext).ToArray();
-            var files = searchPatterns
-                .SelectMany(ext => Directory.GetFiles(TxtRomFolder.Text, ext))
-                .OrderBy(file => file) // This will order the files alphabetically
-                .ToArray();
+            // Create a HashSet to track unique filenames (case-insensitive)
 
-            CheckForMissingImages(files);
+            // Get all ROM files
+            var searchPatterns = _settings.SupportedExtensions.Select(ext => "*." + ext).ToArray();
+            var allFiles = searchPatterns
+                .SelectMany(pattern => Directory.GetFiles(TxtRomFolder.Text, pattern))
+                .Select(Path.GetFileNameWithoutExtension)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(name => name)
+                .ToList();
+
+            // Check each ROM for a corresponding image
+            foreach (var romName in from romName in allFiles.Distinct(StringComparer.OrdinalIgnoreCase) let correspondingImagePath = FindCorrespondingImage(romName) where correspondingImagePath == null select romName)
+            {
+                LstMissingImages.Items.Add(romName);
+            }
+
+            // Update count
+            UpdateMissingCount();
         }
         catch (Exception ex)
         {

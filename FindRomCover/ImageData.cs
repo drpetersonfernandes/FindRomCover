@@ -1,3 +1,5 @@
+using System.Windows.Media.Imaging;
+
 namespace FindRomCover;
 
 public class ImageData(string? imagePath, string? imageName, double similarityThreshold)
@@ -5,4 +7,5 @@ public class ImageData(string? imagePath, string? imageName, double similarityTh
     public string? ImagePath { get; init; } = imagePath;
     public string? ImageName { get; set; } = imageName;
     public double SimilarityThreshold { get; init; } = similarityThreshold;
+    public BitmapImage? ImageSource { get; set; }
 }

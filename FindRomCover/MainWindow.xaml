@@ -19,7 +19,18 @@
                     <Image
                         Width="{Binding Path=ImageWidth, RelativeSource={RelativeSource AncestorType=Window}}"
                         Height="{Binding Path=ImageHeight, RelativeSource={RelativeSource AncestorType=Window}}"
-                        Source="{Binding ImagePath}" MouseDown="ImageCell_MouseDown" ContextMenuOpening="Image_ContextMenuOpening" />
+                        Source="{Binding ImageSource}" MouseDown="ImageCell_MouseDown" ContextMenuOpening="Image_ContextMenuOpening">
+                        <Image.Style>
+                            <Style TargetType="Image">
+                                <Style.Triggers>
+                                    <!-- Fallback if in-memory image is null -->
+                                    <DataTrigger Binding="{Binding ImageSource}" Value="{x:Null}">
+                                        <Setter Property="Source" Value="{Binding ImagePath}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Image.Style>
+                    </Image>
                     <TextBlock HorizontalAlignment="Center">
                         <Bold>
                             <Run Text="{Binding ImageName}" />

@@ -38,7 +38,15 @@ public static class SimilarityCalculator
 
                     if (similarityThreshold2 >= similarityThreshold)
                     {
-                        tempList.Add(new ImageData(imageFile, imageName, similarityThreshold2));
+                        var imageData = new ImageData(imageFile, imageName, similarityThreshold2);
+
+                        // Load the image into memory on a background thread to keep the UI responsive
+                        await Task.Run(() =>
+                        {
+                            imageData.ImageSource = ImageLoader.LoadImageToMemory(imageFile);
+                        });
+
+                        tempList.Add(imageData);
                     }
                 }
             }
