@@ -45,6 +45,7 @@ public static class SimilarityCalculator
 
             tempList.Sort((x, y) => y.SimilarityThreshold.CompareTo(x.SimilarityThreshold));
         }
+
         return tempList;
     }
 
@@ -60,8 +61,13 @@ public static class SimilarityCalculator
         var lengthB = b.Length;
         var distances = new int[lengthA + 1, lengthB + 1];
 
-        for (var i = 0; i <= lengthA; distances[i, 0] = i++) { }
-        for (var j = 0; j <= lengthB; distances[0, j] = j++) { }
+        for (var i = 0; i <= lengthA; distances[i, 0] = i++)
+        {
+        }
+
+        for (var j = 0; j <= lengthB; distances[0, j] = j++)
+        {
+        }
 
         for (var i = 1; i <= lengthA; i++)
         for (var j = 1; j <= lengthB; j++)
@@ -75,25 +81,25 @@ public static class SimilarityCalculator
         var similarityThreshold = (1.0 - distances[lengthA, lengthB] / (double)Math.Max(a.Length, b.Length)) * 100;
         return Math.Round(similarityThreshold, 2);
     }
-    
+
     private static double CalculateLevenshteinSimilarityEfficient(string a, string b)
     {
         // Only store two rows rather than the full matrix
         var lengthA = a.Length;
         var lengthB = b.Length;
-    
+
         var prevRow = new int[lengthB + 1];
         var currRow = new int[lengthB + 1];
-    
+
         // Initialize the first row
         for (var j = 0; j <= lengthB; j++)
             prevRow[j] = j;
-    
+
         // Fill in the rest of the matrix
         for (var i = 1; i <= lengthA; i++)
         {
             currRow[0] = i;
-        
+
             for (var j = 1; j <= lengthB; j++)
             {
                 var cost = (b[j - 1] == a[i - 1]) ? 0 : 1;
@@ -101,11 +107,11 @@ public static class SimilarityCalculator
                     Math.Min(prevRow[j] + 1, currRow[j - 1] + 1),
                     prevRow[j - 1] + cost);
             }
-        
+
             // Swap rows
             (prevRow, currRow) = (currRow, prevRow);
         }
-    
+
         var similarityThreshold = (1.0 - prevRow[lengthB] / (double)Math.Max(a.Length, b.Length)) * 100;
         return Math.Round(similarityThreshold, 2);
     }

@@ -23,9 +23,9 @@ public class ButtonFactory
 
         // Logic to calculate similarity (mocked example)
         var images = await SimilarityCalculator.CalculateSimilarityAsync(
-            selectedRomFileName, 
-            imageFolderPath, 
-            similarityThreshold, 
+            selectedRomFileName,
+            imageFolderPath,
+            similarityThreshold,
             similarityAlgorithm
         ); // Ensure async behavior is properly awaited when used
 
@@ -36,12 +36,12 @@ public class ButtonFactory
 
         return similarImages;
     }
-    
+
     // Method to construct a context menu dynamically
     public static ContextMenu CreateContextMenu(string imagePath)
     {
         var contextMenu = new ContextMenu();
-        
+
         // "Use This Image" menu item
         var useThisImageIcon = new Image
         {
@@ -75,7 +75,7 @@ public class ButtonFactory
             Icon = copyIcon
         };
         contextMenu.Items.Add(copyMenuItem);
-        
+
         // "Open File Location" menu item
         var openLocationIcon = new Image
         {
@@ -92,10 +92,10 @@ public class ButtonFactory
             Icon = openLocationIcon
         };
         contextMenu.Items.Add(openLocationMenuItem);
-        
+
         return contextMenu;
     }
-    
+
     // Command for copying the image filename without extension
     private static ICommand CopyImageFilenameCommand { get; } = new DelegateCommand(param =>
     {
@@ -103,14 +103,14 @@ public class ButtonFactory
         {
             // Get filename without extension
             var filenameWithoutExtension = Path.GetFileNameWithoutExtension(imagePath);
-        
+
             // Copy to clipboard
             Clipboard.SetText(filenameWithoutExtension);
             MessageBox.Show($"Filename '{filenameWithoutExtension}' copied to clipboard!",
                 "Copied", MessageBoxButton.OK, MessageBoxImage.Information);
         }
     });
-    
+
     private static ICommand OpenFileLocationCommand { get; } = new DelegateCommand(param =>
     {
         if (param is string imagePath && File.Exists(imagePath))
@@ -119,7 +119,7 @@ public class ButtonFactory
             System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{imagePath}\"");
         }
     });
-    
+
     private static ICommand UseThisImageCommand { get; } = new DelegateCommand(param =>
     {
         if (param is string imagePath)
@@ -129,7 +129,4 @@ public class ButtonFactory
             mainWindow?.UseImage(imagePath);
         }
     });
-
-
-
 }

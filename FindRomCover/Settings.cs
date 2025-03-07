@@ -52,6 +52,7 @@ public class Settings
                 {
                     extensions.Add(node.InnerText);
                 }
+
                 SupportedExtensions = extensions.ToArray();
             }
 
@@ -66,6 +67,7 @@ public class Settings
                 {
                     ImageWidth = width;
                 }
+
                 if (heightNode != null && int.TryParse(heightNode.InnerText, out var height))
                 {
                     ImageHeight = height;
@@ -184,7 +186,7 @@ public class Settings
         BaseTheme = "Light";
         AccentColor = "Blue";
     }
-    
+
     private void SaveOrUpdateNode(XmlDocument doc, string key, string value)
     {
         var node = doc.SelectSingleNode($"//Settings/{key}");
@@ -193,6 +195,7 @@ public class Settings
             node = doc.CreateElement(key);
             doc.DocumentElement?.AppendChild(node);
         }
+
         node.InnerText = value;
     }
 }

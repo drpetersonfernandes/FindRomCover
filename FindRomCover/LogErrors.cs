@@ -9,12 +9,12 @@ public static class LogErrors
 {
     private static readonly HttpClient HttpClient = new();
     public static string? ApiKey { get; private set; }
-        
+
     static LogErrors()
     {
         LoadConfiguration();
     }
-        
+
     private static void LoadConfiguration()
     {
         var configFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
@@ -55,11 +55,11 @@ public static class LogErrors
             // Ignore any exceptions raised during logging to avoid interrupting the main flow
         }
     }
-        
+
     private static async Task<bool> SendLogToApiAsync(string logContent)
     {
         if (string.IsNullOrEmpty(ApiKey)) return false;
-    
+
         try
         {
             using var content = new MultipartFormDataContent();
@@ -68,7 +68,7 @@ public static class LogErrors
             content.Add(new StringContent("FindRomCover User"), "name");
             content.Add(new StringContent(logContent), "message");
 
-            using var request = new HttpRequestMessage(HttpMethod.Post, 
+            using var request = new HttpRequestMessage(HttpMethod.Post,
                 "https://www.purelogiccode.com/simplelauncher/send_email.php");
             request.Content = content;
             request.Headers.Add("X-API-KEY", ApiKey);
@@ -81,5 +81,4 @@ public static class LogErrors
             return false; // Silently fail for logging system
         }
     }
-        
 }

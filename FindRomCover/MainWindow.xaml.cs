@@ -18,11 +18,13 @@ public partial class MainWindow : INotifyPropertyChanged
     private readonly Settings _settings = new();
     private string _imageFolderPath;
     private string _selectedRomFileName = string.Empty;
+
     // ReSharper disable once MemberCanBePrivate.Global
     public ObservableCollection<ImageData> SimilarImages { get; set; } = [];
     private const string DefaultSimilarityAlgorithm = "Jaro-Winkler Distance";
-        
+
     private int _imageWidth;
+
     public int ImageWidth
     {
         get => _imageWidth;
@@ -37,6 +39,7 @@ public partial class MainWindow : INotifyPropertyChanged
     }
 
     private int _imageHeight;
+
     public int ImageHeight
     {
         get => _imageHeight;
@@ -49,14 +52,14 @@ public partial class MainWindow : INotifyPropertyChanged
             }
         }
     }
-        
+
     private string SelectedSimilarityAlgorithm { get; set; } = DefaultSimilarityAlgorithm;
-        
+
     public MainWindow()
     {
         InitializeComponent();
         DataContext = this;
-           
+
         // Check for command-line arguments
         string[] args = Environment.GetCommandLineArgs();
         if (args.Length == 3)
@@ -72,20 +75,20 @@ public partial class MainWindow : INotifyPropertyChanged
             // or no arguments are provided
             _imageFolderPath = "";
             TxtImageFolder.Text = ""; // Set to default or empty if no arguments
-            TxtRomFolder.Text = "";    // Set to default or empty if no arguments
+            TxtRomFolder.Text = ""; // Set to default or empty if no arguments
         }
-            
+
         LoadSettings();
         UpdateThumbnailSizeMenuChecks();
         UpdateSimilarityAlgorithmChecks();
         UpdateSimilarityThresholdChecks();
     }
-        
+
     private void LoadSettings()
     {
         ImageWidth = _settings.ImageWidth;
         ImageHeight = _settings.ImageHeight;
-            
+
         // Load and apply the theme
         ThemeManager.Current.ChangeThemeBaseColor(this, _settings.BaseTheme);
         ThemeManager.Current.ChangeThemeColorScheme(this, _settings.AccentColor);
@@ -108,7 +111,7 @@ public partial class MainWindow : INotifyPropertyChanged
 
     private void OnPropertyChanged(string propertyName) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        
+
     private void ChangeBaseTheme_Click(object sender, RoutedEventArgs e)
     {
         if (sender is MenuItem menuItem)
@@ -145,7 +148,7 @@ public partial class MainWindow : INotifyPropertyChanged
             {
                 if (item is MenuItem accentMenuItem)
                 {
-                    accentMenuItem.IsChecked = false;  // Uncheck all items
+                    accentMenuItem.IsChecked = false; // Uncheck all items
                 }
             }
 
@@ -153,7 +156,7 @@ public partial class MainWindow : INotifyPropertyChanged
             menuItem.IsChecked = true;
         }
     }
-        
+
     private void DonateButton_Click(object sender, RoutedEventArgs e)
     {
         try
@@ -169,7 +172,7 @@ public partial class MainWindow : INotifyPropertyChanged
         {
             MessageBox.Show($"Unable to open the donation link: {ex.Message}",
                 "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            
+
             var formattedException = $"Unable to open the donation link.\n\n" +
                                      $"Exception type: {ex.GetType().Name}\n" +
                                      $"Exception details: {ex.Message}";
@@ -219,7 +222,7 @@ public partial class MainWindow : INotifyPropertyChanged
     {
         LoadMissingImagesList();
     }
-        
+
     private void LoadMissingImagesList()
     {
         if (_settings.SupportedExtensions.Length == 0)
@@ -240,13 +243,13 @@ public partial class MainWindow : INotifyPropertyChanged
         {
             // Clear list before setting new values
             LstMissingImages.Items.Clear();
-        
+
             var searchPatterns = _settings.SupportedExtensions.Select(ext => "*." + ext).ToArray();
             var files = searchPatterns
                 .SelectMany(ext => Directory.GetFiles(TxtRomFolder.Text, ext))
                 .OrderBy(file => file) // This will order the files alphabetically
                 .ToArray();
-            
+
             CheckForMissingImages(files);
         }
         catch (Exception ex)
@@ -254,7 +257,7 @@ public partial class MainWindow : INotifyPropertyChanged
             MessageBox.Show($"There was an error checking for the missing image files.\n\n" +
                             $"Check if the provided folders are valid.",
                 "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            
+
             var formattedException = $"There was an error checking for the missing image files.\n\n" +
                                      $"Exception type: {ex.GetType().Name}\n" +
                                      $"Exception details: {ex.Message}";
@@ -274,9 +277,9 @@ public partial class MainWindow : INotifyPropertyChanged
                 LstMissingImages.Items.Add(fileNameWithoutExtension);
             }
         }
-        // Update count whenever the check is performed
-        UpdateMissingCount(); 
 
+        // Update count whenever the check is performed
+        UpdateMissingCount();
     }
 
     private string? FindCorrespondingImage(string fileNameWithoutExtension)
@@ -290,6 +293,7 @@ public partial class MainWindow : INotifyPropertyChanged
                 return imagePath;
             }
         }
+
         return null;
     }
 
@@ -341,10 +345,13 @@ public partial class MainWindow : INotifyPropertyChanged
     private void ImageCell_MouseDown(object sender, MouseButtonEventArgs e)
     {
         // Ensure the click is a left mouse button click
-        if (e.ChangedButton == MouseButton.Left && sender is FrameworkElement { DataContext: ImageData
+        if (e.ChangedButton == MouseButton.Left && sender is FrameworkElement
             {
-                ImagePath: not null
-            } imageData })
+                DataContext: ImageData
+                {
+                    ImagePath: not null
+                } imageData
+            })
             UseImage(imageData.ImagePath);
     }
 
@@ -367,7 +374,7 @@ public partial class MainWindow : INotifyPropertyChanged
                 MessageBox.Show("Failed to save the image.",
                     "Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
-                var formattedException = "Failed to save the image.";
+                const string formattedException = "Failed to save the image.";
                 var ex = new Exception(formattedException);
                 _ = LogErrors.LogErrorAsync(ex, formattedException);
             }
@@ -453,11 +460,10 @@ public partial class MainWindow : INotifyPropertyChanged
                 MessageBox.Show("Invalid similarity threshold selected.\n\n" +
                                 "The error was reported to the developer that will try to fix the issue.",
                     "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                
+
                 const string formattedException = "Invalid similarity threshold selected.";
                 var ex = new Exception(formattedException);
                 _ = LogErrors.LogErrorAsync(ex, formattedException);
-                
             }
         }
     }
@@ -536,5 +542,4 @@ public partial class MainWindow : INotifyPropertyChanged
         // Create and assign the context menu using ButtonFactory
         if (imageData.ImagePath != null) element.ContextMenu = ButtonFactory.CreateContextMenu(imageData.ImagePath);
     }
-
 }

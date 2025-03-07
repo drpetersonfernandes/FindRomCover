@@ -10,13 +10,13 @@ public partial class About
     public About()
     {
         InitializeComponent();
-            
+
         App.ApplyThemeToWindow(this);
-            
+
         // Set the data context for data binding
         DataContext = this;
-            
-        // Set the AppVersionTextBlock 
+
+        // Set the AppVersionTextBlock
         AppVersionTextBlock.Text = ApplicationVersion;
     }
 
@@ -43,5 +43,4 @@ public partial class About
             return "Version: " + (version?.ToString() ?? "Unknown");
         }
     }
-
 }
