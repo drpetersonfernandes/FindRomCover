@@ -333,9 +333,9 @@ public partial class MainWindow : INotifyPropertyChanged
                     var textBlock = new TextBlock();
                     textBlock.Inlines.Add(new Run("Search Query: "));
                     textBlock.Inlines.Add(new Run($"{selectedFile} ") { FontWeight = FontWeights.Bold });
-                    textBlock.Inlines.Add(new Run($"with "));
+                    textBlock.Inlines.Add(new Run("with "));
                     textBlock.Inlines.Add(new Run($"{SelectedSimilarityAlgorithm} ") { FontWeight = FontWeights.Bold });
-                    textBlock.Inlines.Add(new Run($"algorithm"));
+                    textBlock.Inlines.Add(new Run("algorithm"));
                     LblSearchQuery.Content = textBlock;
 
                     // Clear and update the SimilarImages collection
