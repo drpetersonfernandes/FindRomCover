@@ -277,23 +277,6 @@ public partial class MainWindow : INotifyPropertyChanged
         }
     }
 
-    private void CheckForMissingImages(string[] romFiles)
-    {
-        foreach (var file in romFiles)
-        {
-            var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(file);
-            var correspondingImagePath = FindCorrespondingImage(fileNameWithoutExtension);
-
-            if (correspondingImagePath == null)
-            {
-                LstMissingImages.Items.Add(fileNameWithoutExtension);
-            }
-        }
-
-        // Update count whenever the check is performed
-        UpdateMissingCount();
-    }
-
     private string? FindCorrespondingImage(string fileNameWithoutExtension)
     {
         string[] imageExtensions = [".png", ".jpg", ".jpeg"];

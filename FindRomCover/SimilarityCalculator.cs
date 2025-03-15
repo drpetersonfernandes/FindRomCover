@@ -195,7 +195,10 @@ public static class SimilarityCalculator
                 prefixLength++;
                 if (prefixLength == 4) break;
             }
-            else break;
+            else
+            {
+                break;
+            }
         }
 
         var jaroWinkler = jaro + (prefixLength * scalingFactor * (1 - jaro));
