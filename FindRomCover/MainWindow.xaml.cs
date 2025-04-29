@@ -30,11 +30,10 @@ public partial class MainWindow : INotifyPropertyChanged
         get => _imageWidth;
         set
         {
-            if (_imageWidth != value)
-            {
-                _imageWidth = value;
-                OnPropertyChanged(nameof(ImageWidth));
-            }
+            if (_imageWidth == value) return;
+
+            _imageWidth = value;
+            OnPropertyChanged(nameof(ImageWidth));
         }
     }
 
@@ -45,11 +44,10 @@ public partial class MainWindow : INotifyPropertyChanged
         get => _imageHeight;
         set
         {
-            if (_imageHeight != value)
-            {
-                _imageHeight = value;
-                OnPropertyChanged(nameof(ImageHeight));
-            }
+            if (_imageHeight == value) return;
+
+            _imageHeight = value;
+            OnPropertyChanged(nameof(ImageHeight));
         }
     }
 
@@ -109,52 +107,51 @@ public partial class MainWindow : INotifyPropertyChanged
         }
     }
 
-    private void OnPropertyChanged(string propertyName) =>
+    private void OnPropertyChanged(string propertyName)
+    {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
 
     private void ChangeBaseTheme_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is MenuItem menuItem)
-        {
-            var theme = menuItem.Name == "LightTheme" ? "Light" : "Dark";
-            ThemeManager.Current.ChangeThemeBaseColor(this, theme);
+        if (sender is not MenuItem menuItem) return;
 
-            // Save base theme to settings.xml
-            _settings.BaseTheme = theme;
-            _settings.SaveSettings();
+        var theme = menuItem.Name == "LightTheme" ? "Light" : "Dark";
+        ThemeManager.Current.ChangeThemeBaseColor(this, theme);
 
-            // Update menu item check state
-            LightTheme.IsChecked = theme == "Light";
-            DarkTheme.IsChecked = theme == "Dark";
-        }
+        // Save base theme to settings.xml
+        _settings.BaseTheme = theme;
+        _settings.SaveSettings();
+
+        // Update menu item check state
+        LightTheme.IsChecked = theme == "Light";
+        DarkTheme.IsChecked = theme == "Dark";
     }
 
     private void ChangeAccentColor_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is MenuItem menuItem)
+        if (sender is not MenuItem menuItem) return;
+        // Extract the accent color name from the selected menu item's name
+        var accent = menuItem.Name.Replace("Accent", "");
+
+        // Change the accent color of the application
+        ThemeManager.Current.ChangeThemeColorScheme(this, accent);
+
+        // Save the selected accent color to the settings.xml file
+        _settings.AccentColor = accent;
+        _settings.SaveSettings();
+
+        // Uncheck all accent color options before checking the new one
+        foreach (var item in ((MenuItem)menuItem.Parent).Items)
         {
-            // Extract the accent color name from the selected menu item's name
-            var accent = menuItem.Name.Replace("Accent", "");
-
-            // Change the accent color of the application
-            ThemeManager.Current.ChangeThemeColorScheme(this, accent);
-
-            // Save the selected accent color to the settings.xml file
-            _settings.AccentColor = accent;
-            _settings.SaveSettings();
-
-            // Uncheck all accent color options before checking the new one
-            foreach (var item in ((MenuItem)menuItem.Parent).Items)
+            if (item is MenuItem accentMenuItem)
             {
-                if (item is MenuItem accentMenuItem)
-                {
-                    accentMenuItem.IsChecked = false; // Uncheck all items
-                }
+                accentMenuItem.IsChecked = false; // Uncheck all items
             }
-
-            // Check the currently selected accent color
-            menuItem.IsChecked = true;
         }
+
+        // Check the currently selected accent color
+        menuItem.IsChecked = true;
     }
 
     private void DonateButton_Click(object sender, RoutedEventArgs e)
@@ -211,11 +208,10 @@ public partial class MainWindow : INotifyPropertyChanged
             Description = "Select the folder where your image files are stored."
         };
 
-        if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
-        {
-            TxtImageFolder.Text = dialog.SelectedPath;
-            _imageFolderPath = dialog.SelectedPath;
-        }
+        if (dialog.ShowDialog() != System.Windows.Forms.DialogResult.OK) return;
+
+        TxtImageFolder.Text = dialog.SelectedPath;
+        _imageFolderPath = dialog.SelectedPath;
     }
 
     private void BtnCheckForMissingImages_Click(object sender, RoutedEventArgs e)
@@ -296,39 +292,38 @@ public partial class MainWindow : INotifyPropertyChanged
     {
         try
         {
-            if (LstMissingImages.SelectedItem is string selectedFile)
+            if (LstMissingImages.SelectedItem is not string selectedFile) return;
+
+            _selectedRomFileName = selectedFile;
+
+            // Use ButtonFactory to create the SimilarImages collection
+            var buttonFactory = new ButtonFactory();
+            var newSimilarImages = await buttonFactory.CreateSimilarImagesCollection(
+                selectedFile,
+                _imageFolderPath,
+                _settings.SimilarityThreshold,
+                SelectedSimilarityAlgorithm
+            );
+
+            // Update the UI
+            await Application.Current.Dispatcher.InvokeAsync(() =>
             {
-                _selectedRomFileName = selectedFile;
+                // Display the search query
+                var textBlock = new TextBlock();
+                textBlock.Inlines.Add(new Run("Search Query: "));
+                textBlock.Inlines.Add(new Run($"{selectedFile} ") { FontWeight = FontWeights.Bold });
+                textBlock.Inlines.Add(new Run("with "));
+                textBlock.Inlines.Add(new Run($"{SelectedSimilarityAlgorithm} ") { FontWeight = FontWeights.Bold });
+                textBlock.Inlines.Add(new Run("algorithm"));
+                LblSearchQuery.Content = textBlock;
 
-                // Use ButtonFactory to create the SimilarImages collection
-                var buttonFactory = new ButtonFactory();
-                var newSimilarImages = await buttonFactory.CreateSimilarImagesCollection(
-                    selectedFile,
-                    _imageFolderPath,
-                    _settings.SimilarityThreshold,
-                    SelectedSimilarityAlgorithm
-                );
-
-                // Update the UI
-                await Application.Current.Dispatcher.InvokeAsync(() =>
+                // Clear and update the SimilarImages collection
+                SimilarImages.Clear();
+                foreach (var imageData in newSimilarImages)
                 {
-                    // Display the search query
-                    var textBlock = new TextBlock();
-                    textBlock.Inlines.Add(new Run("Search Query: "));
-                    textBlock.Inlines.Add(new Run($"{selectedFile} ") { FontWeight = FontWeights.Bold });
-                    textBlock.Inlines.Add(new Run("with "));
-                    textBlock.Inlines.Add(new Run($"{SelectedSimilarityAlgorithm} ") { FontWeight = FontWeights.Bold });
-                    textBlock.Inlines.Add(new Run("algorithm"));
-                    LblSearchQuery.Content = textBlock;
-
-                    // Clear and update the SimilarImages collection
-                    SimilarImages.Clear();
-                    foreach (var imageData in newSimilarImages)
-                    {
-                        SimilarImages.Add(imageData);
-                    }
-                });
-            }
+                    SimilarImages.Add(imageData);
+                }
+            });
         }
         catch (Exception ex)
         {
@@ -352,27 +347,26 @@ public partial class MainWindow : INotifyPropertyChanged
 
     public void UseImage(string imagePath)
     {
-        if (!string.IsNullOrEmpty(_selectedRomFileName) &&
-            !string.IsNullOrEmpty(imagePath) &&
-            !string.IsNullOrEmpty(_imageFolderPath))
-        {
-            var newFileName = Path.Combine(_imageFolderPath, _selectedRomFileName + ".png");
-            if (ImageProcessor.ConvertAndSaveImage(imagePath, newFileName))
-            {
-                PlaySound.PlayClickSound();
-                RemoveSelectedItem();
-                SimilarImages.Clear();
-                UpdateMissingCount(); // Update count whenever an item is removed
-            }
-            else
-            {
-                MessageBox.Show("Failed to save the image.",
-                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        if (string.IsNullOrEmpty(_selectedRomFileName) ||
+            string.IsNullOrEmpty(imagePath) ||
+            string.IsNullOrEmpty(_imageFolderPath)) return;
 
-                const string formattedException = "Failed to save the image.";
-                var ex = new Exception(formattedException);
-                _ = LogErrors.LogErrorAsync(ex, formattedException);
-            }
+        var newFileName = Path.Combine(_imageFolderPath, _selectedRomFileName + ".png");
+        if (ImageProcessor.ConvertAndSaveImage(imagePath, newFileName))
+        {
+            PlaySound.PlayClickSound();
+            RemoveSelectedItem();
+            SimilarImages.Clear();
+            UpdateMissingCount(); // Update count whenever an item is removed
+        }
+        else
+        {
+            MessageBox.Show("Failed to save the image.",
+                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+
+            const string formattedException = "Failed to save the image.";
+            var ex = new Exception(formattedException);
+            _ = LogErrors.LogErrorAsync(ex, formattedException);
         }
     }
 
@@ -385,11 +379,10 @@ public partial class MainWindow : INotifyPropertyChanged
 
     private void RemoveSelectedItem()
     {
-        if (LstMissingImages.SelectedItem != null)
-        {
-            LstMissingImages.Items.Remove(LstMissingImages.SelectedItem);
-            UpdateMissingCount();
-        }
+        if (LstMissingImages.SelectedItem == null) return;
+
+        LstMissingImages.Items.Remove(LstMissingImages.SelectedItem);
+        UpdateMissingCount();
     }
 
     private void UpdateMissingCount()
@@ -399,13 +392,12 @@ public partial class MainWindow : INotifyPropertyChanged
 
     private void SetSimilarityAlgorithm_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is MenuItem menuItem)
-        {
-            SelectedSimilarityAlgorithm = menuItem.Header.ToString() ?? DefaultSimilarityAlgorithm;
-            SaveSimilarityAlgorithmSetting(SelectedSimilarityAlgorithm);
-            UncheckAllSimilarityAlgorithms();
-            menuItem.IsChecked = true;
-        }
+        if (sender is not MenuItem menuItem) return;
+
+        SelectedSimilarityAlgorithm = menuItem.Header.ToString() ?? DefaultSimilarityAlgorithm;
+        SaveSimilarityAlgorithmSetting(SelectedSimilarityAlgorithm);
+        UncheckAllSimilarityAlgorithms();
+        menuItem.IsChecked = true;
     }
 
     private void UpdateSimilarityAlgorithmChecks()
@@ -439,27 +431,26 @@ public partial class MainWindow : INotifyPropertyChanged
 
     private void SetSimilarityThreshold_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is MenuItem clickedItem)
+        if (sender is not MenuItem clickedItem) return;
+
+        var headerText = clickedItem.Header.ToString()?.Replace("%", "") ?? "70";
+
+        if (double.TryParse(headerText, out var rate))
         {
-            var headerText = clickedItem.Header.ToString()?.Replace("%", "") ?? "70";
+            _settings.SimilarityThreshold = rate;
+            UncheckAllSimilarityThresholds();
+            clickedItem.IsChecked = true;
+            _settings.SaveSettings();
+        }
+        else
+        {
+            MessageBox.Show("Invalid similarity threshold selected.\n\n" +
+                            "The error was reported to the developer that will try to fix the issue.",
+                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
-            if (double.TryParse(headerText, out var rate))
-            {
-                _settings.SimilarityThreshold = rate;
-                UncheckAllSimilarityThresholds();
-                clickedItem.IsChecked = true;
-                _settings.SaveSettings();
-            }
-            else
-            {
-                MessageBox.Show("Invalid similarity threshold selected.\n\n" +
-                                "The error was reported to the developer that will try to fix the issue.",
-                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-
-                const string formattedException = "Invalid similarity threshold selected.";
-                var ex = new Exception(formattedException);
-                _ = LogErrors.LogErrorAsync(ex, formattedException);
-            }
+            const string formattedException = "Invalid similarity threshold selected.";
+            var ex = new Exception(formattedException);
+            _ = LogErrors.LogErrorAsync(ex, formattedException);
         }
     }
 
@@ -467,14 +458,13 @@ public partial class MainWindow : INotifyPropertyChanged
     {
         foreach (var item in MySimilarityMenu.Items)
         {
-            if (item is MenuItem menuItem)
+            if (item is not MenuItem menuItem) continue;
+
+            var thresholdString = menuItem.Header.ToString()?.Replace("%", "") ?? "70";
+            if (double.TryParse(thresholdString, NumberStyles.Any, CultureInfo.InvariantCulture, out var menuItemThreshold))
             {
-                var thresholdString = menuItem.Header.ToString()?.Replace("%", "") ?? "70";
-                if (double.TryParse(thresholdString, NumberStyles.Any, CultureInfo.InvariantCulture, out var menuItemThreshold))
-                {
-                    // Check if this menu item's threshold matches the current setting
-                    menuItem.IsChecked = Math.Abs(menuItemThreshold - _settings.SimilarityThreshold) < 0.01;
-                }
+                // Check if this menu item's threshold matches the current setting
+                menuItem.IsChecked = Math.Abs(menuItemThreshold - _settings.SimilarityThreshold) < 0.01;
             }
         }
     }
@@ -483,33 +473,32 @@ public partial class MainWindow : INotifyPropertyChanged
     {
         foreach (var item in MySimilarityMenu.Items)
         {
-            if (item is MenuItem menuItem)
+            if (item is not MenuItem menuItem) continue;
+
+            if (double.TryParse(menuItem.Header.ToString()?.Replace("%", ""), out var rate))
             {
-                if (double.TryParse(menuItem.Header.ToString()?.Replace("%", ""), out var rate))
-                {
-                    menuItem.IsChecked = Math.Abs(rate - _settings.SimilarityThreshold) < 0.01; // Checking for equality in double
-                }
+                menuItem.IsChecked = Math.Abs(rate - _settings.SimilarityThreshold) < 0.01; // Checking for equality in double
             }
         }
     }
 
     private void SetThumbnailSize_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is MenuItem { Header: not null } menuItem && int.TryParse(menuItem.Header.ToString()?.Split(' ')[0], out var size))
+        if (sender is not MenuItem { Header: not null } menuItem ||
+            !int.TryParse(menuItem.Header.ToString()?.Split(' ')[0], out var size)) return;
+
+        ImageWidth = size;
+        ImageHeight = size;
+
+        _settings.ImageWidth = size;
+        _settings.ImageHeight = size;
+        _settings.SaveSettings();
+
+        foreach (var item in ImageSizeMenu.Items)
         {
-            ImageWidth = size;
-            ImageHeight = size;
-
-            _settings.ImageWidth = size;
-            _settings.ImageHeight = size;
-            _settings.SaveSettings();
-
-            foreach (var item in ImageSizeMenu.Items)
+            if (item is MenuItem sizeMenuItem)
             {
-                if (item is MenuItem sizeMenuItem)
-                {
-                    sizeMenuItem.IsChecked = sizeMenuItem == menuItem;
-                }
+                sizeMenuItem.IsChecked = sizeMenuItem == menuItem;
             }
         }
     }
@@ -520,13 +509,11 @@ public partial class MainWindow : INotifyPropertyChanged
 
         foreach (var item in ImageSizeMenu.Items)
         {
-            if (item is MenuItem menuItem)
+            if (item is not MenuItem menuItem) continue;
+            // Assuming the header format is "{size} pixels", extract the number
+            if (int.TryParse(menuItem.Header.ToString()?.Split(' ')[0], out var size))
             {
-                // Assuming the header format is "{size} pixels", extract the number
-                if (int.TryParse(menuItem.Header.ToString()?.Split(' ')[0], out var size))
-                {
-                    menuItem.IsChecked = size == currentSize;
-                }
+                menuItem.IsChecked = size == currentSize;
             }
         }
     }
@@ -535,6 +522,9 @@ public partial class MainWindow : INotifyPropertyChanged
     {
         if (sender is not FrameworkElement { DataContext: ImageData imageData } element) return;
         // Create and assign the context menu using ButtonFactory
-        if (imageData.ImagePath != null) element.ContextMenu = ButtonFactory.CreateContextMenu(imageData.ImagePath);
+        if (imageData.ImagePath != null)
+        {
+            element.ContextMenu = ButtonFactory.CreateContextMenu(imageData.ImagePath);
+        }
     }
 }

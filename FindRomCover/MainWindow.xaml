@@ -411,7 +411,7 @@
                 </ScrollViewer.Background>
 
                 <!-- ItemsControl for displaying similar images -->
-                <ItemsControl ItemsSource="{Binding SimilarImages}">
+                <ItemsControl ItemsSource="{Binding SimilarImages}" d:DataContext="{d:DesignInstance }">
                     <ItemsControl.ItemTemplate>
                         <StaticResource ResourceKey="ImageCellTemplate" />
                     </ItemsControl.ItemTemplate>

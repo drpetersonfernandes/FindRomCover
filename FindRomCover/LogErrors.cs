@@ -18,11 +18,10 @@ public static class LogErrors
     private static void LoadConfiguration()
     {
         var configFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
-        if (File.Exists(configFile))
-        {
-            var config = JObject.Parse(File.ReadAllText(configFile));
-            ApiKey = config[nameof(ApiKey)]?.ToString();
-        }
+        if (!File.Exists(configFile)) return;
+
+        var config = JObject.Parse(File.ReadAllText(configFile));
+        ApiKey = config[nameof(ApiKey)]?.ToString();
     }
 
     public static async Task LogErrorAsync(Exception ex, string? contextMessage = null)
@@ -31,7 +30,7 @@ public static class LogErrors
         var errorLogPath = Path.Combine(baseDirectory, "error.log");
         var userLogPath = Path.Combine(baseDirectory, "error_user.log");
         var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString();
-        version = version ?? "Unknown";
+        version ??= "Unknown";
         var errorMessage = $"Date: {DateTime.Now}\nVersion: {version}\n\n{contextMessage}\n\n\n";
 
         try

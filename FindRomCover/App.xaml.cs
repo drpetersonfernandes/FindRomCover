@@ -1,6 +1,5 @@
 ﻿using System.Windows;
 using ControlzEx.Theming;
-using Application = System.Windows.Application;
 
 namespace FindRomCover;
 
@@ -24,7 +23,7 @@ public partial class App
 
     private static void ApplyTheme(string baseTheme, string accentColor)
     {
-        ThemeManager.Current.ChangeTheme(Application.Current, $"{baseTheme}.{accentColor}");
+        ThemeManager.Current.ChangeTheme(Current, $"{baseTheme}.{accentColor}");
     }
 
     public static void ApplyThemeToWindow(Window window)

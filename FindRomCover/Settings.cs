@@ -169,11 +169,11 @@ public class Settings
         }
 
         var widthNode = doc.CreateElement("Width");
-        widthNode.InnerText = ImageWidth.ToString();
+        widthNode.InnerText = ImageWidth.ToString(CultureInfo.InvariantCulture);
         imageSizeNode.AppendChild(widthNode);
 
         var heightNode = doc.CreateElement("Height");
-        heightNode.InnerText = ImageHeight.ToString();
+        heightNode.InnerText = ImageHeight.ToString(CultureInfo.InvariantCulture);
         imageSizeNode.AppendChild(heightNode);
     }
 

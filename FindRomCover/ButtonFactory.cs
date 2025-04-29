@@ -99,16 +99,14 @@ public class ButtonFactory
     // Command for copying the image filename without extension
     private static ICommand CopyImageFilenameCommand { get; } = new DelegateCommand(param =>
     {
-        if (param is string imagePath)
-        {
-            // Get filename without extension
-            var filenameWithoutExtension = Path.GetFileNameWithoutExtension(imagePath);
+        if (param is not string imagePath) return;
+        // Get filename without extension
+        var filenameWithoutExtension = Path.GetFileNameWithoutExtension(imagePath);
 
-            // Copy to clipboard
-            Clipboard.SetText(filenameWithoutExtension);
-            MessageBox.Show($"Filename '{filenameWithoutExtension}' copied to clipboard!",
-                "Copied", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
+        // Copy to clipboard
+        Clipboard.SetText(filenameWithoutExtension);
+        MessageBox.Show($"Filename '{filenameWithoutExtension}' copied to clipboard!",
+            "Copied", MessageBoxButton.OK, MessageBoxImage.Information);
     });
 
     private static ICommand OpenFileLocationCommand { get; } = new DelegateCommand(param =>
@@ -122,11 +120,9 @@ public class ButtonFactory
 
     private static ICommand UseThisImageCommand { get; } = new DelegateCommand(param =>
     {
-        if (param is string imagePath)
-        {
-            // Ensure that MainWindow's instance is available
-            var mainWindow = Application.Current.Windows.OfType<MainWindow>().FirstOrDefault();
-            mainWindow?.UseImage(imagePath);
-        }
+        if (param is not string imagePath) return;
+        // Ensure that MainWindow's instance is available
+        var mainWindow = Application.Current.Windows.OfType<MainWindow>().FirstOrDefault();
+        mainWindow?.UseImage(imagePath);
     });
 }

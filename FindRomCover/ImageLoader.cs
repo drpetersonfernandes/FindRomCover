@@ -16,7 +16,7 @@ public static class ImageLoader
 
             using var stream = new FileStream(imagePath, FileMode.Open, FileAccess.Read);
             memoryImage.BeginInit();
-            memoryImage.CacheOption = BitmapCacheOption.OnLoad; // Important: load into memory
+            memoryImage.CacheOption = BitmapCacheOption.OnLoad;
             memoryImage.StreamSource = stream;
             memoryImage.EndInit();
 
