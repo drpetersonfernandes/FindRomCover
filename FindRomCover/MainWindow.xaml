@@ -231,6 +231,14 @@
                     IsCheckable="True" />
             </MenuItem>
 
+            <MenuItem Header="Settings">
+                <MenuItem Header="Edit Supported Extensions..." Click="EditExtensions_Click">
+                    <MenuItem.Icon>
+                        <Image Source="pack://application:,,,/images/theme.png" Width="16" Height="16" />
+                    </MenuItem.Icon>
+                </MenuItem>
+            </MenuItem>
+            
             <MenuItem Header="Theme">
                 <MenuItem Header="Base Theme">
                     <MenuItem.Icon>

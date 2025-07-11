@@ -9,7 +9,7 @@ public class Settings
     private static readonly string SettingsFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.xml");
 
     public double SimilarityThreshold { get; set; } = 70;
-    public string[] SupportedExtensions { get; private set; } = Array.Empty<string>();
+    public string[] SupportedExtensions { get; set; } = Array.Empty<string>();
     public int ImageWidth { get; set; } = 300;
     public int ImageHeight { get; set; } = 300;
     public string SelectedSimilarityAlgorithm { get; set; } = "Jaro-Winkler Distance";

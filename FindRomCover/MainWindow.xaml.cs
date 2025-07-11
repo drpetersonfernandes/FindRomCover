@@ -223,7 +223,7 @@ public partial class MainWindow : INotifyPropertyChanged
     {
         if (_settings.SupportedExtensions.Length == 0)
         {
-            MessageBox.Show("No supported file extensions loaded. Please check file 'settings.xml'",
+            MessageBox.Show("No supported file extensions loaded. Please check file 'settings.xml' or edit them in the Settings menu.",
                 "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -529,5 +529,16 @@ public partial class MainWindow : INotifyPropertyChanged
         {
             element.ContextMenu = ButtonFactory.CreateContextMenu(imageData.ImagePath);
         }
+    }
+
+    private void EditExtensions_Click(object sender, RoutedEventArgs e)
+    {
+        var settingsWindow = new SettingsWindow(_settings)
+        {
+            Owner = this // Set the owner to center the dialog over the main window
+        };
+        settingsWindow.ShowDialog();
+        // The _settings object is updated by reference, so no need to do anything else here.
+        // The next time LoadMissingImagesList is called, it will use the new extensions.
     }
 }
