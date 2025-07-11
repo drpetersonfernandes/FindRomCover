@@ -252,7 +252,7 @@ public partial class MainWindow : INotifyPropertyChanged
                 .ToList();
 
             // Check each ROM for a corresponding image
-            foreach (var romName in from romName in allFiles.Distinct(StringComparer.OrdinalIgnoreCase) let correspondingImagePath = FindCorrespondingImage(romName) where correspondingImagePath == null select romName)
+            foreach (var romName in from romName in allFiles let correspondingImagePath = FindCorrespondingImage(romName) where correspondingImagePath == null select romName)
             {
                 LstMissingImages.Items.Add(romName);
             }
@@ -329,6 +329,9 @@ public partial class MainWindow : INotifyPropertyChanged
         {
             // Handle exception
             MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+
+            // Notify developer
+            _ = LogErrors.LogErrorAsync(ex, "Error in LstMissingImages_SelectionChanged");
         }
     }
 

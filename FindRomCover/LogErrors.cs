@@ -1,7 +1,6 @@
 ﻿using System.IO;
 using System.Net.Http;
 using System.Reflection;
-using Newtonsoft.Json.Linq;
 using System.Net.Http.Json;
 using System.Text.Json;
 
@@ -31,9 +30,9 @@ public static class LogErrors
 
         try
         {
-            var config = JObject.Parse(File.ReadAllText(configFile));
-            // Load the API Key specifically for the Bug Report API
-            ApiKey = config[nameof(ApiKey)]?.ToString();
+            var configText = File.ReadAllText(configFile);
+            var config = JsonSerializer.Deserialize<Dictionary<string, string>>(configText);
+            ApiKey = config?["ApiKey"];
 
             if (string.IsNullOrEmpty(ApiKey))
             {

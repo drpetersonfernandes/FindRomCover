@@ -13,6 +13,7 @@ public static class ImageLoader
             // Optionally, log a warning here if the file doesn't exist but was expected
             // _ = LogErrors.LogErrorAsync(new FileNotFoundException($"Image file not found at path:
             // {imagePath}"), $"Image file not found: {imagePath}");
+
             return null;
         }
 

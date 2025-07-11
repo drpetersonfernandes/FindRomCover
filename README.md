@@ -2,10 +2,10 @@
 
 Find ROM Cover is an easy-to-use application designed to help you effortlessly rename and organize cover images for your ROM collection. It helps you rename your images to match the filenames of your ROMs.
 
-The main window shows the right-click context menu:
+Main window showing the right-click context menu:
 ![Screenshot](screenshot1.png)
 
-Another screenshot showing the dark theme:
+Dark theme:
 ![Screenshot](screenshot2.png)
 
 ## How It Works:
@@ -21,7 +21,7 @@ Another screenshot showing the dark theme:
 ## Features:
 
 -   **Easy ROM and Cover Image Matching:** Automatically matches your ROM files with their corresponding cover images based on name similarity.
--   **Multiple Similarity Algorithms:** Choose between Jaro-Winkler Distance (default), Levenshtein Distance, and Jaccard Similarity to find the best matches for your needs.
+-   **Multiple Similarity Algorithms:** Choose between [Jaro-Winkler Distance](https://en.wikipedia.org/wiki/Jaro%E2%80%93Winkler_distance) (default), [Levenshtein Distance](https://en.wikipedia.org/wiki/Levenshtein_distance), and [Jaccard Similarity](https://en.wikipedia.org/wiki/Jaccard_index) to find the best matches for your needs.
 -   **Adjustable Similarity Threshold:** Fine-tune how strict the matching criteria should be, whether you prefer exact matches or broader suggestions.
 -   **Thumbnail Size Customization:** Choose how large or small you want the cover image thumbnails to appear, making it easier to view and select the right covers.
 -   **Manual Selection & Context Menu:** Browse through suggested images, view similarity scores, and use the right-click context menu for actions like using the image, copying its filename, or opening its folder location.
@@ -45,6 +45,11 @@ You can find cover images on websites such as [Libretro Thumbnails](https://gith
 2. Extract the ZIP file to a folder of your choice.
 3. Run `FindRomCover.exe`.
 
+## Recent Updates
+- Switched to System.Text.Json for all JSON handling (removed Newtonsoft.Json dependency).
+- Updated dependencies for better performance and compatibility (e.g., ControlzEx to 7.0.1).
+- Improved error logging in key areas for better debugging.
+
 ## Support the Project
 
 If you find 'Find ROM Cover' useful, please consider showing your support!
@@ -58,4 +63,4 @@ If you find 'Find ROM Cover' useful, please consider showing your support!
 
 ---
 
-Thank you for using **Find Rom Cover**! For more information and support, visit [purelogiccode.com](https://www.purelogiccode.com).
+Thank you for using **Find ROM Cover**! For more information and support, visit [purelogiccode.com](https://www.purelogiccode.com).

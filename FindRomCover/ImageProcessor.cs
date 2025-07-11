@@ -26,10 +26,15 @@ public static class ImageProcessor
                 {
                     File.Delete(targetPath);
                 }
-                catch (IOException)
+                catch (IOException ex)
                 {
+                    // Notify user
                     MessageBox.Show($"Cannot save image - the file is in use by another process: {targetPath}",
                         "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+
+                    // Notify developer
+                    _ = LogErrors.LogErrorAsync(ex, $"Cannot save image - the file is in use by another process: {targetPath}");
+
                     return false;
                 }
             }
@@ -50,7 +55,18 @@ public static class ImageProcessor
                         // Then save to file from the memory stream
                         using (var fileStream = new FileStream(targetPath, FileMode.Create, FileAccess.Write))
                         {
-                            memoryStream.CopyTo(fileStream);
+                            try
+                            {
+                                memoryStream.CopyTo(fileStream);
+                            }
+                            catch (Exception ex)
+                            {
+                                // Notify user
+                                MessageBox.Show("Error saving image file.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+
+                                // Notify developer
+                                _ = LogErrors.LogErrorAsync(ex, $"Error saving image from {sourcePath} to {targetPath}");
+                            }
                         }
                     }
                 }
@@ -62,11 +78,13 @@ public static class ImageProcessor
         catch (System.Runtime.InteropServices.ExternalException ex)
         {
             // Specific handling for GDI+ errors
+            // Notify user
             MessageBox.Show($"GDI+ Error saving image.\n\n" +
                             $"Try using a different image format or restarting the application.\n" +
                             $"Error: {ex.Message}",
                 "Image Processing Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
+            // Notify developer
             var detailedInfo = $"GDI+ Error saving image from {sourcePath} to {targetPath}\n" +
                                $"Error code: {ex.ErrorCode}\n" +
                                $"Source image size: {new FileInfo(sourcePath).Length} bytes";
@@ -82,33 +100,45 @@ public static class ImageProcessor
             }
             catch (Exception fallbackEx)
             {
+                // Notify developer
                 _ = LogErrors.LogErrorAsync(fallbackEx, "Fallback copy method also failed");
+
                 return false;
             }
         }
         catch (OutOfMemoryException ex)
         {
             // This often happens with very large images
+            // Notify user
             MessageBox.Show("The image is too large to process. Try using a smaller image.",
                 "Memory Error", MessageBoxButton.OK, MessageBoxImage.Error);
+
+            // Notify developer
             _ = LogErrors.LogErrorAsync(ex, $"Out of memory when processing {sourcePath}");
+
             return false;
         }
         catch (UnauthorizedAccessException ex)
         {
+            // Notify user
             MessageBox.Show($"Access denied. Cannot write to: {directory}\n\n" +
                             $"Try running the application as administrator.",
                 "Permission Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
+            // Notify developer
             _ = LogErrors.LogErrorAsync(ex, $"Access denied to {directory}");
+
             return false;
         }
         catch (Exception ex)
         {
+            // Notify user
             MessageBox.Show($"Error saving image file: {ex.Message}",
                 "Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
+            // Notify developer
             _ = LogErrors.LogErrorAsync(ex, $"Error saving image from {sourcePath} to {targetPath}");
+
             return false;
         }
     }
