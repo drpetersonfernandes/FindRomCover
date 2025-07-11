@@ -51,6 +51,34 @@ public partial class MainWindow : INotifyPropertyChanged
         }
     }
 
+    private bool _isCheckingMissing;
+
+    public bool IsCheckingMissing
+    {
+        get => _isCheckingMissing;
+        set
+        {
+            if (_isCheckingMissing == value) return;
+
+            _isCheckingMissing = value;
+            OnPropertyChanged(nameof(IsCheckingMissing));
+        }
+    }
+
+    private bool _isFindingSimilar;
+
+    public bool IsFindingSimilar
+    {
+        get => _isFindingSimilar;
+        set
+        {
+            if (_isFindingSimilar == value) return;
+
+            _isFindingSimilar = value;
+            OnPropertyChanged(nameof(IsFindingSimilar));
+        }
+    }
+
     private string SelectedSimilarityAlgorithm { get; set; } = DefaultSimilarityAlgorithm;
 
     public MainWindow()
@@ -214,12 +242,19 @@ public partial class MainWindow : INotifyPropertyChanged
         _imageFolderPath = dialog.SelectedPath;
     }
 
-    private void BtnCheckForMissingImages_Click(object sender, RoutedEventArgs e)
+    private async void BtnCheckForMissingImages_Click(object sender, RoutedEventArgs e)
     {
-        LoadMissingImagesList();
+        try
+        {
+            await LoadMissingImagesList();
+        }
+        catch (Exception ex)
+        {
+            _ = LogErrors.LogErrorAsync(ex, "Error in BtnCheckForMissingImages_Click");
+        }
     }
 
-    private void LoadMissingImagesList()
+    private async Task LoadMissingImagesList()
     {
         if (_settings.SupportedExtensions.Length == 0)
         {
@@ -235,21 +270,24 @@ public partial class MainWindow : INotifyPropertyChanged
             return;
         }
 
+        IsCheckingMissing = true;
         try
         {
-            // Clear list before setting new values
+            // Clear the list before setting new values
             LstMissingImages.Items.Clear();
+            SimilarImages.Clear(); // Also clear suggestions
 
-            // Create a HashSet to track unique filenames (case-insensitive)
-
-            // Get all ROM files
-            var searchPatterns = _settings.SupportedExtensions.Select(ext => "*." + ext).ToArray();
-            var allFiles = searchPatterns
-                .SelectMany(pattern => Directory.GetFiles(TxtRomFolder.Text, pattern))
-                .Select(Path.GetFileNameWithoutExtension)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(name => name)
-                .ToList();
+            // Get all ROM files on a background thread
+            var allFiles = await Task.Run(() =>
+            {
+                var searchPatterns = _settings.SupportedExtensions.Select(ext => "*." + ext).ToArray();
+                return searchPatterns
+                    .SelectMany(pattern => Directory.GetFiles(TxtRomFolder.Text, pattern))
+                    .Select(Path.GetFileNameWithoutExtension)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(name => name)
+                    .ToList();
+            });
 
             // Check each ROM for a corresponding image
             foreach (var romName in from romName in allFiles let correspondingImagePath = FindCorrespondingImage(romName) where correspondingImagePath == null select romName)
@@ -270,6 +308,10 @@ public partial class MainWindow : INotifyPropertyChanged
                                      $"Exception type: {ex.GetType().Name}\n" +
                                      $"Exception details: {ex.Message}";
             _ = LogErrors.LogErrorAsync(ex, formattedException);
+        }
+        finally
+        {
+            IsCheckingMissing = false;
         }
     }
 
@@ -292,45 +334,61 @@ public partial class MainWindow : INotifyPropertyChanged
     {
         try
         {
-            if (LstMissingImages.SelectedItem is not string selectedFile) return;
-
-            _selectedRomFileName = selectedFile;
-
-            // Use ButtonFactory to create the SimilarImages collection
-            var buttonFactory = new ButtonFactory();
-            var newSimilarImages = await buttonFactory.CreateSimilarImagesCollection(
-                selectedFile,
-                _imageFolderPath,
-                _settings.SimilarityThreshold,
-                SelectedSimilarityAlgorithm
-            );
-
-            // Update the UI
-            await Application.Current.Dispatcher.InvokeAsync(() =>
+            if (LstMissingImages.SelectedItem is not string selectedFile)
             {
-                // Display the search query
-                var textBlock = new TextBlock();
-                textBlock.Inlines.Add(new Run("Search Query: "));
-                textBlock.Inlines.Add(new Run($"{selectedFile} ") { FontWeight = FontWeights.Bold });
-                textBlock.Inlines.Add(new Run("with "));
-                textBlock.Inlines.Add(new Run($"{SelectedSimilarityAlgorithm} ") { FontWeight = FontWeights.Bold });
-                textBlock.Inlines.Add(new Run("algorithm"));
-                LblSearchQuery.Content = textBlock;
-
-                // Clear and update the SimilarImages collection
                 SimilarImages.Clear();
-                foreach (var imageData in newSimilarImages)
+                return;
+            }
+
+            IsFindingSimilar = true;
+            try
+            {
+                _selectedRomFileName = selectedFile;
+
+                // Use ButtonFactory to create the SimilarImages collection
+                var buttonFactory = new ButtonFactory();
+                var newSimilarImages = await buttonFactory.CreateSimilarImagesCollection(
+                    selectedFile,
+                    _imageFolderPath,
+                    _settings.SimilarityThreshold,
+                    SelectedSimilarityAlgorithm
+                );
+
+                // Update the UI
+                await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    SimilarImages.Add(imageData);
-                }
-            });
+                    // Display the search query
+                    var textBlock = new TextBlock();
+                    textBlock.Inlines.Add(new Run("Search Query: "));
+                    textBlock.Inlines.Add(new Run($"{selectedFile} ") { FontWeight = FontWeights.Bold });
+                    textBlock.Inlines.Add(new Run("with "));
+                    textBlock.Inlines.Add(new Run($"{SelectedSimilarityAlgorithm} ") { FontWeight = FontWeights.Bold });
+                    textBlock.Inlines.Add(new Run("algorithm"));
+                    LblSearchQuery.Content = textBlock;
+
+                    // Clear and update the SimilarImages collection
+                    SimilarImages.Clear();
+                    foreach (var imageData in newSimilarImages)
+                    {
+                        SimilarImages.Add(imageData);
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                // Handle exception
+                MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+
+                // Notify developer
+                _ = LogErrors.LogErrorAsync(ex, "Error in LstMissingImages_SelectionChanged");
+            }
+            finally
+            {
+                IsFindingSimilar = false;
+            }
         }
         catch (Exception ex)
         {
-            // Handle exception
-            MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-
-            // Notify developer
             _ = LogErrors.LogErrorAsync(ex, "Error in LstMissingImages_SelectionChanged");
         }
     }
