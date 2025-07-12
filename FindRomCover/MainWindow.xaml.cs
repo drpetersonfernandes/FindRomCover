@@ -374,7 +374,7 @@ public partial class MainWindow : INotifyPropertyChanged
         }
         finally
         {
-            IsFindingSimilar = false;
+            IsCheckingMissing = false;
         }
     }
 
