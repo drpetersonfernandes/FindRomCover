@@ -216,7 +216,8 @@
                                 <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <TextBox x:Name="TxtImageFolder" Grid.Column="0"
-                                     controls:TextBoxHelper.Watermark="Path to your image folder..." />
+                                     controls:TextBoxHelper.Watermark="Path to your image folder..." 
+                                     TextChanged="TxtImageFolder_TextChanged" />
                             <Button Grid.Column="1" Content="Browse..." Margin="5,0,0,0"
                                     Click="BtnBrowseImageFolder_Click" />
                         </Grid>

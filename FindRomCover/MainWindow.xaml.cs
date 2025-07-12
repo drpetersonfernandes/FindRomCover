@@ -95,10 +95,35 @@ public partial class MainWindow : INotifyPropertyChanged
         var args = Environment.GetCommandLineArgs();
         if (args.Length == 3)
         {
-            // args[1] is expected to be ImageFolder, args[2] to be RomFolder
-            _imageFolderPath = args[1];
-            TxtImageFolder.Text = _imageFolderPath;
-            TxtRomFolder.Text = args[2];
+            // Validate that the provided paths are valid directories
+            var imageFolderPath = args[1];
+            var romFolderPath = args[2];
+
+            if (Directory.Exists(imageFolderPath) && Directory.Exists(romFolderPath))
+            {
+                // args[1] is expected to be ImageFolder, args[2] to be RomFolder
+                _imageFolderPath = imageFolderPath;
+                TxtImageFolder.Text = _imageFolderPath;
+                TxtRomFolder.Text = romFolderPath;
+            }
+            else
+            {
+                // Show error message for invalid paths
+                var invalidPaths = new List<string>();
+                if (!Directory.Exists(imageFolderPath))
+                    invalidPaths.Add($"Image folder: '{imageFolderPath}'");
+                if (!Directory.Exists(romFolderPath))
+                    invalidPaths.Add($"ROM folder: '{romFolderPath}'");
+
+                MessageBox.Show(
+                    $"The following command-line paths are invalid or do not exist:\n\n{string.Join("\n", invalidPaths)}\n\nThe application will start with empty folder paths.",
+                    "Invalid Command-Line Arguments", MessageBoxButton.OK, MessageBoxImage.Warning);
+
+                // Set to empty values
+                _imageFolderPath = "";
+                TxtImageFolder.Text = "";
+                TxtRomFolder.Text = "";
+            }
         }
         else
         {
@@ -134,10 +159,71 @@ public partial class MainWindow : INotifyPropertyChanged
             DarkTheme.IsChecked = true;
         }
 
-        if (FindName(_settings.AccentColor + "Accent") is MenuItem accentMenuItem)
+        // Use iteration approach similar to other menu updates instead of FindName
+        UpdateAccentColorChecks();
+    }
+
+    private void UpdateAccentColorChecks()
+    {
+        // Find the "Theme" menu item
+        MenuItem? themeMenuItem = null;
+        foreach (var item in MainMenu.Items)
         {
-            accentMenuItem.IsChecked = true;
+            if (item is not MenuItem mi || mi.Header?.ToString() != "Theme") continue;
+
+            themeMenuItem = mi;
+            break;
         }
+
+        if (themeMenuItem == null)
+        {
+            // This should not happen if XAML is correct, but good to handle
+            _ = LogErrors.LogErrorAsync(new Exception("Theme menu item not found."), "Theme menu item not found in MainMenu.");
+            return;
+        }
+
+        // Find the "Accent Colors" submenu under "Theme"
+        MenuItem? accentColorsMenuItem = null;
+        foreach (var subItem in themeMenuItem.Items)
+        {
+            if (subItem is not MenuItem mi || mi.Header?.ToString() != "Accent Colors") continue;
+
+            accentColorsMenuItem = mi;
+            break;
+        }
+
+        if (accentColorsMenuItem == null)
+        {
+            // This should not happen if XAML is correct
+            _ = LogErrors.LogErrorAsync(new Exception("Accent Colors menu item not found."), "Accent Colors menu item not found under Theme menu.");
+            return;
+        }
+
+        // Now iterate through the actual accent color menu items
+        var accentMenuFound = false;
+        foreach (var accentMenuItem in accentColorsMenuItem.Items)
+        {
+            if (accentMenuItem is not MenuItem mi || !mi.Name.EndsWith("Accent", StringComparison.Ordinal)) continue;
+
+            var accentName = mi.Name.Replace("Accent", "");
+            mi.IsChecked = accentName == _settings.AccentColor;
+            if (mi.IsChecked)
+            {
+                accentMenuFound = true;
+            }
+        }
+
+        // If no matching accent color was found, log a warning and potentially set a default
+        if (accentMenuFound || string.IsNullOrEmpty(_settings.AccentColor)) return;
+        // Log the issue for debugging
+        var warningMessage =
+            $"Accent color '{_settings.AccentColor}' not found in menu items. Settings may be corrupted.";
+        _ = LogErrors.LogErrorAsync(new Exception(warningMessage), warningMessage);
+
+        // Optionally reset to a default accent color
+        // You could uncomment the lines below to set a default
+        // _settings.AccentColor = "Blue"; // or whatever your default is
+        // _settings.SaveSettings();
     }
 
     private void OnPropertyChanged(string propertyName)
@@ -164,6 +250,7 @@ public partial class MainWindow : INotifyPropertyChanged
     private void ChangeAccentColor_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not MenuItem menuItem) return;
+
         // Extract the accent color name from the selected menu item's name
         var accent = menuItem.Name.Replace("Accent", "");
 
@@ -174,18 +261,69 @@ public partial class MainWindow : INotifyPropertyChanged
         _settings.AccentColor = accent;
         _settings.SaveSettings();
 
-        // Uncheck all accent color options before checking the new one
-        foreach (var item in ((MenuItem)menuItem.Parent).Items)
-        {
-            if (item is MenuItem accentMenuItem)
-            {
-                accentMenuItem.IsChecked = false; // Uncheck all items
-            }
-        }
+        // Use safer approach to uncheck all accent color options
+        UncheckAllAccentColors(menuItem);
 
         // Check the currently selected accent color
         menuItem.IsChecked = true;
     }
+
+    private void UncheckAllAccentColors(MenuItem selectedMenuItem)
+    {
+        // Find the "Theme" menu item
+        MenuItem? themeMenuItem = null;
+        foreach (var item in MainMenu.Items)
+        {
+            if (item is not MenuItem mi || mi.Header?.ToString() != "Theme") continue;
+
+            themeMenuItem = mi;
+            break;
+        }
+
+        if (themeMenuItem == null) return; // Should not happen, but defensively
+
+        // Find the "Accent Colors" submenu under "Theme"
+        MenuItem? accentColorsMenuItem = null;
+        foreach (var subItem in themeMenuItem.Items)
+        {
+            if (subItem is not MenuItem mi || mi.Header?.ToString() != "Accent Colors") continue;
+
+            accentColorsMenuItem = mi;
+            break;
+        }
+
+        if (accentColorsMenuItem == null) return; // Should not happen, but defensively
+
+        // Iterate through all accent color options and uncheck them
+        foreach (var item in accentColorsMenuItem.Items)
+        {
+            if (item is MenuItem accentMenuItem && accentMenuItem.Name.EndsWith("Accent", StringComparison.Ordinal))
+            {
+                accentMenuItem.IsChecked = false;
+            }
+        }
+        // The calling method ChangeAccentColor_Click will then set selectedMenuItem.IsChecked = true;
+    }
+
+    // This method is no longer needed as its logic is integrated into UncheckAllAccentColors
+    // private void UncheckAccentItemsInMenu(MenuItem parentMenu, MenuItem selectedMenuItem)
+    // {
+    //     foreach (var item in parentMenu.Items)
+    //     {
+    //         if (item is not MenuItem menuItem) continue;
+    //
+    //         if (menuItem.Name.EndsWith("Accent", StringComparison.Ordinal))
+    //         {
+    //             menuItem.IsChecked = false;
+    //         }
+    //
+    //         // Recursively check submenus if they exist
+    //         if (menuItem.Items.Count > 0)
+    //         {
+    //             UncheckAccentItemsInMenu(menuItem, selectedMenuItem);
+    //         }
+    //     }
+    // }
 
     private void DonateButton_Click(object sender, RoutedEventArgs e)
     {
@@ -485,8 +623,8 @@ public partial class MainWindow : INotifyPropertyChanged
 
         SelectedSimilarityAlgorithm = menuItem.Header.ToString() ?? DefaultSimilarityAlgorithm;
         SaveSimilarityAlgorithmSetting(SelectedSimilarityAlgorithm);
-        UncheckAllSimilarityAlgorithms();
-        menuItem.IsChecked = true;
+        UncheckAllSimilarityAlgorithms(); // Uncheck all first
+        menuItem.IsChecked = true; // Then check the selected one
     }
 
     private void UpdateSimilarityAlgorithmChecks()
@@ -506,8 +644,7 @@ public partial class MainWindow : INotifyPropertyChanged
         {
             if (item is MenuItem menuItem)
             {
-                // Check if the menuItem's header matches the SelectedSimilarityAlgorithm
-                menuItem.IsChecked = menuItem.Header.ToString() == SelectedSimilarityAlgorithm;
+                menuItem.IsChecked = false; // Uncheck all
             }
         }
     }
@@ -527,8 +664,8 @@ public partial class MainWindow : INotifyPropertyChanged
         if (double.TryParse(headerText, out var rate))
         {
             _settings.SimilarityThreshold = rate;
-            UncheckAllSimilarityThresholds();
-            clickedItem.IsChecked = true;
+            UncheckAllSimilarityThresholds(); // Uncheck all first
+            clickedItem.IsChecked = true; // Then check the selected one
             _settings.SaveSettings();
         }
         else
@@ -566,10 +703,7 @@ public partial class MainWindow : INotifyPropertyChanged
         {
             if (item is not MenuItem menuItem) continue;
 
-            if (double.TryParse(menuItem.Header.ToString()?.Replace("%", ""), out var rate))
-            {
-                menuItem.IsChecked = Math.Abs(rate - _settings.SimilarityThreshold) < 0.01; // Checking for equality in double
-            }
+            menuItem.IsChecked = false; // Uncheck all
         }
     }
 
@@ -629,4 +763,13 @@ public partial class MainWindow : INotifyPropertyChanged
         // The _settings object is updated by reference, so no need to do anything else here.
         // The next time LoadMissingImagesList is called, it will use the new extensions.
     }
+
+    private void TxtImageFolder_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (sender is TextBox textBox)
+        {
+            _imageFolderPath = textBox.Text;
+        }
+    }
 }
+

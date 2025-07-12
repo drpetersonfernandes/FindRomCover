@@ -1,7 +1,6 @@
 ﻿using System.IO;
 using System.Net.Http;
 using System.Reflection;
-using System.Net.Http.Json;
 using System.Text.Json;
 using FindRomCover.models;
 
@@ -63,7 +62,6 @@ public static class LogErrors
         // Check if API Key is loaded from appsettings.json
         if (string.IsNullOrEmpty(ApiKey))
         {
-            // API Key is missing, cannot send log
             await Console.Error.WriteLineAsync("API Key is missing in appsettings.json. Cannot send error log.");
             return false;
         }
@@ -98,36 +96,51 @@ public static class LogErrors
             // Send the request
             using var response = await HttpClient.SendAsync(request, cts.Token);
 
-            // Check for success status code (2x) from the API
+            // Check for success status code (2xx) from the API
             if (response.IsSuccessStatusCode)
             {
-                // The new API returns a JSON response indicating SMTP2GO success/failure
-                // Attempt to deserialize this response
+                var rawResponse = await response.Content.ReadAsStringAsync(cts.Token);
+
+                var contentType = response.Content.Headers.ContentType?.MediaType;
+                if (contentType != "application/json")
+                {
+                    await Console.Error.WriteLineAsync($"Non-JSON content type ({contentType}) - checking plain text: {rawResponse}");
+
+                    if (rawResponse?.Contains("successfully sent", StringComparison.OrdinalIgnoreCase) != true)
+                        return false;
+
+                    await Console.Error.WriteLineAsync("Plain-text response indicates success - treating as successful.");
+                    return true;
+                }
+
+                // Attempt to deserialize this response as JSON
                 try
                 {
-                    var responseContent = await response.Content.ReadFromJsonAsync<Smtp2GoResponse>(cts.Token);
+                    var responseContent = JsonSerializer.Deserialize<Smtp2GoResponse>(rawResponse);
 
                     // Check the 'succeeded' property in the API's response data
                     if (responseContent?.Data?.Succeeded == 1)
                     {
-                        // API call was successful and email was sent by SMTP2GO
                         return true;
                     }
                     else
                     {
-                        // API call was successful (2x status), but SMTP2GO reported failure
                         var errors = responseContent?.Data?.Errors != null ? string.Join(", ", responseContent.Data.Errors) : "Unknown API reported error";
                         await Console.Error.WriteLineAsync($"API reported SMTP2GO failure: {errors}");
-                        return false; // API processed request but email sending failed
+                        return false;
                     }
                 }
-                catch (JsonException jsonEx)
+                catch (JsonException)
                 {
-                    // Failed to parse the API response JSON
-                    var rawResponse = await response.Content.ReadAsStringAsync(cts.Token);
-                    await Console.Error.WriteLineAsync($"Failed to parse API response JSON: {jsonEx.Message}");
+                    // Suppress detailed exception logging (expected for plain-text responses)
                     await Console.Error.WriteLineAsync($"Raw API Response: {rawResponse}");
-                    return false; // Treat as failure if the response cannot be parsed
+
+                    // Workaround for current API behavior: Check if the plain-text response indicates success
+                    if (rawResponse?.Contains("successfully sent", StringComparison.OrdinalIgnoreCase) != true)
+                        return false;
+
+                    await Console.Error.WriteLineAsync("Plain-text response indicates success - treating as successful.");
+                    return true;
                 }
             }
             else

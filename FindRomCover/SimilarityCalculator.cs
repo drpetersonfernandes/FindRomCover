@@ -5,6 +5,9 @@ namespace FindRomCover;
 
 public static class SimilarityCalculator
 {
+    // Add a configurable limit for maximum concurrent image loading
+    private const int MaxConcurrentImages = 50;
+
     public static async Task<List<ImageData>> CalculateSimilarityAsync(string selectedFileName, string imageFolderPath,
         double similarityThreshold, string algorithm)
     {
@@ -29,7 +32,8 @@ public static class SimilarityCalculator
             }
         }
 
-        // Process files in parallel using Parallel.ForEach
+        // First pass: Calculate similarity scores without loading images
+        var candidateFiles = new List<(string FilePath, string ImageName, double SimilarityScore)>();
         var lockObject = new object();
         var parallelOptions = new ParallelOptions
         {
@@ -38,30 +42,102 @@ public static class SimilarityCalculator
 
         await Task.Run(() =>
         {
-            Parallel.ForEach(allImageFiles, parallelOptions, imageFile =>
+            try
             {
-                var imageName = Path.GetFileNameWithoutExtension(imageFile);
-
-                var similarityScore = algorithm switch
+                Parallel.ForEach(allImageFiles, parallelOptions, imageFile =>
                 {
-                    "Levenshtein Distance" => CalculateLevenshteinSimilarity(selectedFileName, imageName),
-                    "Jaccard Similarity" => CalculateJaccardIndex(selectedFileName, imageName),
-                    "Jaro-Winkler Distance" => CalculateJaroWinklerDistance(selectedFileName, imageName),
-                    _ => throw new NotImplementedException($"Algorithm {algorithm} is not implemented.")
-                };
+                    try
+                    {
+                        var imageName = Path.GetFileNameWithoutExtension(imageFile);
 
-                if (!(similarityScore >= similarityThreshold)) return;
+                        var similarityScore = algorithm switch
+                        {
+                            "Levenshtein Distance" => CalculateLevenshteinSimilarity(selectedFileName, imageName),
+                            "Jaccard Similarity" => CalculateJaccardIndex(selectedFileName, imageName),
+                            "Jaro-Winkler Distance" => CalculateJaroWinklerDistance(selectedFileName, imageName),
+                            _ => throw new NotImplementedException($"Algorithm {algorithm} is not implemented.")
+                        };
 
-                var imageData = new ImageData(imageFile, imageName, similarityScore);
+                        if (!(similarityScore >= similarityThreshold)) return;
 
-                // Load the image into memory
-                imageData.ImageSource = ImageLoader.LoadImageToMemory(imageFile);
+                        lock (lockObject)
+                        {
+                            candidateFiles.Add((imageFile, imageName, similarityScore));
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log individual file processing errors without stopping the entire operation
+                        _ = LogErrors.LogErrorAsync(ex, $"Error processing file {imageFile}: {ex.Message}");
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                // Log parallel processing errors
+                _ = LogErrors.LogErrorAsync(ex, $"Error in parallel processing: {ex.Message}");
+                throw;
+            }
+        });
 
-                lock (lockObject)
+        // Sort candidates by similarity score and limit to prevent memory issues
+        candidateFiles.Sort((x, y) => y.SimilarityScore.CompareTo(x.SimilarityScore));
+        var topCandidates = candidateFiles.Take(MaxConcurrentImages).ToList();
+
+        // Second pass: Load images only for top candidates
+        var semaphore = new SemaphoreSlim(Environment.ProcessorCount, Environment.ProcessorCount);
+
+        await Task.Run(() =>
+        {
+            try
+            {
+                Parallel.ForEach(topCandidates, parallelOptions, candidate =>
                 {
-                    tempList.Add(imageData);
-                }
-            });
+                    semaphore.Wait();
+                    try
+                    {
+                        var imageData = new ImageData(candidate.FilePath, candidate.ImageName,
+                            candidate.SimilarityScore);
+
+                        // Load the image into memory with error handling
+                        try
+                        {
+                            imageData.ImageSource = ImageLoader.LoadImageToMemory(candidate.FilePath);
+
+                            // Only add to results if the image was successfully loaded
+                            if (imageData.ImageSource == null) return;
+
+                            lock (lockObject)
+                            {
+                                tempList.Add(imageData);
+                            }
+                        }
+                        catch (OutOfMemoryException ex)
+                        {
+                            // Specifically, handle OOM exceptions
+                            _ = LogErrors.LogErrorAsync(ex, $"Out of memory while loading image: {candidate.FilePath}");
+                            // Force garbage collection to free up memory
+                            GC.Collect();
+                            GC.WaitForPendingFinalizers();
+                        }
+                        catch (Exception ex)
+                        {
+                            // Handle other image loading errors
+                            _ = LogErrors.LogErrorAsync(ex, $"Error loading image {candidate.FilePath}: {ex.Message}");
+                        }
+                    }
+                    finally
+                    {
+                        semaphore.Release();
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                // Log parallel image loading errors
+                _ = LogErrors.LogErrorAsync(ex, $"Error in parallel image loading: {ex.Message}");
+                throw;
+            }
         });
 
         // Sort by similarity score in descending order
