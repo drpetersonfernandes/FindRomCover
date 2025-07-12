@@ -6,10 +6,10 @@ namespace FindRomCover;
 public static class SimilarityCalculator
 {
     // Add a configurable limit for maximum concurrent image loading
-    private const int MaxConcurrentImages = 50;
+    private const int MaxConcurrentImages = 30;
 
     public static async Task<List<ImageData>> CalculateSimilarityAsync(string selectedFileName, string imageFolderPath,
-        double similarityThreshold, string algorithm)
+        double similarityThreshold, string algorithm, CancellationToken cancellationToken)
     {
         var tempList = new List<ImageData>();
 
@@ -21,6 +21,7 @@ public static class SimilarityCalculator
         var allImageFiles = new List<string>();
         foreach (var ext in imageExtensions)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             try
             {
                 var imageFiles = Directory.GetFiles(imageFolderPath, ext);
@@ -37,7 +38,8 @@ public static class SimilarityCalculator
         var lockObject = new object();
         var parallelOptions = new ParallelOptions
         {
-            MaxDegreeOfParallelism = Environment.ProcessorCount
+            MaxDegreeOfParallelism = Environment.ProcessorCount,
+            CancellationToken = cancellationToken
         };
 
         await Task.Run(() =>
@@ -72,13 +74,20 @@ public static class SimilarityCalculator
                     }
                 });
             }
+            catch (OperationCanceledException)
+            {
+                // Expected when the task is cancelled.
+                throw;
+            }
             catch (Exception ex)
             {
                 // Log parallel processing errors
                 _ = LogErrors.LogErrorAsync(ex, $"Error in parallel processing: {ex.Message}");
                 throw;
             }
-        });
+        }, cancellationToken);
+
+        cancellationToken.ThrowIfCancellationRequested();
 
         // Sort candidates by similarity score and limit to prevent memory issues
         candidateFiles.Sort((x, y) => y.SimilarityScore.CompareTo(x.SimilarityScore));
@@ -93,7 +102,7 @@ public static class SimilarityCalculator
             {
                 Parallel.ForEach(topCandidates, parallelOptions, candidate =>
                 {
-                    semaphore.Wait();
+                    semaphore.Wait(cancellationToken);
                     try
                     {
                         var imageData = new ImageData(candidate.FilePath, candidate.ImageName,
@@ -116,9 +125,6 @@ public static class SimilarityCalculator
                         {
                             // Specifically, handle OOM exceptions
                             _ = LogErrors.LogErrorAsync(ex, $"Out of memory while loading image: {candidate.FilePath}");
-                            // Force garbage collection to free up memory
-                            GC.Collect();
-                            GC.WaitForPendingFinalizers();
                         }
                         catch (Exception ex)
                         {
@@ -132,13 +138,20 @@ public static class SimilarityCalculator
                     }
                 });
             }
+            catch (OperationCanceledException)
+            {
+                // Expected on cancellation
+                throw;
+            }
             catch (Exception ex)
             {
                 // Log parallel image loading errors
                 _ = LogErrors.LogErrorAsync(ex, $"Error in parallel image loading: {ex.Message}");
                 throw;
             }
-        });
+        }, cancellationToken);
+
+        cancellationToken.ThrowIfCancellationRequested();
 
         // Sort by similarity score in descending order
         tempList.Sort((x, y) => y.SimilarityScore.CompareTo(x.SimilarityScore));

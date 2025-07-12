@@ -15,6 +15,8 @@ namespace FindRomCover;
 
 public partial class MainWindow : INotifyPropertyChanged
 {
+    private CancellationTokenSource? _findSimilarCts;
+
     public event PropertyChangedEventHandler? PropertyChanged;
     private string _imageFolderPath;
     private string _selectedRomFileName = string.Empty;
@@ -204,11 +206,6 @@ public partial class MainWindow : INotifyPropertyChanged
 
         var theme = menuItem.Name == "LightTheme" ? "Light" : "Dark";
         App.ChangeTheme(theme, App.Settings.AccentColor); // Use static App.ChangeTheme
-
-        // The AppSettings_PropertyChanged handler will update LightTheme.IsChecked and DarkTheme.IsChecked
-        // based on App.Settings.BaseTheme. So, these explicit assignments here are redundant.
-        // LightTheme.IsChecked = theme == "Light";
-        // DarkTheme.IsChecked = theme == "Dark";
     }
 
     private void ChangeAccentColor_Click(object sender, RoutedEventArgs e)
@@ -217,11 +214,6 @@ public partial class MainWindow : INotifyPropertyChanged
 
         var accent = menuItem.Name.Replace("Accent", "");
         App.ChangeTheme(App.Settings.BaseTheme, accent); // Use static App.ChangeTheme
-
-        // The AppSettings_PropertyChanged handler will call UpdateAccentColorChecks
-        // which will correctly set the IsChecked state. So, these explicit assignments here are redundant.
-        // UncheckAllAccentColors(menuItem);
-        // menuItem.IsChecked = true;
     }
 
     private void UpdateAccentColorChecks()
@@ -397,49 +389,74 @@ public partial class MainWindow : INotifyPropertyChanged
     {
         try
         {
-            if (LstMissingImages.SelectedItem is not string selectedFile)
-            {
-                SimilarImages.Clear();
-                return;
-            }
+            // Cancel any previous search operation
+            if (_findSimilarCts != null) await _findSimilarCts.CancelAsync();
 
-            IsFindingSimilar = true;
+            _findSimilarCts = new CancellationTokenSource();
+            var cancellationToken = _findSimilarCts.Token;
+
             try
             {
-                _selectedRomFileName = selectedFile;
-
-                var newSimilarImages = await ButtonFactory.CreateSimilarImagesCollection(
-                    selectedFile,
-                    _imageFolderPath,
-                    App.Settings.SimilarityThreshold, // Use App.Settings
-                    SelectedSimilarityAlgorithm
-                );
-
-                await Application.Current.Dispatcher.InvokeAsync(() =>
+                if (LstMissingImages.SelectedItem is not string selectedFile)
                 {
-                    var textBlock = new TextBlock();
-                    textBlock.Inlines.Add(new Run("Search Query: "));
-                    textBlock.Inlines.Add(new Run($"{selectedFile} ") { FontWeight = FontWeights.Bold });
-                    textBlock.Inlines.Add(new Run("with "));
-                    textBlock.Inlines.Add(new Run($"{SelectedSimilarityAlgorithm} ") { FontWeight = FontWeights.Bold });
-                    textBlock.Inlines.Add(new Run("algorithm"));
-                    LblSearchQuery.Content = textBlock;
-
                     SimilarImages.Clear();
-                    foreach (var imageData in newSimilarImages)
+                    return;
+                }
+
+                IsFindingSimilar = true;
+                try
+                {
+                    _selectedRomFileName = selectedFile;
+
+                    var newSimilarImages = await ButtonFactory.CreateSimilarImagesCollection(
+                        selectedFile,
+                        _imageFolderPath,
+                        App.Settings.SimilarityThreshold,
+                        SelectedSimilarityAlgorithm,
+                        cancellationToken // Pass the token
+                    );
+
+                    // Check if cancellation was requested before updating the UI
+                    if (cancellationToken.IsCancellationRequested) return;
+
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
                     {
-                        SimilarImages.Add(imageData);
+                        var textBlock = new TextBlock();
+                        textBlock.Inlines.Add(new Run("Search Query: "));
+                        textBlock.Inlines.Add(new Run($"{selectedFile} ") { FontWeight = FontWeights.Bold });
+                        textBlock.Inlines.Add(new Run("with "));
+                        textBlock.Inlines.Add(new Run($"{SelectedSimilarityAlgorithm} ") { FontWeight = FontWeights.Bold });
+                        textBlock.Inlines.Add(new Run("algorithm"));
+                        LblSearchQuery.Content = textBlock;
+
+                        SimilarImages.Clear();
+                        foreach (var imageData in newSimilarImages)
+                        {
+                            SimilarImages.Add(imageData);
+                        }
+                    });
+                }
+                catch (OperationCanceledException)
+                {
+                    // This is expected when a new selection is made, so we just ignore it.
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _ = LogErrors.LogErrorAsync(ex, "Error in LstMissingImages_SelectionChanged");
+                }
+                finally
+                {
+                    // Only set IsFindingSimilar to false if this operation wasn't cancelled
+                    if (!cancellationToken.IsCancellationRequested)
+                    {
+                        IsFindingSimilar = false;
                     }
-                });
+                }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 _ = LogErrors.LogErrorAsync(ex, "Error in LstMissingImages_SelectionChanged");
-            }
-            finally
-            {
-                IsFindingSimilar = false;
             }
         }
         catch (Exception ex)
@@ -460,7 +477,7 @@ public partial class MainWindow : INotifyPropertyChanged
             UseImage(imageData.ImagePath);
     }
 
-    public void UseImage(string imagePath)
+    public void UseImage(string? imagePath)
     {
         if (string.IsNullOrEmpty(_selectedRomFileName) ||
             string.IsNullOrEmpty(imagePath) ||
@@ -512,11 +529,6 @@ public partial class MainWindow : INotifyPropertyChanged
         var algorithm = menuItem.Header.ToString() ?? DefaultSimilarityAlgorithm;
         App.Settings.SelectedSimilarityAlgorithm = algorithm; // Update App.Settings
         App.Settings.SaveSettings(); // Save the settings
-
-        // The AppSettings_PropertyChanged handler will update _selectedSimilarityAlgorithm
-        // and call UpdateSimilarityAlgorithmChecks. So, these explicit assignments here are redundant.
-        // UncheckAllSimilarityAlgorithms();
-        // menuItem.IsChecked = true;
     }
 
     private void UpdateSimilarityAlgorithmChecks()
@@ -540,11 +552,6 @@ public partial class MainWindow : INotifyPropertyChanged
         {
             App.Settings.SimilarityThreshold = rate; // Use App.Settings
             App.Settings.SaveSettings(); // Save the settings
-
-            // The AppSettings_PropertyChanged handler will call UpdateSimilarityThresholdChecks
-            // which will correctly set the IsChecked state. So, these explicit assignments here are redundant.
-            // UncheckAllSimilarityThresholds();
-            // clickedItem.IsChecked = true;
         }
         else
         {
@@ -580,18 +587,6 @@ public partial class MainWindow : INotifyPropertyChanged
         App.Settings.ImageWidth = size; // Update App.Settings
         App.Settings.ImageHeight = size; // Update App.Settings
         App.Settings.SaveSettings(); // Save the settings
-
-        // The AppSettings_PropertyChanged handler will update _imageWidth/_imageHeight
-        // and call UpdateThumbnailSizeMenuChecks. So, these explicit assignments here are redundant.
-        // ImageWidth = size;
-        // ImageHeight = size;
-        // foreach (var item in ImageSizeMenu.Items)
-        // {
-        //     if (item is MenuItem sizeMenuItem)
-        //     {
-        //         sizeMenuItem.IsChecked = sizeMenuItem == menuItem;
-        //     }
-        // }
     }
 
     private void UpdateThumbnailSizeMenuChecks()
@@ -615,7 +610,8 @@ public partial class MainWindow : INotifyPropertyChanged
 
         if (imageData.ImagePath != null)
         {
-            element.ContextMenu = ButtonFactory.CreateContextMenu(imageData.ImagePath);
+            // Pass the UseImage method as the action
+            element.ContextMenu = ButtonFactory.CreateContextMenu(imageData.ImagePath, UseImage);
         }
     }
 

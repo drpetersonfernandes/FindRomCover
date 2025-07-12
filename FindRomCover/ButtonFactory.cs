@@ -5,7 +5,6 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using FindRomCover.models;
-using Application = System.Windows.Application;
 using Clipboard = System.Windows.Clipboard;
 using Image = System.Windows.Controls.Image;
 using MessageBox = System.Windows.MessageBox;
@@ -18,17 +17,24 @@ public class ButtonFactory
         string selectedRomFileName,
         string imageFolderPath,
         double similarityThreshold,
-        string similarityAlgorithm)
+        string similarityAlgorithm,
+        CancellationToken cancellationToken)
     {
         var similarImages = new ObservableCollection<ImageData>();
 
-        // Logic to calculate similarity (mocked example)
+        // Logic to calculate similarity
         var images = await SimilarityCalculator.CalculateSimilarityAsync(
             selectedRomFileName,
             imageFolderPath,
             similarityThreshold,
-            similarityAlgorithm
-        ); // Ensure async behavior is properly awaited when used
+            similarityAlgorithm,
+            cancellationToken
+        );
+
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return [];
+        }
 
         foreach (var image in images)
         {
@@ -39,7 +45,7 @@ public class ButtonFactory
     }
 
     // Method to construct a context menu dynamically
-    public static ContextMenu CreateContextMenu(string imagePath)
+    public static ContextMenu CreateContextMenu(string imagePath, Action<string?> useImageAction)
     {
         var contextMenu = new ContextMenu();
 
@@ -54,7 +60,8 @@ public class ButtonFactory
         var useThisImageMenuItem = new MenuItem
         {
             Header = "Use This Image",
-            Command = UseThisImageCommand,
+            // Use a new command that invokes the passed-in action
+            Command = new DelegateCommand(p => useImageAction?.Invoke(p as string)),
             CommandParameter = imagePath,
             Icon = useThisImageIcon
         };
@@ -119,13 +126,5 @@ public class ButtonFactory
             // Open the folder containing the file and select it
             System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{imagePath}\"");
         }
-    });
-
-    private static ICommand UseThisImageCommand { get; } = new DelegateCommand(param =>
-    {
-        if (param is not string imagePath) return;
-        // Ensure that MainWindow's instance is available
-        var mainWindow = Application.Current.Windows.OfType<MainWindow>().FirstOrDefault();
-        mainWindow?.UseImage(imagePath);
     });
 }
