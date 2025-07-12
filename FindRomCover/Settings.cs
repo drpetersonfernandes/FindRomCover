@@ -1,3 +1,4 @@
+using System.ComponentModel; // Added for INotifyPropertyChanged
 using System.Globalization;
 using System.IO;
 using System.Windows;
@@ -5,18 +6,116 @@ using System.Xml.Linq;
 
 namespace FindRomCover;
 
-public class Settings
+public class Settings : INotifyPropertyChanged // Implemented INotifyPropertyChanged
 {
+    public event PropertyChangedEventHandler? PropertyChanged; // Added PropertyChanged event
+
+    private void OnPropertyChanged(string propertyName) // Helper method for PropertyChanged
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+
     private static readonly string SettingsFilePath =
         Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.xml");
 
-    public double SimilarityThreshold { get; set; }
-    public string[] SupportedExtensions { get; set; } = Array.Empty<string>();
-    public int ImageWidth { get; set; }
-    public int ImageHeight { get; set; }
-    public string SelectedSimilarityAlgorithm { get; set; } = string.Empty;
-    public string BaseTheme { get; set; } = string.Empty;
-    public string AccentColor { get; set; } = string.Empty;
+    // Changed properties to use backing fields and OnPropertyChanged
+    private double _similarityThreshold;
+
+    public double SimilarityThreshold
+    {
+        get => _similarityThreshold;
+        set
+        {
+            if (Math.Abs(_similarityThreshold - value) < 0.01) return;
+
+            _similarityThreshold = value;
+            OnPropertyChanged(nameof(SimilarityThreshold));
+        }
+    }
+
+    private string[] _supportedExtensions = Array.Empty<string>();
+
+    public string[] SupportedExtensions
+    {
+        get => _supportedExtensions;
+        set
+        {
+            if (_supportedExtensions.SequenceEqual(value)) return;
+
+            _supportedExtensions = value;
+            OnPropertyChanged(nameof(SupportedExtensions));
+        }
+    }
+
+    private int _imageWidth;
+
+    public int ImageWidth
+    {
+        get => _imageWidth;
+        set
+        {
+            if (_imageWidth == value) return;
+
+            _imageWidth = value;
+            OnPropertyChanged(nameof(ImageWidth));
+        }
+    }
+
+    private int _imageHeight;
+
+    public int ImageHeight
+    {
+        get => _imageHeight;
+        set
+        {
+            if (_imageHeight == value) return;
+
+            _imageHeight = value;
+            OnPropertyChanged(nameof(ImageHeight));
+        }
+    }
+
+    private string _selectedSimilarityAlgorithm = string.Empty;
+
+    public string SelectedSimilarityAlgorithm
+    {
+        get => _selectedSimilarityAlgorithm;
+        set
+        {
+            if (_selectedSimilarityAlgorithm == value) return;
+
+            _selectedSimilarityAlgorithm = value;
+            OnPropertyChanged(nameof(SelectedSimilarityAlgorithm));
+        }
+    }
+
+    private string _baseTheme = string.Empty;
+
+    public string BaseTheme
+    {
+        get => _baseTheme;
+        set
+        {
+            if (_baseTheme == value) return;
+
+            _baseTheme = value;
+            OnPropertyChanged(nameof(BaseTheme));
+        }
+    }
+
+    private string _accentColor = string.Empty;
+
+    public string AccentColor
+    {
+        get => _accentColor;
+        set
+        {
+            if (_accentColor == value) return;
+
+            _accentColor = value;
+            OnPropertyChanged(nameof(AccentColor));
+        }
+    }
 
     public Settings()
     {
@@ -42,46 +141,42 @@ public class Settings
                 throw new InvalidDataException("The settings.xml file is missing the root <Settings> element.");
             }
 
-            // Helper to get an element's value or a default.
             string GetValue(string elementName, string defaultValue)
             {
                 return settingsElement.Element(elementName)?.Value ?? defaultValue;
             }
 
-            // Load simple properties
-            SimilarityThreshold = double.Parse(GetValue("SimilarityThreshold", "70"), CultureInfo.InvariantCulture);
-            SelectedSimilarityAlgorithm = GetValue("SimilarityAlgorithm", "Jaro-Winkler Distance");
-            BaseTheme = GetValue("BaseTheme", "Light");
-            AccentColor = GetValue("AccentColor", "Blue");
+            // Directly set backing fields to avoid PropertyChanged events during initial load
+            _similarityThreshold = double.Parse(GetValue("SimilarityThreshold", "70"), CultureInfo.InvariantCulture);
+            _selectedSimilarityAlgorithm = GetValue("SimilarityAlgorithm", "Jaro-Winkler Distance");
+            _baseTheme = GetValue("BaseTheme", "Light");
+            _accentColor = GetValue("AccentColor", "Blue");
 
-            // Load nested ImageSize properties
             var imageSizeElement = settingsElement.Element("ImageSize");
             if (imageSizeElement != null)
             {
-                ImageWidth = int.Parse(imageSizeElement.Element("Width")?.Value ?? "300", CultureInfo.InvariantCulture);
-                ImageHeight = int.Parse(imageSizeElement.Element("Height")?.Value ?? "300", CultureInfo.InvariantCulture);
+                _imageWidth = int.Parse(imageSizeElement.Element("Width")?.Value ?? "300", CultureInfo.InvariantCulture);
+                _imageHeight = int.Parse(imageSizeElement.Element("Height")?.Value ?? "300", CultureInfo.InvariantCulture);
             }
             else
             {
-                ImageWidth = 300;
-                ImageHeight = 300;
+                _imageWidth = 300;
+                _imageHeight = 300;
             }
 
-            // Load the list of supported extensions
             var extensionsElement = settingsElement.Element("SupportedExtensions");
             if (extensionsElement != null)
             {
-                SupportedExtensions = extensionsElement.Elements("Extension")
+                _supportedExtensions = extensionsElement.Elements("Extension")
                     .Select(e => e.Value)
                     .Where(e => !string.IsNullOrEmpty(e))
                     .ToArray();
             }
 
-            // If for any reason the extensions list is empty after loading, fall back to defaults.
-            if (SupportedExtensions.Length != 0) return;
+            if (_supportedExtensions.Length != 0) return;
 
             SetDefaultSettings();
-            SaveSettings(); // Save the defaults back to the file for next time.
+            SaveSettings();
         }
         catch (Exception ex)
         {
@@ -122,8 +217,9 @@ public class Settings
 
     private void SetDefaultSettings()
     {
-        SimilarityThreshold = 70;
-        SupportedExtensions =
+        // Directly set backing fields to avoid PropertyChanged events during default setting
+        _similarityThreshold = 70;
+        _supportedExtensions =
         [
             "2hd", "3ds", "7z", "88d", "a78", "arc", "bat", "bin", "bs", "cas", "ccd", "cdi", "cdt", "chd", "cht",
             "ciso", "cmd", "col", "cpr", "cso", "cue", "cv", "d64", "d71", "d81", "d88", "dim", "dol", "dsk", "dup",
@@ -134,10 +230,10 @@ public class Settings
             "t64", "tap", "tgc", "toc", "trd", "tzx", "u1", "unf", "unif", "v64", "voc", "wad", "wbfs", "wua", "xci",
             "xdf", "z64", "z80", "zip", "zso"
         ];
-        ImageWidth = 300;
-        ImageHeight = 300;
-        SelectedSimilarityAlgorithm = "Jaro-Winkler Distance";
-        BaseTheme = "Light";
-        AccentColor = "Blue";
+        _imageWidth = 300;
+        _imageHeight = 300;
+        _selectedSimilarityAlgorithm = "Jaro-Winkler Distance";
+        _baseTheme = "Light";
+        _accentColor = "Blue";
     }
 }

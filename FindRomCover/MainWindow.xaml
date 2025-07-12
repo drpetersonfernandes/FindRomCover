@@ -70,7 +70,7 @@
                                Margin="0,5,0,0" TextTrimming="CharacterEllipsis" ToolTip="{Binding ImageName}"
                                d:DataContext="{d:DesignInstance }" />
                     <TextBlock HorizontalAlignment="Center"
-                               Text="{Binding SimilarityThreshold, StringFormat={}{0:F2}%}" FontWeight="Bold"
+                               Text="{Binding SimilarityScore, StringFormat={}{0:F2}%}" FontWeight="Bold"
                                d:DataContext="{d:DesignInstance }" />
                 </StackPanel>
             </Border>
@@ -129,7 +129,7 @@
                     <MenuItem x:Name="LightTheme" Header="Light" Click="ChangeBaseTheme_Click" IsCheckable="True" />
                     <MenuItem x:Name="DarkTheme" Header="Dark" Click="ChangeBaseTheme_Click" IsCheckable="True" />
                 </MenuItem>
-                <MenuItem Header="Accent Colors">
+                <MenuItem x:Name="MenuAccentColors" Header="Accent Colors">
                     <MenuItem.Icon>
                         <Image Source="pack://application:,,,/images/theme.png" Width="16" Height="16" />
                     </MenuItem.Icon>

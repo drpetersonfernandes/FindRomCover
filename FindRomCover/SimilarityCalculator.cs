@@ -141,7 +141,7 @@ public static class SimilarityCalculator
         });
 
         // Sort by similarity score in descending order
-        tempList.Sort((x, y) => y.SimilarityThreshold.CompareTo(x.SimilarityThreshold));
+        tempList.Sort((x, y) => y.SimilarityScore.CompareTo(x.SimilarityScore));
 
         return tempList;
     }

@@ -6,17 +6,16 @@ namespace FindRomCover;
 
 public partial class SettingsWindow
 {
-    private readonly Settings _settings;
+    private readonly Settings _settings; // This will now always be App.Settings
     private readonly ObservableCollection<string> _supportedExtensions;
 
-    public SettingsWindow(Settings settings)
+    public SettingsWindow(Settings settings) // This 'settings' parameter will be App.Settings
     {
         InitializeComponent();
         App.ApplyThemeToWindow(this);
 
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
 
-        // Use an ObservableCollection to allow the ListBox to update automatically
         _supportedExtensions = new ObservableCollection<string>(_settings.SupportedExtensions.OrderBy(e => e));
         LstSupportedExtensions.ItemsSource = _supportedExtensions;
     }
@@ -30,10 +29,9 @@ public partial class SettingsWindow
 
             if (string.IsNullOrWhiteSpace(newExtension))
             {
-                return; // User cancelled or entered nothing
+                return;
             }
 
-            // Clean up the input
             newExtension = newExtension.Trim().Replace(".", "");
 
             if (string.IsNullOrEmpty(newExtension))
@@ -48,7 +46,6 @@ public partial class SettingsWindow
             }
             else
             {
-                // Find the correct index to insert the new extension to maintain sorted order
                 var insertIndex = FindInsertIndex(newExtension);
                 _supportedExtensions.Insert(insertIndex, newExtension);
 
@@ -57,14 +54,12 @@ public partial class SettingsWindow
         }
         catch (Exception ex)
         {
-            // Notify developer
             _ = LogErrors.LogErrorAsync(ex, "Error in method BtnAdd_Click");
         }
     }
 
     private int FindInsertIndex(string newExtension)
     {
-        // Use binary search to find the correct insertion point
         var left = 0;
         var right = _supportedExtensions.Count;
 
@@ -94,11 +89,10 @@ public partial class SettingsWindow
 
     private void BtnSave_Click(object sender, RoutedEventArgs e)
     {
-        // Convert the collection back to an array and save
-        _settings.SupportedExtensions = [.. _supportedExtensions];
-        _settings.SaveSettings();
+        _settings.SupportedExtensions = [.. _supportedExtensions]; // Updates App.Settings.SupportedExtensions
+        _settings.SaveSettings(); // Saves the single App.Settings instance
 
-        DialogResult = true; // Indicates success
+        DialogResult = true;
         Close();
     }
 

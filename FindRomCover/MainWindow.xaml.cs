@@ -6,7 +6,6 @@ using System.Windows.Input;
 using System.ComponentModel;
 using System.Globalization;
 using System.Windows.Documents;
-using ControlzEx.Theming;
 using FindRomCover.models;
 using Microsoft.Win32;
 using Application = System.Windows.Application;
@@ -17,7 +16,6 @@ namespace FindRomCover;
 public partial class MainWindow : INotifyPropertyChanged
 {
     public event PropertyChangedEventHandler? PropertyChanged;
-    private readonly Settings _settings = new();
     private string _imageFolderPath;
     private string _selectedRomFileName = string.Empty;
 
@@ -35,6 +33,7 @@ public partial class MainWindow : INotifyPropertyChanged
 
             _imageWidth = value;
             OnPropertyChanged(nameof(ImageWidth));
+            // Removed direct App.Settings update here. Handled by SetThumbnailSize_Click.
         }
     }
 
@@ -49,6 +48,7 @@ public partial class MainWindow : INotifyPropertyChanged
 
             _imageHeight = value;
             OnPropertyChanged(nameof(ImageHeight));
+            // Removed direct App.Settings update here. Handled by SetThumbnailSize_Click.
         }
     }
 
@@ -80,35 +80,52 @@ public partial class MainWindow : INotifyPropertyChanged
         }
     }
 
-    private string SelectedSimilarityAlgorithm { get; set; } = DefaultSimilarityAlgorithm;
+    private string _selectedSimilarityAlgorithm; // Backing field for property
+
+    public string SelectedSimilarityAlgorithm
+    {
+        get => _selectedSimilarityAlgorithm;
+        set
+        {
+            if (_selectedSimilarityAlgorithm == value) return;
+
+            _selectedSimilarityAlgorithm = value;
+            OnPropertyChanged(nameof(SelectedSimilarityAlgorithm));
+            // Removed direct App.Settings update here. Handled by SetSimilarityAlgorithm_Click.
+        }
+    }
+
     public object ImageSource { get; } = new();
     public object ImagePath { get; } = new();
     public object ImageName { get; } = new();
-    public object SimilarityThreshold { get; } = new();
+    public object SimilarityThreshold { get; } = new(); // This property is not used in MainWindow, can be removed or bound to App.Settings.SimilarityThreshold
+    public object SimilarityScore { get; } = new();
 
     public MainWindow()
     {
         InitializeComponent();
         DataContext = this;
 
+        // Initialize local properties from App.Settings (direct backing field assignment to avoid PropertyChanged during init)
+        _imageWidth = App.Settings.ImageWidth;
+        _imageHeight = App.Settings.ImageHeight;
+        _selectedSimilarityAlgorithm = App.Settings.SelectedSimilarityAlgorithm;
+
         // Check for command-line arguments
         var args = Environment.GetCommandLineArgs();
         if (args.Length == 3)
         {
-            // Validate that the provided paths are valid directories
             var imageFolderPath = args[1];
             var romFolderPath = args[2];
 
             if (Directory.Exists(imageFolderPath) && Directory.Exists(romFolderPath))
             {
-                // args[1] is expected to be ImageFolder, args[2] to be RomFolder
                 _imageFolderPath = imageFolderPath;
                 TxtImageFolder.Text = _imageFolderPath;
                 TxtRomFolder.Text = romFolderPath;
             }
             else
             {
-                // Show error message for invalid paths
                 var invalidPaths = new List<string>();
                 if (!Directory.Exists(imageFolderPath))
                     invalidPaths.Add($"Image folder: '{imageFolderPath}'");
@@ -119,7 +136,6 @@ public partial class MainWindow : INotifyPropertyChanged
                     $"The following command-line paths are invalid or do not exist:\n\n{string.Join("\n", invalidPaths)}\n\nThe application will start with empty folder paths.",
                     "Invalid Command-Line Arguments", MessageBoxButton.OK, MessageBoxImage.Warning);
 
-                // Set to empty values
                 _imageFolderPath = "";
                 TxtImageFolder.Text = "";
                 TxtRomFolder.Text = "";
@@ -127,103 +143,54 @@ public partial class MainWindow : INotifyPropertyChanged
         }
         else
         {
-            // Proceed with regular execution if arguments are not as expected
-            // or no arguments are provided
             _imageFolderPath = "";
-            TxtImageFolder.Text = ""; // Set to default or empty if no arguments
-            TxtRomFolder.Text = ""; // Set to default or empty if no arguments
+            TxtImageFolder.Text = "";
+            TxtRomFolder.Text = "";
         }
 
-        LoadSettings();
         UpdateThumbnailSizeMenuChecks();
         UpdateSimilarityAlgorithmChecks();
         UpdateSimilarityThresholdChecks();
-    }
-
-    private void LoadSettings()
-    {
-        ImageWidth = _settings.ImageWidth;
-        ImageHeight = _settings.ImageHeight;
-
-        // Load and apply the theme
-        ThemeManager.Current.ChangeThemeBaseColor(this, _settings.BaseTheme);
-        ThemeManager.Current.ChangeThemeColorScheme(this, _settings.AccentColor);
-
-        // Mark the correct menu item as checked
-        if (_settings.BaseTheme == "Light")
-        {
-            LightTheme.IsChecked = true;
-        }
-        else
-        {
-            DarkTheme.IsChecked = true;
-        }
-
-        // Use iteration approach similar to other menu updates instead of FindName
         UpdateAccentColorChecks();
+
+        // Subscribe to App.Settings PropertyChanged to update UI if settings change elsewhere (e.g. SettingsWindow)
+        App.Settings.PropertyChanged += AppSettings_PropertyChanged;
     }
 
-    private void UpdateAccentColorChecks()
+    // Handle settings changes from other parts of the application (e.g., SettingsWindow)
+    private void AppSettings_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        // Find the "Theme" menu item
-        MenuItem? themeMenuItem = null;
-        foreach (var item in MainMenu.Items)
+        switch (e.PropertyName)
         {
-            if (item is not MenuItem mi || mi.Header?.ToString() != "Theme") continue;
-
-            themeMenuItem = mi;
-            break;
+            case nameof(Settings.BaseTheme):
+                // Base theme is handled by App.ChangeTheme, which applies globally.
+                // Ensure menu checks are updated.
+                LightTheme.IsChecked = App.Settings.BaseTheme == "Light";
+                DarkTheme.IsChecked = App.Settings.BaseTheme == "Dark";
+                break;
+            case nameof(Settings.AccentColor):
+                // Accent color is handled by App.ChangeTheme, which applies globally.
+                // Ensure menu checks are updated.
+                UpdateAccentColorChecks(); // This is the call that was reported as "Cannot resolve symbol"
+                break;
+            case nameof(Settings.ImageWidth):
+            case nameof(Settings.ImageHeight):
+                // Update local properties and trigger UI update
+                _imageWidth = App.Settings.ImageWidth;
+                _imageHeight = App.Settings.ImageHeight;
+                OnPropertyChanged(nameof(ImageWidth));
+                OnPropertyChanged(nameof(ImageHeight));
+                UpdateThumbnailSizeMenuChecks();
+                break;
+            case nameof(Settings.SelectedSimilarityAlgorithm):
+                _selectedSimilarityAlgorithm = App.Settings.SelectedSimilarityAlgorithm;
+                OnPropertyChanged(nameof(SelectedSimilarityAlgorithm));
+                UpdateSimilarityAlgorithmChecks();
+                break;
+            case nameof(Settings.SimilarityThreshold):
+                UpdateSimilarityThresholdChecks();
+                break;
         }
-
-        if (themeMenuItem == null)
-        {
-            // This should not happen if XAML is correct, but good to handle
-            _ = LogErrors.LogErrorAsync(new Exception("Theme menu item not found."), "Theme menu item not found in MainMenu.");
-            return;
-        }
-
-        // Find the "Accent Colors" submenu under "Theme"
-        MenuItem? accentColorsMenuItem = null;
-        foreach (var subItem in themeMenuItem.Items)
-        {
-            if (subItem is not MenuItem mi || mi.Header?.ToString() != "Accent Colors") continue;
-
-            accentColorsMenuItem = mi;
-            break;
-        }
-
-        if (accentColorsMenuItem == null)
-        {
-            // This should not happen if XAML is correct
-            _ = LogErrors.LogErrorAsync(new Exception("Accent Colors menu item not found."), "Accent Colors menu item not found under Theme menu.");
-            return;
-        }
-
-        // Now iterate through the actual accent color menu items
-        var accentMenuFound = false;
-        foreach (var accentMenuItem in accentColorsMenuItem.Items)
-        {
-            if (accentMenuItem is not MenuItem mi || !mi.Name.EndsWith("Accent", StringComparison.Ordinal)) continue;
-
-            var accentName = mi.Name.Replace("Accent", "");
-            mi.IsChecked = accentName == _settings.AccentColor;
-            if (mi.IsChecked)
-            {
-                accentMenuFound = true;
-            }
-        }
-
-        // If no matching accent color was found, log a warning and potentially set a default
-        if (accentMenuFound || string.IsNullOrEmpty(_settings.AccentColor)) return;
-        // Log the issue for debugging
-        var warningMessage =
-            $"Accent color '{_settings.AccentColor}' not found in menu items. Settings may be corrupted.";
-        _ = LogErrors.LogErrorAsync(new Exception(warningMessage), warningMessage);
-
-        // Optionally reset to a default accent color
-        // You could uncomment the lines below to set a default
-        // _settings.AccentColor = "Blue"; // or whatever your default is
-        // _settings.SaveSettings();
     }
 
     private void OnPropertyChanged(string propertyName)
@@ -236,94 +203,37 @@ public partial class MainWindow : INotifyPropertyChanged
         if (sender is not MenuItem menuItem) return;
 
         var theme = menuItem.Name == "LightTheme" ? "Light" : "Dark";
-        ThemeManager.Current.ChangeThemeBaseColor(this, theme);
+        App.ChangeTheme(theme, App.Settings.AccentColor); // Use static App.ChangeTheme
 
-        // Save base theme to settings.xml
-        _settings.BaseTheme = theme;
-        _settings.SaveSettings();
-
-        // Update menu item check state
-        LightTheme.IsChecked = theme == "Light";
-        DarkTheme.IsChecked = theme == "Dark";
+        // The AppSettings_PropertyChanged handler will update LightTheme.IsChecked and DarkTheme.IsChecked
+        // based on App.Settings.BaseTheme. So, these explicit assignments here are redundant.
+        // LightTheme.IsChecked = theme == "Light";
+        // DarkTheme.IsChecked = theme == "Dark";
     }
 
     private void ChangeAccentColor_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not MenuItem menuItem) return;
 
-        // Extract the accent color name from the selected menu item's name
         var accent = menuItem.Name.Replace("Accent", "");
+        App.ChangeTheme(App.Settings.BaseTheme, accent); // Use static App.ChangeTheme
 
-        // Change the accent color of the application
-        ThemeManager.Current.ChangeThemeColorScheme(this, accent);
-
-        // Save the selected accent color to the settings.xml file
-        _settings.AccentColor = accent;
-        _settings.SaveSettings();
-
-        // Use safer approach to uncheck all accent color options
-        UncheckAllAccentColors(menuItem);
-
-        // Check the currently selected accent color
-        menuItem.IsChecked = true;
+        // The AppSettings_PropertyChanged handler will call UpdateAccentColorChecks
+        // which will correctly set the IsChecked state. So, these explicit assignments here are redundant.
+        // UncheckAllAccentColors(menuItem);
+        // menuItem.IsChecked = true;
     }
 
-    private void UncheckAllAccentColors(MenuItem selectedMenuItem)
+    private void UpdateAccentColorChecks()
     {
-        // Find the "Theme" menu item
-        MenuItem? themeMenuItem = null;
-        foreach (var item in MainMenu.Items)
+        var currentAccent = App.Settings.AccentColor;
+        foreach (var item in MenuAccentColors.Items)
         {
-            if (item is not MenuItem mi || mi.Header?.ToString() != "Theme") continue;
+            if (item is not MenuItem { Header: not null } menuItem) continue;
 
-            themeMenuItem = mi;
-            break;
+            menuItem.IsChecked = menuItem.Header.ToString() == currentAccent;
         }
-
-        if (themeMenuItem == null) return; // Should not happen, but defensively
-
-        // Find the "Accent Colors" submenu under "Theme"
-        MenuItem? accentColorsMenuItem = null;
-        foreach (var subItem in themeMenuItem.Items)
-        {
-            if (subItem is not MenuItem mi || mi.Header?.ToString() != "Accent Colors") continue;
-
-            accentColorsMenuItem = mi;
-            break;
-        }
-
-        if (accentColorsMenuItem == null) return; // Should not happen, but defensively
-
-        // Iterate through all accent color options and uncheck them
-        foreach (var item in accentColorsMenuItem.Items)
-        {
-            if (item is MenuItem accentMenuItem && accentMenuItem.Name.EndsWith("Accent", StringComparison.Ordinal))
-            {
-                accentMenuItem.IsChecked = false;
-            }
-        }
-        // The calling method ChangeAccentColor_Click will then set selectedMenuItem.IsChecked = true;
     }
-
-    // This method is no longer needed as its logic is integrated into UncheckAllAccentColors
-    // private void UncheckAccentItemsInMenu(MenuItem parentMenu, MenuItem selectedMenuItem)
-    // {
-    //     foreach (var item in parentMenu.Items)
-    //     {
-    //         if (item is not MenuItem menuItem) continue;
-    //
-    //         if (menuItem.Name.EndsWith("Accent", StringComparison.Ordinal))
-    //         {
-    //             menuItem.IsChecked = false;
-    //         }
-    //
-    //         // Recursively check submenus if they exist
-    //         if (menuItem.Items.Count > 0)
-    //         {
-    //             UncheckAccentItemsInMenu(menuItem, selectedMenuItem);
-    //         }
-    //     }
-    // }
 
     private void DonateButton_Click(object sender, RoutedEventArgs e)
     {
@@ -338,11 +248,9 @@ public partial class MainWindow : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            // Notify user
             MessageBox.Show($"Unable to open the donation link: {ex.Message}",
                 "Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
-            // Notify developer
             var formattedException = $"Unable to open the donation link.\n\n" +
                                      $"Exception type: {ex.GetType().Name}\n" +
                                      $"Exception details: {ex.Message}";
@@ -395,29 +303,25 @@ public partial class MainWindow : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            // Notify developer
             _ = LogErrors.LogErrorAsync(ex, "Error in BtnCheckForMissingImages_Click");
         }
     }
 
     private async Task LoadMissingImagesList()
     {
-        if (_settings.SupportedExtensions.Length == 0)
+        if (App.Settings.SupportedExtensions.Length == 0) // Use App.Settings
         {
-            // Notify user
             MessageBox.Show("No supported file extensions loaded. Please check file 'settings.xml' or edit them in the Settings menu.",
                 "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
 
             return;
         }
 
-        // Capture UI-dependent values before going to a background thread
         var romFolderPath = TxtRomFolder.Text;
         var imageFolderPath = TxtImageFolder.Text;
 
         if (string.IsNullOrEmpty(romFolderPath) || string.IsNullOrEmpty(imageFolderPath))
         {
-            // Notify user
             MessageBox.Show("Please select both ROM and Image folders.",
                 "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
 
@@ -427,10 +331,9 @@ public partial class MainWindow : INotifyPropertyChanged
         IsCheckingMissing = true;
         try
         {
-            // Get all ROM files and find missing ones on a background thread
             var missingFiles = await Task.Run(() =>
             {
-                var searchPatterns = _settings.SupportedExtensions.Select(ext => "*." + ext).ToArray();
+                var searchPatterns = App.Settings.SupportedExtensions.Select(ext => "*." + ext).ToArray(); // Use App.Settings
                 var allRomNames = searchPatterns
                     .SelectMany(pattern => Directory.GetFiles(romFolderPath, pattern))
                     .Select(Path.GetFileNameWithoutExtension)
@@ -449,25 +352,21 @@ public partial class MainWindow : INotifyPropertyChanged
                 return missing.OrderBy(static name => name).ToList();
             });
 
-            // Now, update the UI on the UI thread in one go
             LstMissingImages.Items.Clear();
-            SimilarImages.Clear(); // Also clear suggestions
+            SimilarImages.Clear();
             foreach (var file in missingFiles)
             {
                 LstMissingImages.Items.Add(file);
             }
 
-            // Update count
             UpdateMissingCount();
         }
         catch (Exception ex)
         {
-            // Notify user
             MessageBox.Show($"There was an error checking for the missing image files.\n\n" +
                             $"Check if the provided folders are valid.",
                 "Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
-            // Notify developer
             var formattedException = $"There was an error checking for the missing image files.\n\n" +
                                      $"Exception type: {ex.GetType().Name}\n" +
                                      $"Exception details: {ex.Message}";
@@ -475,7 +374,7 @@ public partial class MainWindow : INotifyPropertyChanged
         }
         finally
         {
-            IsCheckingMissing = false;
+            IsFindingSimilar = false;
         }
     }
 
@@ -509,18 +408,15 @@ public partial class MainWindow : INotifyPropertyChanged
             {
                 _selectedRomFileName = selectedFile;
 
-                // Use ButtonFactory to create the SimilarImages collection
                 var newSimilarImages = await ButtonFactory.CreateSimilarImagesCollection(
                     selectedFile,
                     _imageFolderPath,
-                    _settings.SimilarityThreshold,
+                    App.Settings.SimilarityThreshold, // Use App.Settings
                     SelectedSimilarityAlgorithm
                 );
 
-                // Update the UI
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
-                    // Display the search query
                     var textBlock = new TextBlock();
                     textBlock.Inlines.Add(new Run("Search Query: "));
                     textBlock.Inlines.Add(new Run($"{selectedFile} ") { FontWeight = FontWeights.Bold });
@@ -529,7 +425,6 @@ public partial class MainWindow : INotifyPropertyChanged
                     textBlock.Inlines.Add(new Run("algorithm"));
                     LblSearchQuery.Content = textBlock;
 
-                    // Clear and update the SimilarImages collection
                     SimilarImages.Clear();
                     foreach (var imageData in newSimilarImages)
                     {
@@ -539,10 +434,7 @@ public partial class MainWindow : INotifyPropertyChanged
             }
             catch (Exception ex)
             {
-                // Notify user
                 MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-
-                // Notify developer
                 _ = LogErrors.LogErrorAsync(ex, "Error in LstMissingImages_SelectionChanged");
             }
             finally
@@ -552,14 +444,12 @@ public partial class MainWindow : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            // Notify developer
             _ = LogErrors.LogErrorAsync(ex, "Error in LstMissingImages_SelectionChanged");
         }
     }
 
     private void ImageCell_MouseDown(object sender, MouseButtonEventArgs e)
     {
-        // Ensure the click is a left mouse button click
         if (e.ChangedButton == MouseButton.Left && sender is FrameworkElement
             {
                 DataContext: ImageData
@@ -582,15 +472,13 @@ public partial class MainWindow : INotifyPropertyChanged
             PlaySound.PlayClickSound();
             RemoveSelectedItem();
             SimilarImages.Clear();
-            UpdateMissingCount(); // Update count whenever an item is removed
+            UpdateMissingCount();
         }
         else
         {
-            // Notify user
             MessageBox.Show("Failed to save the image.",
                 "Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
-            // Notify developer
             const string formattedException = "Failed to save the image.";
             var ex = new Exception(formattedException);
             _ = LogErrors.LogErrorAsync(ex, formattedException);
@@ -621,10 +509,14 @@ public partial class MainWindow : INotifyPropertyChanged
     {
         if (sender is not MenuItem menuItem) return;
 
-        SelectedSimilarityAlgorithm = menuItem.Header.ToString() ?? DefaultSimilarityAlgorithm;
-        SaveSimilarityAlgorithmSetting(SelectedSimilarityAlgorithm);
-        UncheckAllSimilarityAlgorithms(); // Uncheck all first
-        menuItem.IsChecked = true; // Then check the selected one
+        var algorithm = menuItem.Header.ToString() ?? DefaultSimilarityAlgorithm;
+        App.Settings.SelectedSimilarityAlgorithm = algorithm; // Update App.Settings
+        App.Settings.SaveSettings(); // Save the settings
+
+        // The AppSettings_PropertyChanged handler will update _selectedSimilarityAlgorithm
+        // and call UpdateSimilarityAlgorithmChecks. So, these explicit assignments here are redundant.
+        // UncheckAllSimilarityAlgorithms();
+        // menuItem.IsChecked = true;
     }
 
     private void UpdateSimilarityAlgorithmChecks()
@@ -633,26 +525,9 @@ public partial class MainWindow : INotifyPropertyChanged
         {
             if (item is MenuItem menuItem)
             {
-                menuItem.IsChecked = menuItem.Header.ToString() == _settings.SelectedSimilarityAlgorithm;
+                menuItem.IsChecked = menuItem.Header.ToString() == App.Settings.SelectedSimilarityAlgorithm; // Use App.Settings
             }
         }
-    }
-
-    private void UncheckAllSimilarityAlgorithms()
-    {
-        foreach (var item in MenuSimilarityAlgorithms.Items)
-        {
-            if (item is MenuItem menuItem)
-            {
-                menuItem.IsChecked = false; // Uncheck all
-            }
-        }
-    }
-
-    private void SaveSimilarityAlgorithmSetting(string algorithm)
-    {
-        _settings.SelectedSimilarityAlgorithm = algorithm;
-        _settings.SaveSettings();
     }
 
     private void SetSimilarityThreshold_Click(object sender, RoutedEventArgs e)
@@ -663,19 +538,20 @@ public partial class MainWindow : INotifyPropertyChanged
 
         if (double.TryParse(headerText, out var rate))
         {
-            _settings.SimilarityThreshold = rate;
-            UncheckAllSimilarityThresholds(); // Uncheck all first
-            clickedItem.IsChecked = true; // Then check the selected one
-            _settings.SaveSettings();
+            App.Settings.SimilarityThreshold = rate; // Use App.Settings
+            App.Settings.SaveSettings(); // Save the settings
+
+            // The AppSettings_PropertyChanged handler will call UpdateSimilarityThresholdChecks
+            // which will correctly set the IsChecked state. So, these explicit assignments here are redundant.
+            // UncheckAllSimilarityThresholds();
+            // clickedItem.IsChecked = true;
         }
         else
         {
-            // Notify user
             MessageBox.Show("Invalid similarity threshold selected.\n\n" +
                             "The error was reported to the developer that will try to fix the issue.",
                 "Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
-            // Notify developer
             const string formattedException = "Invalid similarity threshold selected.";
             var ex = new Exception(formattedException);
             _ = LogErrors.LogErrorAsync(ex, formattedException);
@@ -691,19 +567,8 @@ public partial class MainWindow : INotifyPropertyChanged
             var thresholdString = menuItem.Header.ToString()?.Replace("%", "") ?? "70";
             if (double.TryParse(thresholdString, NumberStyles.Any, CultureInfo.InvariantCulture, out var menuItemThreshold))
             {
-                // Check if this menu item's threshold matches the current setting
-                menuItem.IsChecked = Math.Abs(menuItemThreshold - _settings.SimilarityThreshold) < 0.01;
+                menuItem.IsChecked = Math.Abs(menuItemThreshold - App.Settings.SimilarityThreshold) < 0.01; // Use App.Settings
             }
-        }
-    }
-
-    private void UncheckAllSimilarityThresholds()
-    {
-        foreach (var item in MySimilarityMenu.Items)
-        {
-            if (item is not MenuItem menuItem) continue;
-
-            menuItem.IsChecked = false; // Uncheck all
         }
     }
 
@@ -712,30 +577,31 @@ public partial class MainWindow : INotifyPropertyChanged
         if (sender is not MenuItem { Header: not null } menuItem ||
             !int.TryParse(menuItem.Header.ToString()?.Split(' ')[0], out var size)) return;
 
-        ImageWidth = size;
-        ImageHeight = size;
+        App.Settings.ImageWidth = size; // Update App.Settings
+        App.Settings.ImageHeight = size; // Update App.Settings
+        App.Settings.SaveSettings(); // Save the settings
 
-        _settings.ImageWidth = size;
-        _settings.ImageHeight = size;
-        _settings.SaveSettings();
-
-        foreach (var item in ImageSizeMenu.Items)
-        {
-            if (item is MenuItem sizeMenuItem)
-            {
-                sizeMenuItem.IsChecked = sizeMenuItem == menuItem;
-            }
-        }
+        // The AppSettings_PropertyChanged handler will update _imageWidth/_imageHeight
+        // and call UpdateThumbnailSizeMenuChecks. So, these explicit assignments here are redundant.
+        // ImageWidth = size;
+        // ImageHeight = size;
+        // foreach (var item in ImageSizeMenu.Items)
+        // {
+        //     if (item is MenuItem sizeMenuItem)
+        //     {
+        //         sizeMenuItem.IsChecked = sizeMenuItem == menuItem;
+        //     }
+        // }
     }
 
     private void UpdateThumbnailSizeMenuChecks()
     {
-        var currentSize = ImageWidth;
+        var currentSize = App.Settings.ImageWidth; // Use App.Settings
 
         foreach (var item in ImageSizeMenu.Items)
         {
             if (item is not MenuItem menuItem) continue;
-            // Assuming the header format is "{size} pixels", extract the number
+
             if (int.TryParse(menuItem.Header.ToString()?.Split(' ')[0], out var size))
             {
                 menuItem.IsChecked = size == currentSize;
@@ -746,7 +612,7 @@ public partial class MainWindow : INotifyPropertyChanged
     private void Image_ContextMenuOpening(object sender, ContextMenuEventArgs e)
     {
         if (sender is not FrameworkElement { DataContext: ImageData imageData } element) return;
-        // Create and assign the context menu using ButtonFactory
+
         if (imageData.ImagePath != null)
         {
             element.ContextMenu = ButtonFactory.CreateContextMenu(imageData.ImagePath);
@@ -755,13 +621,11 @@ public partial class MainWindow : INotifyPropertyChanged
 
     private void EditExtensions_Click(object sender, RoutedEventArgs e)
     {
-        var settingsWindow = new SettingsWindow(_settings)
+        var settingsWindow = new SettingsWindow(App.Settings) // Pass App.Settings
         {
-            Owner = this // Set the owner to center the dialog over the main window
+            Owner = this
         };
         settingsWindow.ShowDialog();
-        // The _settings object is updated by reference, so no need to do anything else here.
-        // The next time LoadMissingImagesList is called, it will use the new extensions.
     }
 
     private void TxtImageFolder_TextChanged(object sender, TextChangedEventArgs e)
@@ -771,5 +635,11 @@ public partial class MainWindow : INotifyPropertyChanged
             _imageFolderPath = textBox.Text;
         }
     }
-}
 
+    // Unsubscribe from PropertyChanged when the window closes to prevent memory leaks
+    protected override void OnClosed(EventArgs e)
+    {
+        App.Settings.PropertyChanged -= AppSettings_PropertyChanged;
+        base.OnClosed(e);
+    }
+}
