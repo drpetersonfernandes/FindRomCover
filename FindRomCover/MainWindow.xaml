@@ -14,61 +14,58 @@
     <Window.Resources>
         <local:ObjectToBoolConverter x:Key="IsNotNullConverter" />
 
-        <!-- Style for the main action button with hover effects -->
-        <Style x:Key="AccentOnHoverButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="{DynamicResource MahApps.Brushes.Gray8}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray5}" />
-            <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.Text}" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Padding" Value="10,5" />
+        <Style x:Key="ImageSuggestionButtonStyle" TargetType="Button">
+            <Setter Property="Margin" Value="10" />
+            <Setter Property="Padding" Value="5" />
             <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="HorizontalContentAlignment" Value="Center" />
-            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="VerticalContentAlignment" Value="Stretch" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="ButtonBorder"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="3"
+                                Background="{DynamicResource MahApps.Brushes.Gray9}"
+                                BorderBrush="{DynamicResource MahApps.Brushes.Gray7}"
+                                BorderThickness="1"
+                                CornerRadius="5"
                                 RenderTransformOrigin="0.5,0.5">
                             <Border.RenderTransform>
                                 <ScaleTransform ScaleX="1.0" ScaleY="1.0" />
                             </Border.RenderTransform>
                             <Border.Effect>
-                                <DropShadowEffect Color="{DynamicResource MahApps.Colors.Gray5}" Direction="315" ShadowDepth="2" Opacity="0.3" BlurRadius="4" />
+                                <DropShadowEffect Color="{DynamicResource MahApps.Colors.Gray5}" Direction="315" ShadowDepth="3"
+                                                  Opacity="0.4" BlurRadius="5" />
                             </Border.Effect>
                             <ContentPresenter x:Name="ButtonContentPresenter"
                                               HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                                               VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-                                              Margin="{TemplateBinding Padding}"
-                                              RecognizesAccessKey="True"
-                                              SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                                              Margin="{TemplateBinding Padding}" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource MahApps.Brushes.Accent4}" />
-                                <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent}" />
-                                <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                                <Setter TargetName="ButtonBorder" Property="Background"
+                                        Value="{DynamicResource MahApps.Brushes.Accent4}" />
+                                <Setter TargetName="ButtonBorder" Property="BorderBrush"
+                                        Value="{DynamicResource MahApps.Brushes.Accent}" />
                                 <Setter TargetName="ButtonBorder" Property="Effect">
                                     <Setter.Value>
-                                        <DropShadowEffect Color="{DynamicResource MahApps.Colors.Accent}" Direction="315" ShadowDepth="4" Opacity="0.6" BlurRadius="8" />
+                                        <DropShadowEffect Color="{DynamicResource MahApps.Colors.Accent}" Direction="315"
+                                                          ShadowDepth="5" Opacity="0.6" BlurRadius="8" />
                                     </Setter.Value>
                                 </Setter>
                                 <Setter TargetName="ButtonBorder" Property="RenderTransform">
                                     <Setter.Value>
-                                        <ScaleTransform ScaleX="1.03" ScaleY="1.03" />
+                                        <ScaleTransform ScaleX="1.02" ScaleY="1.02" />
                                     </Setter.Value>
                                 </Setter>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource MahApps.Brushes.Accent}" />
-                                <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Accent}" />
-                                <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                                <Setter TargetName="ButtonBorder" Property="Background"
+                                        Value="{DynamicResource MahApps.Brushes.Accent}" />
                                 <Setter TargetName="ButtonBorder" Property="Effect">
                                     <Setter.Value>
-                                        <DropShadowEffect Color="Black" Direction="315" ShadowDepth="1" Opacity="0.7" BlurRadius="2" />
+                                        <DropShadowEffect Color="Black" Direction="315" ShadowDepth="1" Opacity="0.7"
+                                                          BlurRadius="2" />
                                     </Setter.Value>
                                 </Setter>
                                 <Setter TargetName="ButtonContentPresenter" Property="RenderTransform">
@@ -77,12 +74,6 @@
                                     </Setter.Value>
                                 </Setter>
                             </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource MahApps.Brushes.Gray7}" />
-                                <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="{DynamicResource MahApps.Brushes.Gray5}" />
-                                <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.Gray3}" />
-                                <Setter TargetName="ButtonBorder" Property="Effect" Value="{x:Null}" />
-                            </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
@@ -90,42 +81,9 @@
         </Style>
 
         <DataTemplate x:Key="ImageCellTemplate">
-            <Border
-                Margin="10"
-                Padding="5"
-                BorderBrush="{DynamicResource MahApps.Brushes.Gray7}"
-                BorderThickness="1"
-                Background="{DynamicResource MahApps.Brushes.Gray9}"
-                MouseDown="ImageCell_MouseDown"
-                ContextMenuOpening="Image_ContextMenuOpening"
-                Cursor="Hand">
-                <Border.Effect>
-                    <DropShadowEffect ShadowDepth="4" Direction="315" Color="Black" Opacity="0.5" BlurRadius="5"/>
-                </Border.Effect>
-                <Border.Style>
-                    <Style TargetType="Border">
-                        <Setter Property="RenderTransform">
-                            <Setter.Value>
-                                <ScaleTransform ScaleX="1.0" ScaleY="1.0" />
-                            </Setter.Value>
-                        </Setter>
-                        <Setter Property="RenderTransformOrigin" Value="0.5, 0.5" />
-                        <Style.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="RenderTransform">
-                                    <Setter.Value>
-                                        <ScaleTransform ScaleX="1.02" ScaleY="1.02" />
-                                    </Setter.Value>
-                                </Setter>
-                                <Setter Property="Effect">
-                                    <Setter.Value>
-                                        <DropShadowEffect ShadowDepth="8" Direction="315" Color="Black" Opacity="0.6" BlurRadius="10"/>
-                                    </Setter.Value>
-                                </Setter>
-                            </Trigger>
-                        </Style.Triggers>
-                    </Style>
-                </Border.Style>
+            <Button Style="{StaticResource ImageSuggestionButtonStyle}"
+                    Click="ImageCell_Click"
+                    ContextMenuOpening="Image_ContextMenuOpening">
                 <StackPanel>
                     <Image
                         Width="{Binding Path=ImageWidth, RelativeSource={RelativeSource AncestorType=Window}}"
@@ -148,7 +106,7 @@
                                Text="{Binding SimilarityScore, StringFormat={}{0:F2}%}" FontWeight="Bold"
                                d:DataContext="{d:DesignInstance }" />
                 </StackPanel>
-            </Border>
+            </Button>
         </DataTemplate>
     </Window.Resources>
 
@@ -300,7 +258,7 @@
                 </GroupBox>
 
                 <!-- Step 2: Missing Covers -->
-                <GroupBox Grid.Row="1" Margin="0,0,0,10">
+                <GroupBox Grid.Row="1" Margin="0,0,0,0">
                     <GroupBox.Header>
 <StackPanel Orientation="Horizontal">
     <Label x:Name="LabelMissingRoms" Content="LIST OF MISSING COVERS" Padding="0,0,5,0" 
@@ -314,7 +272,7 @@
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
                         <Button Grid.Row="0" Content="Check for Missing Images" Click="BtnCheckForMissingImages_Click"
-                                Margin="5" Style="{StaticResource AccentOnHoverButtonStyle}" />
+                                Margin="5"/>
 
                         <Grid Grid.Row="1">
                             <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -388,4 +346,3 @@
         </Grid>
     </Grid>
 </controls:MetroWindow>
-

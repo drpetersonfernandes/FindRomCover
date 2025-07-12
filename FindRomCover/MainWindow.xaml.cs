@@ -2,7 +2,6 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 using System.ComponentModel;
 using System.Globalization;
 using System.Windows.Documents;
@@ -447,7 +446,7 @@ public partial class MainWindow : INotifyPropertyChanged
                 }
                 finally
                 {
-                    // Only set IsFindingSimilar to false if this operation wasn't cancelled
+                    // Only set IsFindingSimilar to false if this operation wasn't canceled
                     if (!cancellationToken.IsCancellationRequested)
                     {
                         IsFindingSimilar = false;
@@ -465,16 +464,12 @@ public partial class MainWindow : INotifyPropertyChanged
         }
     }
 
-    private void ImageCell_MouseDown(object sender, MouseButtonEventArgs e)
+    private void ImageCell_Click(object sender, RoutedEventArgs e)
     {
-        if (e.ChangedButton == MouseButton.Left && sender is FrameworkElement
-            {
-                DataContext: ImageData
-                {
-                    ImagePath: not null
-                } imageData
-            })
+        if (sender is FrameworkElement { DataContext: ImageData { ImagePath: not null } imageData })
+        {
             UseImage(imageData.ImagePath);
+        }
     }
 
     public void UseImage(string? imagePath)
