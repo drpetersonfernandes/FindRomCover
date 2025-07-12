@@ -1,10 +1,12 @@
 ﻿using System.IO;
+using FindRomCover.models;
 
 namespace FindRomCover;
 
 public static class SimilarityCalculator
 {
-    public static async Task<List<ImageData>> CalculateSimilarityAsync(string selectedFileName, string imageFolderPath, double similarityThreshold, string algorithm)
+    public static async Task<List<ImageData>> CalculateSimilarityAsync(string selectedFileName, string imageFolderPath,
+        double similarityThreshold, string algorithm)
     {
         var tempList = new List<ImageData>();
 
@@ -12,44 +14,57 @@ public static class SimilarityCalculator
 
         string[] imageExtensions = ["*.png", "*.jpg", "*.jpeg"];
 
+        // Collect all image files first
+        var allImageFiles = new List<string>();
         foreach (var ext in imageExtensions)
         {
-            string[] imageFiles;
             try
             {
-                imageFiles = Directory.GetFiles(imageFolderPath, ext);
+                var imageFiles = Directory.GetFiles(imageFolderPath, ext);
+                allImageFiles.AddRange(imageFiles);
             }
             catch (Exception ex)
             {
                 throw new IOException($"Failed to access the directory: {imageFolderPath}", ex);
             }
+        }
 
-            foreach (var imageFile in imageFiles)
+        // Process files in parallel using Parallel.ForEach
+        var lockObject = new object();
+        var parallelOptions = new ParallelOptions
+        {
+            MaxDegreeOfParallelism = Environment.ProcessorCount
+        };
+
+        await Task.Run(() =>
+        {
+            Parallel.ForEach(allImageFiles, parallelOptions, imageFile =>
             {
                 var imageName = Path.GetFileNameWithoutExtension(imageFile);
 
-                var similarityThreshold2 = algorithm switch
+                var similarityScore = algorithm switch
                 {
-                    "Levenshtein Distance" => await Task.Run(() => CalculateLevenshteinSimilarity(selectedFileName, imageName)),
-                    "Jaccard Similarity" => await Task.Run(() => CalculateJaccardIndex(selectedFileName, imageName)),
-                    "Jaro-Winkler Distance" => await Task.Run(() => CalculateJaroWinklerDistance(selectedFileName, imageName)),
+                    "Levenshtein Distance" => CalculateLevenshteinSimilarity(selectedFileName, imageName),
+                    "Jaccard Similarity" => CalculateJaccardIndex(selectedFileName, imageName),
+                    "Jaro-Winkler Distance" => CalculateJaroWinklerDistance(selectedFileName, imageName),
                     _ => throw new NotImplementedException($"Algorithm {algorithm} is not implemented.")
                 };
 
-                if (!(similarityThreshold2 >= similarityThreshold)) continue;
+                if (!(similarityScore >= similarityThreshold)) return;
 
-                var imageData = new ImageData(imageFile, imageName, similarityThreshold2);
+                var imageData = new ImageData(imageFile, imageName, similarityScore);
 
-                // Load the image into memory on a background thread to keep the UI responsive
-                await Task.Run(() =>
+                // Load the image into memory
+                imageData.ImageSource = ImageLoader.LoadImageToMemory(imageFile);
+
+                lock (lockObject)
                 {
-                    imageData.ImageSource = ImageLoader.LoadImageToMemory(imageFile);
-                });
+                    tempList.Add(imageData);
+                }
+            });
+        });
 
-                tempList.Add(imageData);
-            }
-        }
-
+        // Sort by similarity score in descending order
         tempList.Sort((x, y) => y.SimilarityThreshold.CompareTo(x.SimilarityThreshold));
 
         return tempList;
@@ -195,7 +210,8 @@ public static class SimilarityCalculator
             k++;
         }
 
-        var jaro = ((double)matches / s1Len + (double)matches / s2Len + (matches - (double)transpositions / 2) / matches) / 3;
+        var jaro =
+            ((double)matches / s1Len + (double)matches / s2Len + (matches - (double)transpositions / 2) / matches) / 3;
 
         var prefixLength = 0;
         for (var i = 0; i < Math.Min(s1Len, s2Len); i++)

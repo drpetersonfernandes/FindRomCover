@@ -1,24 +1,40 @@
 using System.IO;
+using System.Windows;
 using System.Windows.Media;
+using MessageBox = System.Windows.MessageBox;
 
 namespace FindRomCover;
 
 public static class PlaySound
 {
-    private static readonly MediaPlayer MediaPlayer = new();
     private static readonly string SoundPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "audio", "click.mp3");
 
     public static void PlayClickSound()
     {
         try
         {
-            MediaPlayer.MediaOpened += (_, _) => { MediaPlayer.Play(); };
-            MediaPlayer.Volume = 1.0;
-            MediaPlayer.Open(new Uri(SoundPath, UriKind.Absolute));
+            // Create a new instance for each playback to avoid state conflicts.
+            var mediaPlayer = new MediaPlayer();
+            mediaPlayer.MediaOpened += static (sender, e) =>
+            {
+                // The sender is the new mediaPlayer instance
+                ((MediaPlayer?)sender)?.Play();
+            };
+            mediaPlayer.MediaFailed += (sender, e) =>
+            {
+                // Optionally handle/log media failing to load
+                _ = LogErrors.LogErrorAsync(e.ErrorException, $"Failed to play sound: {SoundPath}");
+            };
+            mediaPlayer.Volume = 1.0;
+            mediaPlayer.Open(new Uri(SoundPath, UriKind.Absolute));
         }
         catch (Exception ex)
         {
-            System.Windows.MessageBox.Show($"Error playing sound: {ex.Message}", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            // Notify user
+            MessageBox.Show($"Error playing sound: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+
+            // Notify developer
+            _ = LogErrors.LogErrorAsync(ex, "Error in PlayClickSound");
         }
     }
 }

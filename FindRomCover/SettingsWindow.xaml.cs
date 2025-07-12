@@ -23,39 +23,65 @@ public partial class SettingsWindow
 
     private async void BtnAdd_Click(object sender, RoutedEventArgs e)
     {
-        var newExtension = await this.ShowInputAsync("Add Extension", "Enter the new file extension (without the dot):");
-
-        if (string.IsNullOrWhiteSpace(newExtension))
+        try
         {
-            return; // User cancelled or entered nothing
-        }
+            var newExtension =
+                await this.ShowInputAsync("Add Extension", "Enter the new file extension (without the dot):");
 
-        // Clean up the input
-        newExtension = newExtension.Trim().Replace(".", "");
-
-        if (string.IsNullOrEmpty(newExtension))
-        {
-            await this.ShowMessageAsync("Invalid Input", "Extension cannot be empty or just a dot.");
-            return;
-        }
-
-        if (_supportedExtensions.Contains(newExtension, StringComparer.OrdinalIgnoreCase))
-        {
-            await this.ShowMessageAsync("Duplicate", $"The extension '{newExtension}' already exists.");
-        }
-        else
-        {
-            _supportedExtensions.Add(newExtension);
-            // Sort the list after adding
-            var sorted = new ObservableCollection<string>(_supportedExtensions.OrderBy(i => i));
-            _supportedExtensions.Clear();
-            foreach (var item in sorted)
+            if (string.IsNullOrWhiteSpace(newExtension))
             {
-                _supportedExtensions.Add(item);
+                return; // User cancelled or entered nothing
             }
 
-            LstSupportedExtensions.SelectedItem = newExtension;
+            // Clean up the input
+            newExtension = newExtension.Trim().Replace(".", "");
+
+            if (string.IsNullOrEmpty(newExtension))
+            {
+                await this.ShowMessageAsync("Invalid Input", "Extension cannot be empty or just a dot.");
+                return;
+            }
+
+            if (_supportedExtensions.Contains(newExtension, StringComparer.OrdinalIgnoreCase))
+            {
+                await this.ShowMessageAsync("Duplicate", $"The extension '{newExtension}' already exists.");
+            }
+            else
+            {
+                // Find the correct index to insert the new extension to maintain sorted order
+                var insertIndex = FindInsertIndex(newExtension);
+                _supportedExtensions.Insert(insertIndex, newExtension);
+
+                LstSupportedExtensions.SelectedItem = newExtension;
+            }
         }
+        catch (Exception ex)
+        {
+            // Notify developer
+            _ = LogErrors.LogErrorAsync(ex, "Error in method BtnAdd_Click");
+        }
+    }
+
+    private int FindInsertIndex(string newExtension)
+    {
+        // Use binary search to find the correct insertion point
+        var left = 0;
+        var right = _supportedExtensions.Count;
+
+        while (left < right)
+        {
+            var mid = left + (right - left) / 2;
+            if (string.Compare(_supportedExtensions[mid], newExtension, StringComparison.OrdinalIgnoreCase) < 0)
+            {
+                left = mid + 1;
+            }
+            else
+            {
+                right = mid;
+            }
+        }
+
+        return left;
     }
 
     private void BtnRemove_Click(object sender, RoutedEventArgs e)

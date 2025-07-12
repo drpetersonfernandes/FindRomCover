@@ -6,25 +6,56 @@
                       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                       xmlns:local="clr-namespace:FindRomCover"
                       mc:Ignorable="d"
+                      d:DataContext="{d:DesignInstance Type=local:MainWindow, IsDesignTimeCreatable=True}"
                       Title="Find ROM Cover"
                       MinWidth="900"
                       MinHeight="600">
 
     <Window.Resources>
         <local:ObjectToBoolConverter x:Key="IsNotNullConverter" />
-        
+
         <DataTemplate x:Key="ImageCellTemplate">
             <Border
-                Margin="5"
+                Margin="10"
                 Padding="5"
                 BorderBrush="{DynamicResource MahApps.Brushes.Gray7}"
                 BorderThickness="1"
-                Background="{DynamicResource MahApps.Brushes.Gray9}">
+                Background="{DynamicResource MahApps.Brushes.Gray9}"
+                MouseDown="ImageCell_MouseDown"
+                ContextMenuOpening="Image_ContextMenuOpening"
+                Cursor="Hand">
+                <Border.Effect>
+                    <DropShadowEffect ShadowDepth="4" Direction="315" Color="Black" Opacity="0.5" BlurRadius="5"/>
+                </Border.Effect>
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="RenderTransform">
+                            <Setter.Value>
+                                <ScaleTransform ScaleX="1.0" ScaleY="1.0" />
+                            </Setter.Value>
+                        </Setter>
+                        <Setter Property="RenderTransformOrigin" Value="0.5, 0.5" />
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="RenderTransform">
+                                    <Setter.Value>
+                                        <ScaleTransform ScaleX="1.02" ScaleY="1.02" />
+                                    </Setter.Value>
+                                </Setter>
+                                <Setter Property="Effect">
+                                    <Setter.Value>
+                                        <DropShadowEffect ShadowDepth="8" Direction="315" Color="Black" Opacity="0.6" BlurRadius="10"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
                 <StackPanel>
                     <Image
                         Width="{Binding Path=ImageWidth, RelativeSource={RelativeSource AncestorType=Window}}"
                         Height="{Binding Path=ImageHeight, RelativeSource={RelativeSource AncestorType=Window}}"
-                        Source="{Binding ImageSource}" MouseDown="ImageCell_MouseDown" ContextMenuOpening="Image_ContextMenuOpening">
+                        Source="{Binding ImageSource}" d:DataContext="{d:DesignInstance }">
                         <Image.Style>
                             <Style TargetType="Image">
                                 <Style.Triggers>
@@ -35,8 +66,12 @@
                             </Style>
                         </Image.Style>
                     </Image>
-                    <TextBlock HorizontalAlignment="Center" Text="{Binding ImageName}" FontWeight="Bold" Margin="0,5,0,0" TextTrimming="CharacterEllipsis" ToolTip="{Binding ImageName}"/>
-                    <TextBlock HorizontalAlignment="Center" Text="{Binding SimilarityThreshold, StringFormat={}{0:F2}%}" FontWeight="Bold" />
+                    <TextBlock HorizontalAlignment="Center" Text="{Binding ImageName}" FontWeight="Bold"
+                               Margin="0,5,0,0" TextTrimming="CharacterEllipsis" ToolTip="{Binding ImageName}"
+                               d:DataContext="{d:DesignInstance }" />
+                    <TextBlock HorizontalAlignment="Center"
+                               Text="{Binding SimilarityThreshold, StringFormat={}{0:F2}%}" FontWeight="Bold"
+                               d:DataContext="{d:DesignInstance }" />
                 </StackPanel>
             </Border>
         </DataTemplate>
@@ -51,9 +86,12 @@
         <Menu Grid.Row="0" Name="MainMenu">
             <!-- Menu Items remain the same, but placed here for context -->
             <MenuItem x:Name="MenuSimilarityAlgorithms" Header="Set Similarity Algorithm">
-                <MenuItem x:Name="MenuAlgorithmJaccard" Click="SetSimilarityAlgorithm_Click" Header="Jaccard Similarity" IsCheckable="True" />
-                <MenuItem x:Name="MenuAlgorithmJaroWinkler" Click="SetSimilarityAlgorithm_Click" Header="Jaro-Winkler Distance" IsCheckable="True" />
-                <MenuItem x:Name="MenuAlgorithmLevenshtein" Click="SetSimilarityAlgorithm_Click" Header="Levenshtein Distance" IsCheckable="True" />
+                <MenuItem x:Name="MenuAlgorithmJaccard" Click="SetSimilarityAlgorithm_Click"
+                          Header="Jaccard Similarity" IsCheckable="True" />
+                <MenuItem x:Name="MenuAlgorithmJaroWinkler" Click="SetSimilarityAlgorithm_Click"
+                          Header="Jaro-Winkler Distance" IsCheckable="True" />
+                <MenuItem x:Name="MenuAlgorithmLevenshtein" Click="SetSimilarityAlgorithm_Click"
+                          Header="Levenshtein Distance" IsCheckable="True" />
             </MenuItem>
             <MenuItem x:Name="MySimilarityMenu" Header="Set Similarity Threshold">
                 <MenuItem x:Name="Menu10" Click="SetSimilarityThreshold_Click" Header="10%" IsCheckable="True" />
@@ -77,27 +115,72 @@
                 <MenuItem x:Name="Thumbnail500" Click="SetThumbnailSize_Click" Header="500 pixels" IsCheckable="True" />
             </MenuItem>
             <MenuItem Header="Settings">
-                <MenuItem Header="Edit Supported Extensions..." Click="EditExtensions_Click" />
+                <MenuItem Click="EditExtensions_Click" Header="Edit Supported Extensions...">
+                    <MenuItem.Icon>
+                        <Image Source="pack://application:,,,/images/settings.png" Width="16" Height="16" />
+                    </MenuItem.Icon>
+                </MenuItem>
             </MenuItem>
             <MenuItem Header="Theme">
                 <MenuItem Header="Base Theme">
-                    <MenuItem.Icon><Image Source="pack://application:,,,/images/theme.png" Width="16" Height="16" /></MenuItem.Icon>
+                    <MenuItem.Icon>
+                        <Image Source="pack://application:,,,/images/theme.png" Width="16" Height="16" />
+                    </MenuItem.Icon>
                     <MenuItem x:Name="LightTheme" Header="Light" Click="ChangeBaseTheme_Click" IsCheckable="True" />
                     <MenuItem x:Name="DarkTheme" Header="Dark" Click="ChangeBaseTheme_Click" IsCheckable="True" />
                 </MenuItem>
                 <MenuItem Header="Accent Colors">
-                     <MenuItem.Icon><Image Source="pack://application:,,,/images/theme.png" Width="16" Height="16" /></MenuItem.Icon>
-                    <MenuItem x:Name="RedAccent" Header="Red" Click="ChangeAccentColor_Click" IsCheckable="True" /><MenuItem x:Name="GreenAccent" Header="Green" Click="ChangeAccentColor_Click" IsCheckable="True" /><MenuItem x:Name="BlueAccent" Header="Blue" Click="ChangeAccentColor_Click" IsCheckable="True" /><MenuItem x:Name="PurpleAccent" Header="Purple" Click="ChangeAccentColor_Click" IsCheckable="True" /><MenuItem x:Name="OrangeAccent" Header="Orange" Click="ChangeAccentColor_Click" IsCheckable="True" /><MenuItem x:Name="LimeAccent" Header="Lime" Click="ChangeAccentColor_Click" IsCheckable="True" /><MenuItem x:Name="EmeraldAccent" Header="Emerald" Click="ChangeAccentColor_Click" IsCheckable="True" /><MenuItem x:Name="TealAccent" Header="Teal" Click="ChangeAccentColor_Click" IsCheckable="True" /><MenuItem x:Name="CyanAccent" Header="Cyan" Click="ChangeAccentColor_Click" IsCheckable="True" /><MenuItem x:Name="CobaltAccent" Header="Cobalt" Click="ChangeAccentColor_Click" IsCheckable="True" /><MenuItem x:Name="IndigoAccent" Header="Indigo" Click="ChangeAccentColor_Click" IsCheckable="True" /><MenuItem x:Name="VioletAccent" Header="Violet" Click="ChangeAccentColor_Click" IsCheckable="True" /><MenuItem x:Name="PinkAccent" Header="Pink" Click="ChangeAccentColor_Click" IsCheckable="True" /><MenuItem x:Name="MagentaAccent" Header="Magenta" Click="ChangeAccentColor_Click" IsCheckable="True" /><MenuItem x:Name="CrimsonAccent" Header="Crimson" Click="ChangeAccentColor_Click" IsCheckable="True" /><MenuItem x:Name="AmberAccent" Header="Amber" Click="ChangeAccentColor_Click" IsCheckable="True" /><MenuItem x:Name="YellowAccent" Header="Yellow" Click="ChangeAccentColor_Click" IsCheckable="True" /><MenuItem x:Name="BrownAccent" Header="Brown" Click="ChangeAccentColor_Click" IsCheckable="True" /><MenuItem x:Name="OliveAccent" Header="Olive" Click="ChangeAccentColor_Click" IsCheckable="True" /><MenuItem x:Name="SteelAccent" Header="Steel" Click="ChangeAccentColor_Click" IsCheckable="True" /><MenuItem x:Name="MauveAccent" Header="Mauve" Click="ChangeAccentColor_Click" IsCheckable="True" /><MenuItem x:Name="TaupeAccent" Header="Taupe" Click="ChangeAccentColor_Click" IsCheckable="True" /><MenuItem x:Name="SiennaAccent" Header="Sienna" Click="ChangeAccentColor_Click" IsCheckable="True" />
+                    <MenuItem.Icon>
+                        <Image Source="pack://application:,,,/images/theme.png" Width="16" Height="16" />
+                    </MenuItem.Icon>
+                    <MenuItem x:Name="RedAccent" Header="Red" Click="ChangeAccentColor_Click" IsCheckable="True" />
+                    <MenuItem x:Name="GreenAccent" Header="Green" Click="ChangeAccentColor_Click" IsCheckable="True" />
+                    <MenuItem x:Name="BlueAccent" Header="Blue" Click="ChangeAccentColor_Click" IsCheckable="True" />
+                    <MenuItem x:Name="PurpleAccent" Header="Purple" Click="ChangeAccentColor_Click" IsCheckable="True" />
+                    <MenuItem x:Name="OrangeAccent" Header="Orange" Click="ChangeAccentColor_Click" IsCheckable="True" />
+                    <MenuItem x:Name="LimeAccent" Header="Lime" Click="ChangeAccentColor_Click" IsCheckable="True" />
+                    <MenuItem x:Name="EmeraldAccent" Header="Emerald" Click="ChangeAccentColor_Click"
+                              IsCheckable="True" />
+                    <MenuItem x:Name="TealAccent" Header="Teal" Click="ChangeAccentColor_Click" IsCheckable="True" />
+                    <MenuItem x:Name="CyanAccent" Header="Cyan" Click="ChangeAccentColor_Click" IsCheckable="True" />
+                    <MenuItem x:Name="CobaltAccent" Header="Cobalt" Click="ChangeAccentColor_Click" IsCheckable="True" />
+                    <MenuItem x:Name="IndigoAccent" Header="Indigo" Click="ChangeAccentColor_Click" IsCheckable="True" />
+                    <MenuItem x:Name="VioletAccent" Header="Violet" Click="ChangeAccentColor_Click" IsCheckable="True" />
+                    <MenuItem x:Name="PinkAccent" Header="Pink" Click="ChangeAccentColor_Click" IsCheckable="True" />
+                    <MenuItem x:Name="MagentaAccent" Header="Magenta" Click="ChangeAccentColor_Click"
+                              IsCheckable="True" />
+                    <MenuItem x:Name="CrimsonAccent" Header="Crimson" Click="ChangeAccentColor_Click"
+                              IsCheckable="True" />
+                    <MenuItem x:Name="AmberAccent" Header="Amber" Click="ChangeAccentColor_Click" IsCheckable="True" />
+                    <MenuItem x:Name="YellowAccent" Header="Yellow" Click="ChangeAccentColor_Click" IsCheckable="True" />
+                    <MenuItem x:Name="BrownAccent" Header="Brown" Click="ChangeAccentColor_Click" IsCheckable="True" />
+                    <MenuItem x:Name="OliveAccent" Header="Olive" Click="ChangeAccentColor_Click" IsCheckable="True" />
+                    <MenuItem x:Name="SteelAccent" Header="Steel" Click="ChangeAccentColor_Click" IsCheckable="True" />
+                    <MenuItem x:Name="MauveAccent" Header="Mauve" Click="ChangeAccentColor_Click" IsCheckable="True" />
+                    <MenuItem x:Name="TaupeAccent" Header="Taupe" Click="ChangeAccentColor_Click" IsCheckable="True" />
+                    <MenuItem x:Name="SiennaAccent" Header="Sienna" Click="ChangeAccentColor_Click" IsCheckable="True" />
                 </MenuItem>
             </MenuItem>
             <MenuItem Header="Donate">
-                <MenuItem Click="DonateButton_Click" Header="Donate"><MenuItem.Icon><Image Source="pack://application:,,,/images/donate.png" Width="16" Height="16" /></MenuItem.Icon></MenuItem>
+                <MenuItem Click="DonateButton_Click" Header="Donate">
+                    <MenuItem.Icon>
+                        <Image Source="pack://application:,,,/images/donate.png" Width="16" Height="16" />
+                    </MenuItem.Icon>
+                </MenuItem>
             </MenuItem>
             <MenuItem Header="About">
-                <MenuItem Click="About_Click" Header="About"><MenuItem.Icon><Image Source="pack://application:,,,/images/about.png" Width="16" Height="16" /></MenuItem.Icon></MenuItem>
+                <MenuItem Click="About_Click" Header="About">
+                    <MenuItem.Icon>
+                        <Image Source="pack://application:,,,/images/about.png" Width="16" Height="16" />
+                    </MenuItem.Icon>
+                </MenuItem>
             </MenuItem>
             <MenuItem Header="Exit">
-                <MenuItem Click="Exit_Click" Header="Exit"><MenuItem.Icon><Image Source="pack://application:,,,/images/exit.png" Width="16" Height="16" /></MenuItem.Icon></MenuItem>
+                <MenuItem Click="Exit_Click" Header="Exit">
+                    <MenuItem.Icon>
+                        <Image Source="pack://application:,,,/images/exit.png" Width="16" Height="16" />
+                    </MenuItem.Icon>
+                </MenuItem>
             </MenuItem>
         </Menu>
 
@@ -108,30 +191,45 @@
             </Grid.ColumnDefinitions>
 
             <!-- LEFT COLUMN -->
-            <StackPanel Grid.Column="0" Margin="0,0,10,0">
+            <Grid Grid.Column="0" Margin="0,0,10,0">
+
+
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
                 <!-- Step 1: Input Folders -->
-                <GroupBox Header="1. Select Folders" Margin="0,0,0,10">
+                <GroupBox Grid.Row="0" Header="Select Folders" Margin="0,0,0,10">
                     <StackPanel Margin="5">
                         <Grid Margin="0,5,0,5">
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                            <TextBox x:Name="TxtRomFolder" Grid.Column="0" controls:TextBoxHelper.Watermark="Path to your ROM folder..." />
-                            <Button Grid.Column="1" Content="Browse..." Margin="5,0,0,0" Click="BtnBrowseRomFolder_Click" />
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="TxtRomFolder" Grid.Column="0"
+                                     controls:TextBoxHelper.Watermark="Path to your ROM folder..." />
+                            <Button Grid.Column="1" Content="Browse..." Margin="5,0,0,0"
+                                    Click="BtnBrowseRomFolder_Click" />
                         </Grid>
                         <Grid Margin="0,5,0,5">
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                            <TextBox x:Name="TxtImageFolder" Grid.Column="0" controls:TextBoxHelper.Watermark="Path to your image folder..." />
-                            <Button Grid.Column="1" Content="Browse..." Margin="5,0,0,0" Click="BtnBrowseImageFolder_Click" />
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="TxtImageFolder" Grid.Column="0"
+                                     controls:TextBoxHelper.Watermark="Path to your image folder..." />
+                            <Button Grid.Column="1" Content="Browse..." Margin="5,0,0,0"
+                                    Click="BtnBrowseImageFolder_Click" />
                         </Grid>
                     </StackPanel>
                 </GroupBox>
 
                 <!-- Step 2: Missing Covers -->
-                <GroupBox Margin="0,0,0,10">
+                <GroupBox Grid.Row="1" Margin="0,0,0,10">
                     <GroupBox.Header>
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="2. Missing Covers" />
-                            <Label x:Name="LabelMissingRoms" Content=" (0)" Padding="0,0,5,0" />
-                        </StackPanel>
+<StackPanel Orientation="Horizontal">
+    <Label x:Name="LabelMissingRoms" Content="LIST OF MISSING COVERS" Padding="0,0,5,0" 
+           Foreground="{DynamicResource MahApps.Brushes.IdealForeground}" />
+</StackPanel>
                     </GroupBox.Header>
                     <Grid>
                         <Grid.RowDefinitions>
@@ -139,23 +237,27 @@
                             <RowDefinition Height="*" />
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
-                        <Button Grid.Row="0" Content="Check for Missing Images" Click="BtnCheckForMissingImages_Click" Margin="5" />
-                        
-                        <Grid Grid.Row="1" MinHeight="200">
+                        <Button Grid.Row="0" Content="Check for Missing Images" Click="BtnCheckForMissingImages_Click"
+                                Margin="5" />
+
+                        <Grid Grid.Row="1">
                             <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                <ListBox x:Name="LstMissingImages" SelectionChanged="LstMissingImages_SelectionChanged" BorderThickness="0" />
+                                <ListBox x:Name="LstMissingImages" SelectionChanged="LstMissingImages_SelectionChanged"
+                                         BorderThickness="0" />
                             </ScrollViewer>
-                            <controls:ProgressRing IsActive="{Binding IsCheckingMissing}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            <controls:ProgressRing IsActive="{Binding IsCheckingMissing}" HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center" />
                         </Grid>
-                        
-                        <Button Grid.Row="2" x:Name="BtnRemoveSelectedItem" Content="Remove Selected Item from List" Click="BtnRemoveSelectedItem_Click" Margin="5"
+
+                        <Button Grid.Row="2" x:Name="BtnRemoveSelectedItem" Content="Remove Selected Item from List"
+                                Click="BtnRemoveSelectedItem_Click" Margin="5"
                                 IsEnabled="{Binding ElementName=LstMissingImages, Path=SelectedItem, Converter={StaticResource IsNotNullConverter}}" />
                     </Grid>
                 </GroupBox>
-            </StackPanel>
+            </Grid>
 
             <!-- RIGHT COLUMN -->
-            <GroupBox Grid.Column="1" Header="3. Image Suggestions">
+            <GroupBox Grid.Column="1" Header="Image Suggestions">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -180,7 +282,8 @@
                         </ScrollViewer>
 
                         <!-- Loading Indicator -->
-                        <controls:ProgressRing IsActive="{Binding IsFindingSimilar}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        <controls:ProgressRing IsActive="{Binding IsFindingSimilar}" HorizontalAlignment="Center"
+                                               VerticalAlignment="Center" />
 
                         <!-- Empty State Message -->
                         <TextBlock Text="Select a missing cover from the list to see suggestions."
@@ -192,7 +295,9 @@
                                     <Style.Triggers>
                                         <MultiDataTrigger>
                                             <MultiDataTrigger.Conditions>
-                                                <Condition Binding="{Binding ElementName=ImageScrollViewer, Path=DataContext.SimilarImages.Count}" Value="0" />
+                                                <Condition
+                                                    Binding="{Binding ElementName=ImageScrollViewer, Path=DataContext.SimilarImages.Count}"
+                                                    Value="0" />
                                                 <Condition Binding="{Binding IsFindingSimilar}" Value="False" />
                                             </MultiDataTrigger.Conditions>
                                             <Setter Property="Visibility" Value="Visible" />

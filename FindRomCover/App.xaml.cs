@@ -18,7 +18,7 @@ public partial class App
         ApplyTheme(baseTheme, accentColor);
         Settings.BaseTheme = baseTheme;
         Settings.AccentColor = accentColor;
-        Settings.SaveSettings(); // Now saves all settings
+        Settings.SaveSettings();
     }
 
     private static void ApplyTheme(string baseTheme, string accentColor)

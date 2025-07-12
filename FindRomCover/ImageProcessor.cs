@@ -1,5 +1,7 @@
 using System.IO;
 using System.Windows;
+using System.Drawing;
+using System.Drawing.Imaging;
 using Image = System.Drawing.Image;
 using MessageBox = System.Windows.MessageBox;
 
@@ -49,7 +51,7 @@ public static class ImageProcessor
                     using (var memoryStream = new MemoryStream())
                     {
                         // Save to memory first to validate the image
-                        bitmap.Save(memoryStream, System.Drawing.Imaging.ImageFormat.Png);
+                        bitmap.Save(memoryStream, ImageFormat.Png);
                         memoryStream.Position = 0;
 
                         // Then save to file from the memory stream

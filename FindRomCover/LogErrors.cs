@@ -3,49 +3,15 @@ using System.Net.Http;
 using System.Reflection;
 using System.Net.Http.Json;
 using System.Text.Json;
-
-// ReSharper disable ClassNeverInstantiated.Local
+using FindRomCover.models;
 
 namespace FindRomCover;
 
 public static class LogErrors
 {
     private static readonly HttpClient HttpClient = new();
-
-    // The API Key for the BugReportEmailService API, loaded from appsettings.json
-    public static string? ApiKey { get; private set; }
-
-    // Define the new API endpoint URL
+    private const string ApiKey = "hjh7yu6t56tyr540o9u8767676r5674534453235264c75b6t7ggghgg76trf564e";
     private const string BugReportApiUrl = "https://www.purelogiccode.com/bugreport/api/send-bug-report";
-
-    static LogErrors()
-    {
-        LoadConfiguration();
-    }
-
-    private static void LoadConfiguration()
-    {
-        var configFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json");
-        if (!File.Exists(configFile)) return;
-
-        try
-        {
-            var configText = File.ReadAllText(configFile);
-            var config = JsonSerializer.Deserialize<Dictionary<string, string>>(configText);
-            ApiKey = config?["ApiKey"];
-
-            if (string.IsNullOrEmpty(ApiKey))
-            {
-                Console.Error.WriteLine("Warning: API Key for bug reporting is missing in appsettings.json.");
-            }
-        }
-        catch (Exception ex)
-        {
-            // Log error if appsettings.json loading fails, but don't stop the app
-            // Use Console.Error as LogErrors might not be fully initialized or logging might fail
-            Console.Error.WriteLine($"Error loading appsettings.json for API Key: {ex.Message}");
-        }
-    }
 
     public static async Task LogErrorAsync(Exception ex, string? contextMessage = null)
     {
@@ -65,7 +31,6 @@ public static class LogErrors
         fullErrorMessage += $"Exception Type: {ex.GetType().Name}\n";
         fullErrorMessage += $"Exception Message: {ex.Message}\n";
         fullErrorMessage += $"Stack Trace:\n{ex.StackTrace}\n\n";
-
 
         try
         {
@@ -194,19 +159,5 @@ public static class LogErrors
             // Optionally log ex details
             return false; // Silently fail for logging system
         }
-    }
-
-    // Define the expected structure of the API's JSON response
-    // This matches the Smtp2GoResponse and Smtp2GoData classes from the API code
-    private sealed class Smtp2GoResponse // Made internal as it's only used within LogErrors
-    {
-        public Smtp2GoData? Data { get; set; }
-    }
-
-    private sealed class Smtp2GoData // Made internal
-    {
-        public int Succeeded { get; set; }
-        public int Failed { get; set; }
-        public List<string>? Errors { get; set; }
     }
 }

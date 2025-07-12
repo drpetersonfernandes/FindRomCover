@@ -10,9 +10,8 @@ public static class ImageLoader
         // Basic validation: Check if the path is null/empty or the file doesn't exist
         if (string.IsNullOrEmpty(imagePath) || !File.Exists(imagePath))
         {
-            // Optionally, log a warning here if the file doesn't exist but was expected
-            // _ = LogErrors.LogErrorAsync(new FileNotFoundException($"Image file not found at path:
-            // {imagePath}"), $"Image file not found: {imagePath}");
+            // Notify developer
+            _ = LogErrors.LogErrorAsync(new FileNotFoundException($"Image file not found at path: {imagePath}"), $"Image file not found: {imagePath}");
 
             return null;
         }
@@ -39,7 +38,9 @@ public static class ImageLoader
             if (memoryImage.PixelWidth == 0 || memoryImage.PixelHeight == 0)
             {
                  // Log a specific warning or error if the image appears invalid after loading
+                 // Notify developer
                  _ = LogErrors.LogErrorAsync(new InvalidOperationException($"Loaded image has zero dimensions for path: {imagePath}"), $"Image appears invalid after loading: {imagePath}");
+
                  return null; // Return null if the image is invalid
             }
 

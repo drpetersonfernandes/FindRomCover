@@ -6,12 +6,11 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <UseWindowsForms>True</UseWindowsForms>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ApplicationIcon>images\icon.ico</ApplicationIcon>
     <PackageIcon>icon2.png</PackageIcon>
-    <AssemblyVersion>2.1.2</AssemblyVersion>
-    <FileVersion>2.1.2</FileVersion>
+    <AssemblyVersion>2.2</AssemblyVersion>
+    <FileVersion>2.2</FileVersion>
     <SupportedOSPlatformVersion>7.0</SupportedOSPlatformVersion>
     <StartupObject>FindRomCover.App</StartupObject>
     <IsPackable>false</IsPackable>
@@ -23,16 +22,22 @@
 
   <ItemGroup>
     <None Remove="audio\click.mp3" />
-    <None Update="appsettings.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
     <None Update="settings.xml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="images\icon.ico" />
+    <Resource Include="images\icon.ico" />
+    <None Remove="images\icon.png" />
+    <Resource Include="images\icon.png" />
+    <None Remove="images\icon2.png" />
+    <Resource Include="images\icon2.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </Resource>
+    <None Remove="images\settings.png" />
+    <Resource Include="images\settings.png" />
   </ItemGroup>
 
   <ItemGroup>
@@ -42,16 +47,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="images\icon2.png">
-      <Pack>True</Pack>
-      <PackagePath>\</PackagePath>
-    </None>
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="ControlzEx" Version="5.0.2" />
     <PackageReference Include="MahApps.Metro" Version="2.4.10" />
     <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.135" />
+    <PackageReference Include="System.Drawing.Common" Version="9.0.7" />
     <PackageReference Include="System.Text.Json" Version="9.0.7" />
   </ItemGroup>
 

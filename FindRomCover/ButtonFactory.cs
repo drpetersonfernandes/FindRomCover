@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
+using FindRomCover.models;
 using Application = System.Windows.Application;
 using Clipboard = System.Windows.Clipboard;
 using Image = System.Windows.Controls.Image;
@@ -13,7 +14,7 @@ namespace FindRomCover;
 
 public class ButtonFactory
 {
-    public async Task<ObservableCollection<ImageData>> CreateSimilarImagesCollection(
+    public static async Task<ObservableCollection<ImageData>> CreateSimilarImagesCollection(
         string selectedRomFileName,
         string imageFolderPath,
         double similarityThreshold,
@@ -105,6 +106,8 @@ public class ButtonFactory
 
         // Copy to clipboard
         Clipboard.SetText(filenameWithoutExtension);
+
+        // Notify user
         MessageBox.Show($"Filename '{filenameWithoutExtension}' copied to clipboard!",
             "Copied", MessageBoxButton.OK, MessageBoxImage.Information);
     });

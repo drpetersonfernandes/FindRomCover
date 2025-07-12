@@ -1,6 +1,6 @@
 using System.Windows.Media.Imaging;
 
-namespace FindRomCover;
+namespace FindRomCover.models;
 
 public class ImageData(string? imagePath, string? imageName, double similarityThreshold)
 {

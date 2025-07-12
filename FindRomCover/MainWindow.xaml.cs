@@ -7,6 +7,8 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Windows.Documents;
 using ControlzEx.Theming;
+using FindRomCover.models;
+using Microsoft.Win32;
 using Application = System.Windows.Application;
 using MessageBox = System.Windows.MessageBox;
 
@@ -19,7 +21,6 @@ public partial class MainWindow : INotifyPropertyChanged
     private string _imageFolderPath;
     private string _selectedRomFileName = string.Empty;
 
-    // ReSharper disable once MemberCanBePrivate.Global
     public ObservableCollection<ImageData> SimilarImages { get; set; } = [];
     private const string DefaultSimilarityAlgorithm = "Jaro-Winkler Distance";
 
@@ -80,6 +81,10 @@ public partial class MainWindow : INotifyPropertyChanged
     }
 
     private string SelectedSimilarityAlgorithm { get; set; } = DefaultSimilarityAlgorithm;
+    public object ImageSource { get; } = new();
+    public object ImagePath { get; } = new();
+    public object ImageName { get; } = new();
+    public object SimilarityThreshold { get; } = new();
 
     public MainWindow()
     {
@@ -195,9 +200,11 @@ public partial class MainWindow : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
+            // Notify user
             MessageBox.Show($"Unable to open the donation link: {ex.Message}",
                 "Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
+            // Notify developer
             var formattedException = $"Unable to open the donation link.\n\n" +
                                      $"Exception type: {ex.GetType().Name}\n" +
                                      $"Exception details: {ex.Message}";
@@ -218,28 +225,28 @@ public partial class MainWindow : INotifyPropertyChanged
 
     private void BtnBrowseRomFolder_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new FolderBrowserDialog
+        var dialog = new OpenFolderDialog
         {
-            Description = "Select the folder where your ROM or ISO files are stored."
+            Title = "Select the folder where your ROM or ISO files are stored."
         };
 
-        if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+        if (dialog.ShowDialog() == true)
         {
-            TxtRomFolder.Text = dialog.SelectedPath;
+            TxtRomFolder.Text = dialog.FolderName;
         }
     }
 
     private void BtnBrowseImageFolder_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new FolderBrowserDialog
+        var dialog = new OpenFolderDialog
         {
-            Description = "Select the folder where your image files are stored."
+            Title = "Select the folder where your image files are stored."
         };
 
-        if (dialog.ShowDialog() != System.Windows.Forms.DialogResult.OK) return;
+        if (dialog.ShowDialog() != true) return;
 
-        TxtImageFolder.Text = dialog.SelectedPath;
-        _imageFolderPath = dialog.SelectedPath;
+        TxtImageFolder.Text = dialog.FolderName;
+        _imageFolderPath = dialog.FolderName;
     }
 
     private async void BtnCheckForMissingImages_Click(object sender, RoutedEventArgs e)
@@ -250,6 +257,7 @@ public partial class MainWindow : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
+            // Notify developer
             _ = LogErrors.LogErrorAsync(ex, "Error in BtnCheckForMissingImages_Click");
         }
     }
@@ -258,41 +266,57 @@ public partial class MainWindow : INotifyPropertyChanged
     {
         if (_settings.SupportedExtensions.Length == 0)
         {
+            // Notify user
             MessageBox.Show("No supported file extensions loaded. Please check file 'settings.xml' or edit them in the Settings menu.",
                 "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+
             return;
         }
 
-        if (string.IsNullOrEmpty(TxtRomFolder.Text) || string.IsNullOrEmpty(TxtImageFolder.Text))
+        // Capture UI-dependent values before going to a background thread
+        var romFolderPath = TxtRomFolder.Text;
+        var imageFolderPath = TxtImageFolder.Text;
+
+        if (string.IsNullOrEmpty(romFolderPath) || string.IsNullOrEmpty(imageFolderPath))
         {
+            // Notify user
             MessageBox.Show("Please select both ROM and Image folders.",
                 "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+
             return;
         }
 
         IsCheckingMissing = true;
         try
         {
-            // Clear the list before setting new values
-            LstMissingImages.Items.Clear();
-            SimilarImages.Clear(); // Also clear suggestions
-
-            // Get all ROM files on a background thread
-            var allFiles = await Task.Run(() =>
+            // Get all ROM files and find missing ones on a background thread
+            var missingFiles = await Task.Run(() =>
             {
                 var searchPatterns = _settings.SupportedExtensions.Select(ext => "*." + ext).ToArray();
-                return searchPatterns
-                    .SelectMany(pattern => Directory.GetFiles(TxtRomFolder.Text, pattern))
+                var allRomNames = searchPatterns
+                    .SelectMany(pattern => Directory.GetFiles(romFolderPath, pattern))
                     .Select(Path.GetFileNameWithoutExtension)
                     .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .OrderBy(name => name)
                     .ToList();
+
+                var missing = new List<string>();
+                foreach (var romName in allRomNames)
+                {
+                    if (romName != null && FindCorrespondingImage(romName, imageFolderPath) == null)
+                    {
+                        missing.Add(romName);
+                    }
+                }
+
+                return missing.OrderBy(static name => name).ToList();
             });
 
-            // Check each ROM for a corresponding image
-            foreach (var romName in from romName in allFiles let correspondingImagePath = FindCorrespondingImage(romName) where correspondingImagePath == null select romName)
+            // Now, update the UI on the UI thread in one go
+            LstMissingImages.Items.Clear();
+            SimilarImages.Clear(); // Also clear suggestions
+            foreach (var file in missingFiles)
             {
-                LstMissingImages.Items.Add(romName);
+                LstMissingImages.Items.Add(file);
             }
 
             // Update count
@@ -300,10 +324,12 @@ public partial class MainWindow : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
+            // Notify user
             MessageBox.Show($"There was an error checking for the missing image files.\n\n" +
                             $"Check if the provided folders are valid.",
                 "Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
+            // Notify developer
             var formattedException = $"There was an error checking for the missing image files.\n\n" +
                                      $"Exception type: {ex.GetType().Name}\n" +
                                      $"Exception details: {ex.Message}";
@@ -315,12 +341,12 @@ public partial class MainWindow : INotifyPropertyChanged
         }
     }
 
-    private string? FindCorrespondingImage(string fileNameWithoutExtension)
+    private static string? FindCorrespondingImage(string fileNameWithoutExtension, string imageFolderPath)
     {
         string[] imageExtensions = [".png", ".jpg", ".jpeg"];
         foreach (var ext in imageExtensions)
         {
-            var imagePath = Path.Combine(TxtImageFolder.Text, fileNameWithoutExtension + ext);
+            var imagePath = Path.Combine(imageFolderPath, fileNameWithoutExtension + ext);
             if (File.Exists(imagePath))
             {
                 return imagePath;
@@ -346,8 +372,7 @@ public partial class MainWindow : INotifyPropertyChanged
                 _selectedRomFileName = selectedFile;
 
                 // Use ButtonFactory to create the SimilarImages collection
-                var buttonFactory = new ButtonFactory();
-                var newSimilarImages = await buttonFactory.CreateSimilarImagesCollection(
+                var newSimilarImages = await ButtonFactory.CreateSimilarImagesCollection(
                     selectedFile,
                     _imageFolderPath,
                     _settings.SimilarityThreshold,
@@ -376,7 +401,7 @@ public partial class MainWindow : INotifyPropertyChanged
             }
             catch (Exception ex)
             {
-                // Handle exception
+                // Notify user
                 MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
                 // Notify developer
@@ -389,6 +414,7 @@ public partial class MainWindow : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
+            // Notify developer
             _ = LogErrors.LogErrorAsync(ex, "Error in LstMissingImages_SelectionChanged");
         }
     }
@@ -422,9 +448,11 @@ public partial class MainWindow : INotifyPropertyChanged
         }
         else
         {
+            // Notify user
             MessageBox.Show("Failed to save the image.",
                 "Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
+            // Notify developer
             const string formattedException = "Failed to save the image.";
             var ex = new Exception(formattedException);
             _ = LogErrors.LogErrorAsync(ex, formattedException);
@@ -448,7 +476,7 @@ public partial class MainWindow : INotifyPropertyChanged
 
     private void UpdateMissingCount()
     {
-        LabelMissingRoms.Content = "Missing Covers: " + LstMissingImages.Items.Count;
+        LabelMissingRoms.Content = "MISSING COVERS: " + LstMissingImages.Items.Count;
     }
 
     private void SetSimilarityAlgorithm_Click(object sender, RoutedEventArgs e)
@@ -505,10 +533,12 @@ public partial class MainWindow : INotifyPropertyChanged
         }
         else
         {
+            // Notify user
             MessageBox.Show("Invalid similarity threshold selected.\n\n" +
                             "The error was reported to the developer that will try to fix the issue.",
                 "Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
+            // Notify developer
             const string formattedException = "Invalid similarity threshold selected.";
             var ex = new Exception(formattedException);
             _ = LogErrors.LogErrorAsync(ex, formattedException);
