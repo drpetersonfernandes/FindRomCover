@@ -2,11 +2,11 @@
 
 Find ROM Cover is an easy-to-use application designed to help you effortlessly rename and organize cover images for your ROM collection. It helps you rename your images to match the filenames of your ROMs.
 
-Main window showing the right-click context menu:
-![Screenshot](screenshot1.png)
-
-Dark theme:
+Main window with white theme:
 ![Screenshot](screenshot2.png)
+
+Main window with dark theme:
+![Screenshot](screenshot1.png)
 
 ## How It Works:
 
