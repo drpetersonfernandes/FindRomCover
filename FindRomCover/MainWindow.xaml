@@ -9,7 +9,8 @@
                       d:DataContext="{d:DesignInstance Type=local:MainWindow, IsDesignTimeCreatable=True}"
                       Title="Find ROM Cover"
                       MinWidth="900"
-                      MinHeight="600">
+                      MinHeight="600"
+                      WindowStartupLocation="CenterScreen">
 
     <Window.Resources>
         <local:ObjectToBoolConverter x:Key="IsNotNullConverter" />

@@ -251,7 +251,7 @@ public partial class MainWindow : INotifyPropertyChanged
 
     private void About_Click(object sender, RoutedEventArgs e)
     {
-        About aboutWindow = new();
+        AboutWindow aboutWindow = new();
         aboutWindow.ShowDialog();
     }
 

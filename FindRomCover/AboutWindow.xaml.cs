@@ -5,9 +5,9 @@ using System.Reflection;
 
 namespace FindRomCover;
 
-public partial class About
+public partial class AboutWindow
 {
-    public About()
+    public AboutWindow()
     {
         InitializeComponent();
 
