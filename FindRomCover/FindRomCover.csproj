@@ -23,6 +23,9 @@
   <ItemGroup>
     <None Remove="audio\click.mp3" />
     <None Update="settings.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="mame.dat">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
@@ -49,6 +52,7 @@
   <ItemGroup>
     <PackageReference Include="ControlzEx" Version="5.0.2" />
     <PackageReference Include="MahApps.Metro" Version="2.4.10" />
+    <PackageReference Include="MessagePack" Version="3.1.4" />
     <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.135" />
     <PackageReference Include="System.Drawing.Common" Version="9.0.7" />
     <PackageReference Include="System.Text.Json" Version="9.0.7" />

@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.ComponentModel;
 using System.Globalization;
 using System.Windows.Documents;
+using System.Windows.Input;
 using FindRomCover.models;
 using Microsoft.Win32;
 using Application = System.Windows.Application;
@@ -14,6 +15,9 @@ namespace FindRomCover;
 
 public partial class MainWindow : INotifyPropertyChanged
 {
+    private readonly List<MameManager> _machines;
+    private readonly Dictionary<string, string> _mameLookup;
+
     private CancellationTokenSource? _findSimilarCts;
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -153,9 +157,22 @@ public partial class MainWindow : INotifyPropertyChanged
         UpdateSimilarityAlgorithmChecks();
         UpdateSimilarityThresholdChecks();
         UpdateAccentColorChecks();
+        UpdateBaseThemeMenuChecks();
 
         // Subscribe to App.Settings PropertyChanged to update UI if settings change elsewhere (e.g. SettingsWindow)
         App.Settings.PropertyChanged += AppSettings_PropertyChanged;
+
+        // Load _machines and _mameLookup
+        _machines = MameManager.LoadFromDat();
+        _mameLookup = _machines
+            .GroupBy(static m => m.MachineName, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(static g => g.Key, static g => g.First().Description, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private void UpdateBaseThemeMenuChecks()
+    {
+        LightTheme.IsChecked = App.Settings.BaseTheme == "Light";
+        DarkTheme.IsChecked = App.Settings.BaseTheme == "Dark";
     }
 
     // Handle settings changes from other parts of the application (e.g., SettingsWindow)
@@ -300,11 +317,10 @@ public partial class MainWindow : INotifyPropertyChanged
 
     private async Task LoadMissingImagesList()
     {
-        if (App.Settings.SupportedExtensions.Length == 0) // Use App.Settings
+        if (App.Settings.SupportedExtensions.Length == 0)
         {
             MessageBox.Show("No supported file extensions loaded. Please check file 'settings.xml' or edit them in the Settings menu.",
                 "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
-
             return;
         }
 
@@ -315,7 +331,6 @@ public partial class MainWindow : INotifyPropertyChanged
         {
             MessageBox.Show("Please select both ROM and Image folders.",
                 "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
-
             return;
         }
 
@@ -324,30 +339,42 @@ public partial class MainWindow : INotifyPropertyChanged
         {
             var missingFiles = await Task.Run(() =>
             {
-                var searchPatterns = App.Settings.SupportedExtensions.Select(ext => "*." + ext).ToArray(); // Use App.Settings
+                var searchPatterns = App.Settings.SupportedExtensions.Select(ext => "*." + ext).ToArray();
                 var allRomNames = searchPatterns
                     .SelectMany(pattern => Directory.GetFiles(romFolderPath, pattern))
                     .Select(Path.GetFileNameWithoutExtension)
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .ToList();
 
-                var missing = new List<string>();
+                var missing = new List<(string RomName, string SearchName)>();
                 foreach (var romName in allRomNames)
                 {
                     if (romName != null && FindCorrespondingImage(romName, imageFolderPath) == null)
                     {
-                        missing.Add(romName);
+                        // Check if we have a MAME description for this ROM
+                        if (_mameLookup.TryGetValue(romName, out var description) && !string.IsNullOrEmpty(description))
+                        {
+                            // Use the MAME description for searching
+                            missing.Add((romName, description));
+                        }
+                        else
+                        {
+                            // Fall back to the ROM filename
+                            missing.Add((romName, romName));
+                        }
                     }
                 }
 
-                return missing.OrderBy(static name => name).ToList();
+                return missing.OrderBy(x => x.RomName).ToList();
             });
 
             LstMissingImages.Items.Clear();
             SimilarImages.Clear();
-            foreach (var file in missingFiles)
+
+            foreach (var (romName, searchName) in missingFiles)
             {
-                LstMissingImages.Items.Add(file);
+                // Store both the actual ROM name and the search name
+                LstMissingImages.Items.Add(new { RomName = romName, SearchName = searchName });
             }
 
             UpdateMissingCount();
@@ -369,6 +396,7 @@ public partial class MainWindow : INotifyPropertyChanged
         }
     }
 
+
     private static string? FindCorrespondingImage(string fileNameWithoutExtension, string imageFolderPath)
     {
         string[] imageExtensions = [".png", ".jpg", ".jpeg"];
@@ -388,7 +416,6 @@ public partial class MainWindow : INotifyPropertyChanged
     {
         try
         {
-            // Cancel any previous search operation
             if (_findSimilarCts != null) await _findSimilarCts.CancelAsync();
 
             _findSimilarCts = new CancellationTokenSource();
@@ -396,33 +423,38 @@ public partial class MainWindow : INotifyPropertyChanged
 
             try
             {
-                if (LstMissingImages.SelectedItem is not string selectedFile)
+                if (LstMissingImages.SelectedItem == null)
                 {
                     SimilarImages.Clear();
                     return;
                 }
 
+                dynamic selectedItem = LstMissingImages.SelectedItem;
+                string romName = selectedItem.RomName;
+                string searchName = selectedItem.SearchName;
+
                 IsFindingSimilar = true;
                 try
                 {
-                    _selectedRomFileName = selectedFile;
+                    _selectedRomFileName = romName; // Keep the original ROM name for saving
 
                     var newSimilarImages = await ButtonFactory.CreateSimilarImagesCollection(
-                        selectedFile,
+                        searchName, // Use the search name (MAME description or ROM name)
                         _imageFolderPath,
                         App.Settings.SimilarityThreshold,
                         SelectedSimilarityAlgorithm,
-                        cancellationToken // Pass the token
+                        cancellationToken
                     );
 
-                    // Check if cancellation was requested before updating the UI
                     if (cancellationToken.IsCancellationRequested) return;
 
                     await Application.Current.Dispatcher.InvokeAsync(() =>
                     {
                         var textBlock = new TextBlock();
                         textBlock.Inlines.Add(new Run("Search Query: "));
-                        textBlock.Inlines.Add(new Run($"{selectedFile} ") { FontWeight = FontWeights.Bold });
+                        textBlock.Inlines.Add(new Run($"{searchName} ") { FontWeight = FontWeights.Bold });
+                        textBlock.Inlines.Add(new Run("for ROM: "));
+                        textBlock.Inlines.Add(new Run($"{romName} ") { FontWeight = FontWeights.Bold });
                         textBlock.Inlines.Add(new Run("with "));
                         textBlock.Inlines.Add(new Run($"{SelectedSimilarityAlgorithm} ") { FontWeight = FontWeights.Bold });
                         textBlock.Inlines.Add(new Run("algorithm"));
@@ -437,7 +469,7 @@ public partial class MainWindow : INotifyPropertyChanged
                 }
                 catch (OperationCanceledException)
                 {
-                    // This is expected when a new selection is made, so we just ignore it.
+                    // Expected when a new selection is made, so we just ignore it.
                 }
                 catch (Exception ex)
                 {
@@ -446,12 +478,14 @@ public partial class MainWindow : INotifyPropertyChanged
                 }
                 finally
                 {
-                    // Only set IsFindingSimilar to false if this operation wasn't canceled
                     if (!cancellationToken.IsCancellationRequested)
                     {
                         IsFindingSimilar = false;
                     }
                 }
+
+                // Scroll to top when new selection is made
+                ImageScrollViewer.ScrollToTop();
             }
             catch (Exception ex)
             {
@@ -506,9 +540,22 @@ public partial class MainWindow : INotifyPropertyChanged
 
     private void RemoveSelectedItem()
     {
-        if (LstMissingImages.SelectedItem == null) return;
+        if (LstMissingImages.SelectedItem == null || LstMissingImages.SelectedIndex < 0) return;
 
-        LstMissingImages.Items.Remove(LstMissingImages.SelectedItem);
+        var oldIndex = LstMissingImages.SelectedIndex;
+        LstMissingImages.Items.RemoveAt(oldIndex);
+
+        // Select next logical item
+        if (LstMissingImages.Items.Count > 0)
+        {
+            var newIndex = Math.Min(oldIndex, LstMissingImages.Items.Count - 1);
+            LstMissingImages.SelectedIndex = newIndex;
+            if (newIndex >= 0) // Changed from > 0 to >= 0 to include the first item
+            {
+                LstMissingImages.ScrollIntoView(LstMissingImages.Items[newIndex]);
+            }
+        }
+
         UpdateMissingCount();
     }
 
@@ -632,5 +679,14 @@ public partial class MainWindow : INotifyPropertyChanged
     {
         App.Settings.PropertyChanged -= AppSettings_PropertyChanged;
         base.OnClosed(e);
+    }
+
+    private void LstMissingImages_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Delete)
+        {
+            RemoveSelectedItem();
+            PlaySound.PlayClickSound();
+        }
     }
 }

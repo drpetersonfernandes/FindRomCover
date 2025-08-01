@@ -278,7 +278,9 @@
 
                         <Grid Grid.Row="1">
                             <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                <ListBox x:Name="LstMissingImages" SelectionChanged="LstMissingImages_SelectionChanged"
+                                <ListBox x:Name="LstMissingImages" 
+                                         SelectionChanged="LstMissingImages_SelectionChanged"
+                                         KeyDown="LstMissingImages_KeyDown"
                                          BorderThickness="0" />
                             </ScrollViewer>
                             <controls:ProgressRing IsActive="{Binding IsCheckingMissing}" HorizontalAlignment="Center"
