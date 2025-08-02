@@ -552,7 +552,11 @@ public partial class MainWindow : INotifyPropertyChanged
             LstMissingImages.SelectedIndex = newIndex;
             if (newIndex >= 0) // Changed from > 0 to >= 0 to include the first item
             {
-                LstMissingImages.ScrollIntoView(LstMissingImages.Items[newIndex]);
+                var itemToScrollTo = LstMissingImages.Items[newIndex];
+                if (itemToScrollTo != null)
+                {
+                    LstMissingImages.ScrollIntoView(itemToScrollTo);
+                }
             }
         }
 
