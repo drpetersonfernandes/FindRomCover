@@ -281,6 +281,7 @@
                                 <ListBox x:Name="LstMissingImages" 
                                          SelectionChanged="LstMissingImages_SelectionChanged"
                                          KeyDown="LstMissingImages_KeyDown"
+                                         DisplayMemberPath="RomName"
                                          BorderThickness="0" />
                             </ScrollViewer>
                             <controls:ProgressRing IsActive="{Binding IsCheckingMissing}" HorizontalAlignment="Center"

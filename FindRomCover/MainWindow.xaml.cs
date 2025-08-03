@@ -396,7 +396,6 @@ public partial class MainWindow : INotifyPropertyChanged
         }
     }
 
-
     private static string? FindCorrespondingImage(string fileNameWithoutExtension, string imageFolderPath)
     {
         string[] imageExtensions = [".png", ".jpg", ".jpeg"];
