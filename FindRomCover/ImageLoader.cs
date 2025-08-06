@@ -7,7 +7,7 @@ public static class ImageLoader
 {
     public static BitmapImage? LoadImageToMemory(string? imagePath)
     {
-        // Basic validation: Check if the path is null/empty or the file doesn't exist
+        // Check if the path is null/empty or the file doesn't exist
         if (string.IsNullOrEmpty(imagePath) || !File.Exists(imagePath))
         {
             // Notify developer
@@ -18,32 +18,35 @@ public static class ImageLoader
 
         try
         {
+            // Check for zero-length files, which can cause NullReferenceException in BitmapImage.EndInit()
+            if (new FileInfo(imagePath).Length == 0)
+            {
+                _ = LogErrors.LogErrorAsync(new InvalidDataException($"Image file is empty (0 bytes): {imagePath}"), $"Image file is empty: {imagePath}");
+                return null;
+            }
+
             var memoryImage = new BitmapImage();
 
             // Use a FileStream with FileShare.Read to allow other processes to read the file.
             // This helps prevent issues if the file is open elsewhere (e.g., in a preview pane).
-            // Use FileMode.Open and FileAccess.Read as before.
             using (var stream = new FileStream(imagePath, FileMode.Open, FileAccess.Read, FileShare.Read))
             {
                 memoryImage.BeginInit();
                 // CacheOption.OnLoad loads the entire image into memory immediately
-                // and releases the stream/file handle once EndInit() is called.
+                // and releases the stream/file handle once EndInit() is called to prevent file locks.
                 memoryImage.CacheOption = BitmapCacheOption.OnLoad;
                 memoryImage.StreamSource = stream;
                 memoryImage.EndInit();
             } // The 'using' statement ensures the stream is closed and the file handle is released here.
 
             // Check if the image was successfully loaded with valid dimensions.
-            // Sometimes EndInit might not throw for invalid files, but the resulting image is empty.
             if (memoryImage.PixelWidth == 0 || memoryImage.PixelHeight == 0)
             {
-                 // Log a specific warning or error if the image appears invalid after loading
                  // Notify developer
                  _ = LogErrors.LogErrorAsync(new InvalidOperationException($"Loaded image has zero dimensions for path: {imagePath}"), $"Image appears invalid after loading: {imagePath}");
 
-                 return null; // Return null if the image is invalid
+                 return null;
             }
-
 
             // Make the image freezable to avoid cross-thread issues.
             // This is important because this method is called from a Task.Run in SimilarityCalculator.
@@ -54,10 +57,12 @@ public static class ImageLoader
         }
         catch (Exception ex)
         {
-            // Log the exception details for better debugging.
-            // Include the exception type and message in the logged context.
-            _ = LogErrors.LogErrorAsync(ex, $"Failed to load image into memory: {imagePath}\nException Type: {ex.GetType().Name}\nException Message: {ex.Message}");
-            return null; // Return null on any exception during loading
+            // Notify developer
+            _ = LogErrors.LogErrorAsync(ex, $"Failed to load image into memory: {imagePath}\n" +
+                                            $"Exception Type: {ex.GetType().Name}\n" +
+                                            $"Exception Message: {ex.Message}");
+
+            return null;
         }
     }
 }

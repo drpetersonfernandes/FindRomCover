@@ -105,31 +105,21 @@ public static class SimilarityCalculator
                     semaphore.Wait(cancellationToken);
                     try
                     {
-                        var imageData = new ImageData(candidate.FilePath, candidate.ImageName,
-                            candidate.SimilarityScore);
+                        // Load the image. ImageLoader is designed to handle all errors (including BitmapDecoder failures),
+                        // log them, and return null.
+                        var imageSource = ImageLoader.LoadImageToMemory(candidate.FilePath);
 
-                        // Load the image into memory with error handling
-                        try
-                        {
-                            imageData.ImageSource = ImageLoader.LoadImageToMemory(candidate.FilePath);
+                        // If loading failed, the error is already logged. We skip this file and continue.
+                        if (imageSource == null) return;
 
-                            // Only add to results if the image was successfully loaded
-                            if (imageData.ImageSource == null) return;
-
-                            lock (lockObject)
-                            {
-                                tempList.Add(imageData);
-                            }
-                        }
-                        catch (OutOfMemoryException ex)
+                        var imageData = new ImageData(candidate.FilePath, candidate.ImageName, candidate.SimilarityScore)
                         {
-                            // Specifically, handle OOM exceptions
-                            _ = LogErrors.LogErrorAsync(ex, $"Out of memory while loading image: {candidate.FilePath}");
-                        }
-                        catch (Exception ex)
+                            ImageSource = imageSource
+                        };
+                        
+                        lock (lockObject)
                         {
-                            // Handle other image loading errors
-                            _ = LogErrors.LogErrorAsync(ex, $"Error loading image {candidate.FilePath}: {ex.Message}");
+                            tempList.Add(imageData);
                         }
                     }
                     finally
