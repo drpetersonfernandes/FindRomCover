@@ -116,7 +116,7 @@ public static class SimilarityCalculator
                         {
                             ImageSource = imageSource
                         };
-                        
+
                         lock (lockObject)
                         {
                             tempList.Add(imageData);
