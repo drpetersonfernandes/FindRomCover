@@ -521,8 +521,8 @@ public partial class MainWindow : INotifyPropertyChanged
         }
         else
         {
-            MessageBox.Show("Failed to save the image.",
-                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show("Failed to save the image.", "Error",
+                MessageBoxButton.OK, MessageBoxImage.Error);
 
             const string formattedException = "Failed to save the image.";
             var ex = new Exception(formattedException);

@@ -1,7 +1,5 @@
 using System.IO;
-using System.Windows;
 using System.Windows.Media;
-using MessageBox = System.Windows.MessageBox;
 
 namespace FindRomCover;
 
@@ -49,8 +47,6 @@ public static class PlaySound
         }
         catch (Exception ex)
         {
-            // Notify user
-            MessageBox.Show($"Error playing sound: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             // Notify developer
             _ = LogErrors.LogErrorAsync(ex, "Error in PlayClickSound");
         }

@@ -28,7 +28,6 @@ public static class ImageLoader
             var memoryImage = new BitmapImage();
 
             // Use a FileStream with FileShare.Read to allow other processes to read the file.
-            // This helps prevent issues if the file is open elsewhere (e.g., in a preview pane).
             using (var stream = new FileStream(imagePath, FileMode.Open, FileAccess.Read, FileShare.Read))
             {
                 memoryImage.BeginInit();

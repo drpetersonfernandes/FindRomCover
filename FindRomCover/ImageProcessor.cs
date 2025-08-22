@@ -14,6 +14,15 @@ public static class ImageProcessor
         var directory = Path.GetDirectoryName(targetPath);
         if (directory == null) return false;
 
+        if (sourcePath == targetPath)
+        {
+            MessageBox.Show("Source and target paths are the same.\n\n" +
+                            "Please choose another target path.", "Error",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+
+            return false;
+        }
+
         try
         {
             // Test if we can write to the directory
@@ -54,7 +63,7 @@ public static class ImageProcessor
                         bitmap.Save(memoryStream, ImageFormat.Png);
                         memoryStream.Position = 0;
 
-                        // Then save to file from the memory stream
+                        // Then save to the file from the memory stream
                         using (var fileStream = new FileStream(targetPath, FileMode.Create, FileAccess.Write))
                         {
                             try
@@ -64,7 +73,9 @@ public static class ImageProcessor
                             catch (Exception ex)
                             {
                                 // Notify user
-                                MessageBox.Show("Error saving image file.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                                MessageBox.Show("Error saving the image file.\n" +
+                                                "Try to run this application with Administrative Access.", "Error",
+                                    MessageBoxButton.OK, MessageBoxImage.Error);
 
                                 // Notify developer
                                 _ = LogErrors.LogErrorAsync(ex, $"Error saving image from {sourcePath} to {targetPath}");
@@ -113,7 +124,8 @@ public static class ImageProcessor
             // This often happens with very large images
             // Notify user
             MessageBox.Show("The image is too large to process. Try using a smaller image.",
-                "Memory Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                "Memory Error",
+                MessageBoxButton.OK, MessageBoxImage.Error);
 
             // Notify developer
             _ = LogErrors.LogErrorAsync(ex, $"Out of memory when processing {sourcePath}");
