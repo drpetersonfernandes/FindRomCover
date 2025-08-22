@@ -6,11 +6,11 @@ using System.Xml.Linq;
 
 namespace FindRomCover;
 
-public class Settings : INotifyPropertyChanged // Implemented INotifyPropertyChanged
+public class Settings : INotifyPropertyChanged
 {
-    public event PropertyChangedEventHandler? PropertyChanged; // Added PropertyChanged event
+    public event PropertyChangedEventHandler? PropertyChanged;
 
-    private void OnPropertyChanged(string propertyName) // Helper method for PropertyChanged
+    private void OnPropertyChanged(string propertyName)
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
@@ -18,7 +18,6 @@ public class Settings : INotifyPropertyChanged // Implemented INotifyPropertyCha
     private static readonly string SettingsFilePath =
         Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.xml");
 
-    // Changed properties to use backing fields and OnPropertyChanged
     private double _similarityThreshold;
 
     public double SimilarityThreshold
@@ -30,6 +29,20 @@ public class Settings : INotifyPropertyChanged // Implemented INotifyPropertyCha
 
             _similarityThreshold = value;
             OnPropertyChanged(nameof(SimilarityThreshold));
+        }
+    }
+
+    private bool _useMameDescription = true;
+
+    public bool UseMameDescription
+    {
+        get => _useMameDescription;
+        set
+        {
+            if (_useMameDescription == value) return;
+
+            _useMameDescription = value;
+            OnPropertyChanged(nameof(UseMameDescription));
         }
     }
 
@@ -175,6 +188,8 @@ public class Settings : INotifyPropertyChanged // Implemented INotifyPropertyCha
 
             if (_supportedExtensions.Length != 0) return;
 
+            _useMameDescription = bool.Parse(GetValue("UseMameDescription", "true"));
+
             SetDefaultSettings();
             SaveSettings();
         }
@@ -203,7 +218,8 @@ public class Settings : INotifyPropertyChanged // Implemented INotifyPropertyCha
                     ),
                     new XElement("SimilarityAlgorithm", SelectedSimilarityAlgorithm),
                     new XElement("BaseTheme", BaseTheme),
-                    new XElement("AccentColor", AccentColor)
+                    new XElement("AccentColor", AccentColor),
+                    new XElement("UseMameDescription", UseMameDescription)
                 )
             );
             doc.Save(SettingsFilePath);

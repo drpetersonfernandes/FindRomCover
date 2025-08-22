@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8" ?>
 <Settings>
 	<SimilarityThreshold>80</SimilarityThreshold>
 	<SupportedExtensions>
@@ -120,4 +120,5 @@
 	<SimilarityAlgorithm>Jaro-Winkler Distance</SimilarityAlgorithm>
 	<BaseTheme>Light</BaseTheme>
 	<AccentColor>Blue</AccentColor>
+       <UseMameDescription>true</UseMameDescription>
 </Settings>

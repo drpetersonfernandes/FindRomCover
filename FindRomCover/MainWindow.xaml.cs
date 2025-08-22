@@ -158,6 +158,7 @@ public partial class MainWindow : INotifyPropertyChanged
         UpdateSimilarityThresholdChecks();
         UpdateAccentColorChecks();
         UpdateBaseThemeMenuChecks();
+        UpdateMameDescriptionCheck();
 
         // Subscribe to App.Settings PropertyChanged to update UI if settings change elsewhere (e.g. SettingsWindow)
         App.Settings.PropertyChanged += AppSettings_PropertyChanged;
@@ -207,6 +208,9 @@ public partial class MainWindow : INotifyPropertyChanged
                 break;
             case nameof(Settings.SimilarityThreshold):
                 UpdateSimilarityThresholdChecks();
+                break;
+            case nameof(Settings.UseMameDescription):
+                UpdateMameDescriptionCheck();
                 break;
         }
     }
@@ -351,8 +355,10 @@ public partial class MainWindow : INotifyPropertyChanged
                 {
                     if (romName != null && FindCorrespondingImage(romName, imageFolderPath) == null)
                     {
-                        // Check if we have a MAME description for this ROM
-                        if (_mameLookup.TryGetValue(romName, out var description) && !string.IsNullOrEmpty(description))
+                        // Check if we have a MAME description for this ROM and if the feature is enabled
+                        if (App.Settings.UseMameDescription &&
+                            _mameLookup.TryGetValue(romName, out var description) &&
+                            !string.IsNullOrEmpty(description))
                         {
                             // Use the MAME description for searching
                             missing.Add((romName, description));
@@ -691,5 +697,19 @@ public partial class MainWindow : INotifyPropertyChanged
             RemoveSelectedItem();
             PlaySound.PlayClickSound();
         }
+    }
+
+    private void MenuUseMameDescription_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem menuItem)
+        {
+            App.Settings.UseMameDescription = menuItem.IsChecked;
+            App.Settings.SaveSettings();
+        }
+    }
+
+    private void UpdateMameDescriptionCheck()
+    {
+        MenuUseMameDescription.IsChecked = App.Settings.UseMameDescription;
     }
 }
