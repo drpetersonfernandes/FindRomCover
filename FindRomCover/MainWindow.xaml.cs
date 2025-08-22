@@ -421,80 +421,105 @@ public partial class MainWindow : INotifyPropertyChanged
     {
         try
         {
-            if (_findSimilarCts != null) await _findSimilarCts.CancelAsync();
+            // Cancel any ongoing operation
+            if (_findSimilarCts != null)
+            {
+                await _findSimilarCts.CancelAsync();
+                _findSimilarCts.Dispose();
+            }
 
+            // Create new cancellation token source
             _findSimilarCts = new CancellationTokenSource();
             var cancellationToken = _findSimilarCts.Token;
 
             try
             {
+                // Clear results if no selection
                 if (LstMissingImages.SelectedItem == null)
                 {
                     SimilarImages.Clear();
                     return;
                 }
 
+                // Get selection data
                 dynamic selectedItem = LstMissingImages.SelectedItem;
                 string romName = selectedItem.RomName;
                 string searchName = selectedItem.SearchName;
 
+                // Set loading state
                 IsFindingSimilar = true;
+
                 try
                 {
-                    _selectedRomFileName = romName; // Keep the original ROM name for saving
+                    _selectedRomFileName = romName;
 
+                    // Calculate similarity with cancellation support
                     var newSimilarImages = await ButtonFactory.CreateSimilarImagesCollection(
-                        searchName, // Use the search name (MAME description or ROM name)
+                        searchName,
                         _imageFolderPath,
                         App.Settings.SimilarityThreshold,
                         SelectedSimilarityAlgorithm,
                         cancellationToken
                     );
 
-                    if (cancellationToken.IsCancellationRequested) return;
-
-                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    // Only update UI if operation wasn't cancelled
+                    if (!cancellationToken.IsCancellationRequested)
                     {
-                        var textBlock = new TextBlock();
-                        textBlock.Inlines.Add(new Run("Search Query: "));
-                        textBlock.Inlines.Add(new Run($"{searchName} ") { FontWeight = FontWeights.Bold });
-                        textBlock.Inlines.Add(new Run("for ROM: "));
-                        textBlock.Inlines.Add(new Run($"{romName} ") { FontWeight = FontWeights.Bold });
-                        textBlock.Inlines.Add(new Run("with "));
-                        textBlock.Inlines.Add(new Run($"{SelectedSimilarityAlgorithm} ") { FontWeight = FontWeights.Bold });
-                        textBlock.Inlines.Add(new Run("algorithm"));
-                        LblSearchQuery.Content = textBlock;
-
-                        SimilarImages.Clear();
-                        foreach (var imageData in newSimilarImages)
+                        await Application.Current.Dispatcher.InvokeAsync(() =>
                         {
-                            SimilarImages.Add(imageData);
-                        }
-                    });
+                            var textBlock = new TextBlock();
+                            textBlock.Inlines.Add(new Run("Search Query: "));
+                            textBlock.Inlines.Add(new Run($"{searchName} ") { FontWeight = FontWeights.Bold });
+                            textBlock.Inlines.Add(new Run("for ROM: "));
+                            textBlock.Inlines.Add(new Run($"{romName} ") { FontWeight = FontWeights.Bold });
+                            textBlock.Inlines.Add(new Run("with "));
+                            textBlock.Inlines.Add(new Run($"{SelectedSimilarityAlgorithm} ") { FontWeight = FontWeights.Bold });
+                            textBlock.Inlines.Add(new Run("algorithm"));
+                            LblSearchQuery.Content = textBlock;
+
+                            // Clear and update collection
+                            SimilarImages.Clear();
+                            foreach (var imageData in newSimilarImages)
+                            {
+                                SimilarImages.Add(imageData);
+                            }
+                        });
+                    }
                 }
                 catch (OperationCanceledException)
                 {
-                    // Expected when a new selection is made, so we just ignore it.
+                    // Expected when cancelled - just return
+                    return;
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    _ = LogErrors.LogErrorAsync(ex, "Error in LstMissingImages_SelectionChanged");
+                    if (!cancellationToken.IsCancellationRequested)
+                    {
+                        MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                        _ = LogErrors.LogErrorAsync(ex, "Error in LstMissingImages_SelectionChanged");
+                    }
                 }
                 finally
                 {
+                    // Only set IsFindingSimilar to false if not cancelled
                     if (!cancellationToken.IsCancellationRequested)
                     {
                         IsFindingSimilar = false;
                     }
                 }
 
-                // Scroll to top when new selection is made
-                ImageScrollViewer.ScrollToTop();
+                // Scroll to top when new selection is made (only if not cancelled)
+                if (!cancellationToken.IsCancellationRequested)
+                {
+                    ImageScrollViewer.ScrollToTop();
+                }
             }
             catch (Exception ex)
             {
-                _ = LogErrors.LogErrorAsync(ex, "Error in LstMissingImages_SelectionChanged");
+                if (!cancellationToken.IsCancellationRequested)
+                {
+                    _ = LogErrors.LogErrorAsync(ex, "Error in LstMissingImages_SelectionChanged");
+                }
             }
         }
         catch (Exception ex)

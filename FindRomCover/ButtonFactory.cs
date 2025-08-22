@@ -47,6 +47,11 @@ public class ButtonFactory
     // Method to construct a context menu dynamically
     public static ContextMenu CreateContextMenu(string imagePath, Action<string?> useImageAction)
     {
+        if (string.IsNullOrEmpty(imagePath))
+        {
+            return new ContextMenu(); // Return empty menu
+        }
+
         var contextMenu = new ContextMenu();
 
         // "Use This Image" menu item
@@ -119,9 +124,15 @@ public class ButtonFactory
             "Copied", MessageBoxButton.OK, MessageBoxImage.Information);
     });
 
-    private static ICommand OpenFileLocationCommand { get; } = new DelegateCommand(param =>
+    private static ICommand OpenFileLocationCommand { get; } = new DelegateCommand(static param =>
     {
-        if (param is string imagePath && File.Exists(imagePath))
+        if (param is not string imagePath || string.IsNullOrEmpty(imagePath))
+        {
+            MessageBox.Show("Image path is null or empty.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
+
+        if (File.Exists(imagePath))
         {
             // Open the folder containing the file and select it
             System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{imagePath}\"");

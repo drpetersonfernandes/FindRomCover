@@ -33,7 +33,7 @@
                 <Hyperlink NavigateUri="https://www.purelogiccode.com" RequestNavigate="Hyperlink_RequestNavigate">https://www.purelogiccode.com</Hyperlink>
             </TextBlock>
             <TextBlock Margin="0,10,0,10">
-                <Hyperlink NavigateUri="https://github.com/drpetersonfernandes/SimpleLauncher" RequestNavigate="Hyperlink_RequestNavigate">https://github.com/drpetersonfernandes/FindRomCover</Hyperlink>
+                <Hyperlink NavigateUri="https://github.com/drpetersonfernandes/FindRomCover" RequestNavigate="Hyperlink_RequestNavigate">https://github.com/drpetersonfernandes/FindRomCover</Hyperlink>
             </TextBlock>
         </StackPanel>
 
