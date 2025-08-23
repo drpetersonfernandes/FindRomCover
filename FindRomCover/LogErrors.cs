@@ -11,6 +11,7 @@ public static class LogErrors
     private static readonly HttpClient HttpClient = new();
     private const string ApiKey = "hjh7yu6t56tyr540o9u8767676r5674534453235264c75b6t7ggghgg76trf564e";
     private const string BugReportApiUrl = "https://www.purelogiccode.com/bugreport/api/send-bug-report";
+    private static readonly string LogFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "LogError.txt");
 
     public static async Task LogErrorAsync(Exception? ex, string? contextMessage = null)
     {
@@ -57,20 +58,13 @@ public static class LogErrors
         catch (Exception loggingEx)
         {
             // Ignore any exceptions raised during logging to avoid interrupting the main flow
-            // Optionally log this failure to console or a separate minimal log file
-            await Console.Error.WriteLineAsync($"Failed to write error log files or send to API: {loggingEx.Message}");
+            // Write this internal logging error to the dedicated local log file
+            await WriteToLogFileAsync($"Failed to write error log files or send to API: {loggingEx.Message}");
         }
     }
 
     private static async Task<bool> SendLogToApiAsync(string logContent)
     {
-        // Check if API Key is loaded from appsettings.json
-        if (string.IsNullOrEmpty(ApiKey))
-        {
-            await Console.Error.WriteLineAsync("API Key is missing in appsettings.json. Cannot send error log.");
-            return false;
-        }
-
         try
         {
             // The new API expects a JSON payload matching the BugReport model
@@ -109,13 +103,9 @@ public static class LogErrors
                 var contentType = response.Content.Headers.ContentType?.MediaType;
                 if (contentType != "application/json")
                 {
-                    await Console.Error.WriteLineAsync($"Non-JSON content type ({contentType}) - checking plain text: {rawResponse}");
-
-                    if (rawResponse?.Contains("successfully sent", StringComparison.OrdinalIgnoreCase) != true)
-                        return false;
-
-                    await Console.Error.WriteLineAsync("Plain-text response indicates success - treating as successful.");
-                    return true;
+                    // Non-JSON response is considered a failure. Do not attempt to parse it.
+                    await WriteToLogFileAsync($"API returned non-JSON content type ({contentType}): {rawResponse}");
+                    return false;
                 }
 
                 // Attempt to deserialize this response as JSON
@@ -131,51 +121,60 @@ public static class LogErrors
                     else
                     {
                         var errors = responseContent?.Data?.Errors != null ? string.Join(", ", responseContent.Data.Errors) : "Unknown API reported error";
-                        await Console.Error.WriteLineAsync($"API reported SMTP2GO failure: {errors}");
+                        await WriteToLogFileAsync($"API reported SMTP2GO failure: {errors}");
                         return false;
                     }
                 }
-                catch (JsonException)
+                catch (JsonException jsonEx)
                 {
-                    // Suppress detailed exception logging (expected for plain-text responses)
-                    await Console.Error.WriteLineAsync($"Raw API Response: {rawResponse}");
-
-                    // Workaround for current API behavior: Check if the plain-text response indicates success
-                    if (rawResponse?.Contains("successfully sent", StringComparison.OrdinalIgnoreCase) != true)
-                        return false;
-
-                    await Console.Error.WriteLineAsync("Plain-text response indicates success - treating as successful.");
-                    return true;
+                    // Failed to deserialize the JSON response. This is a failure.
+                    await WriteToLogFileAsync($"Failed to deserialize API response as JSON. Raw response: {rawResponse}. Exception: {jsonEx.Message}");
+                    return false;
                 }
             }
             else
             {
                 // API returned a non-success status code (e.g., 400, 401, 500)
                 var errorContent = await response.Content.ReadAsStringAsync(cts.Token);
-                await Console.Error.WriteLineAsync($"API returned non-success status code: {response.StatusCode}");
-                await Console.Error.WriteLineAsync($"API Error Response: {errorContent}");
+                await WriteToLogFileAsync($"API returned non-success status code: {response.StatusCode}. Response: {errorContent}");
                 return false; // API call failed
             }
         }
         catch (HttpRequestException httpEx)
         {
             // Handle network errors, DNS issues, connection refused, etc.
-            await Console.Error.WriteLineAsync($"HTTP Request failed when sending log to API: {httpEx.Message}");
-            // Optionally log httpEx details to a separate file or console
+            await WriteToLogFileAsync($"HTTP Request failed when sending log to API: {httpEx.Message}");
             return false; // Silently fail for logging system
         }
         catch (TaskCanceledException tcEx) when (tcEx.CancellationToken.IsCancellationRequested)
         {
             // Handle timeout
-            await Console.Error.WriteLineAsync("HTTP Request timed out when sending log to API.");
+            await WriteToLogFileAsync("HTTP Request timed out when sending log to API.");
             return false;
         }
         catch (Exception ex)
         {
             // Catch any other unexpected exceptions during the API call process
-            await Console.Error.WriteLineAsync($"An unexpected error occurred when sending log to API: {ex.Message}");
-            // Optionally log ex details
+            await WriteToLogFileAsync($"An unexpected error occurred when sending log to API: {ex.Message}");
             return false; // Silently fail for logging system
+        }
+    }
+
+    /// <summary>
+    /// Writes an error message to a local log file.
+    /// </summary>
+    /// <param name="message">The error message to write.</param>
+    private static async Task WriteToLogFileAsync(string message)
+    {
+        try
+        {
+            var logMessage = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}{Environment.NewLine}";
+            await File.AppendAllTextAsync(LogFilePath, logMessage);
+        }
+        catch
+        {
+            // If we can't write to the log file, there's nothing else we can do.
+            // This prevents an infinite loop of logging failures.
         }
     }
 }

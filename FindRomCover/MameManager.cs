@@ -35,10 +35,34 @@ public class MameManager
             // Deserialize the binary data to a list of MameManager objects
             return MessagePackSerializer.Deserialize<List<MameManager>>(binaryData);
         }
+        catch (MessagePackSerializationException ex)
+        {
+            // Specific handling for MessagePack deserialization errors
+            const string contextMessage = "The file mame.dat is corrupted or not in the correct MessagePack format.";
+            _ = LogErrors.LogErrorAsync(ex, contextMessage);
+
+            return []; // return an empty list
+        }
+        catch (IOException ex)
+        {
+            // Handle file access issues
+            const string contextMessage = "Error reading the file mame.dat (possibly locked by another process).";
+            _ = LogErrors.LogErrorAsync(ex, contextMessage);
+
+            return []; // return an empty list
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            // Handle permission issues
+            const string contextMessage = "Access denied to the file mame.dat.";
+            _ = LogErrors.LogErrorAsync(ex, contextMessage);
+
+            return []; // return an empty list
+        }
         catch (Exception ex)
         {
-            // Notify developer
-            const string contextMessage = "The file mame.dat could not be loaded or is corrupted.";
+            // Fallback for any other unexpected exceptions
+            const string contextMessage = "An unexpected error occurred while loading mame.dat.";
             _ = LogErrors.LogErrorAsync(ex, contextMessage);
 
             return []; // return an empty list
