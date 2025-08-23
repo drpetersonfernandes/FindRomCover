@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System.Collections.Concurrent;
+using System.IO;
 using FindRomCover.models;
 
 namespace FindRomCover;
@@ -17,25 +18,46 @@ public static class SimilarityCalculator
 
         string[] imageExtensions = ["*.png", "*.jpg", "*.jpeg"];
 
-        // Collect all image files first
+        // Use Directory.EnumerateFiles for memory efficiency with large directories
         var allImageFiles = new List<string>();
-        foreach (var ext in imageExtensions)
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            try
+            foreach (var ext in imageExtensions)
             {
-                var imageFiles = Directory.GetFiles(imageFolderPath, ext);
-                allImageFiles.AddRange(imageFiles);
+                cancellationToken.ThrowIfCancellationRequested();
+
+                // Process in batches to avoid memory issues with huge directories
+                const int batchSize = 1000;
+                var fileCount = 0;
+
+                foreach (var file in Directory.EnumerateFiles(imageFolderPath, ext))
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    allImageFiles.Add(file);
+                    fileCount++;
+
+                    // Process in batches to avoid memory spikes
+                    if (fileCount % batchSize == 0)
+                    {
+                        await Task.Delay(1, cancellationToken); // Yield to allow cancellation checks
+                    }
+                }
             }
-            catch (Exception ex)
-            {
-                throw new IOException($"Failed to access the directory: {imageFolderPath}", ex);
-            }
+        }
+        catch (Exception ex)
+        {
+            throw new IOException($"Failed to access the directory: {imageFolderPath}", ex);
+        }
+
+        // Limit total files to prevent memory issues
+        const int maxFilesToProcess = 10000;
+        if (allImageFiles.Count > maxFilesToProcess)
+        {
+            allImageFiles = allImageFiles.Take(maxFilesToProcess).ToList();
         }
 
         // First pass: Calculate similarity scores without loading images
-        var candidateFiles = new List<(string FilePath, string ImageName, double SimilarityScore)>();
-        var lockObject = new object();
+        var candidateFiles = new ConcurrentBag<(string FilePath, string ImageName, double SimilarityScore)>();
         var parallelOptions = new ParallelOptions
         {
             MaxDegreeOfParallelism = Environment.ProcessorCount,
@@ -50,6 +72,7 @@ public static class SimilarityCalculator
                 {
                     try
                     {
+                        cancellationToken.ThrowIfCancellationRequested();
                         var imageName = Path.GetFileNameWithoutExtension(imageFile);
 
                         var similarityScore = algorithm switch
@@ -60,28 +83,23 @@ public static class SimilarityCalculator
                             _ => throw new NotImplementedException($"Algorithm {algorithm} is not implemented.")
                         };
 
-                        if (!(similarityScore >= similarityThreshold)) return;
-
-                        lock (lockObject)
+                        if (similarityScore >= similarityThreshold)
                         {
                             candidateFiles.Add((imageFile, imageName, similarityScore));
                         }
                     }
                     catch (Exception ex)
                     {
-                        // Log individual file processing errors without stopping the entire operation
                         _ = LogErrors.LogErrorAsync(ex, $"Error processing file {imageFile}: {ex.Message}");
                     }
                 });
             }
             catch (OperationCanceledException)
             {
-                // Expected when the task is cancelled.
                 throw;
             }
             catch (Exception ex)
             {
-                // Log parallel processing errors
                 _ = LogErrors.LogErrorAsync(ex, $"Error in parallel processing: {ex.Message}");
                 throw;
             }
@@ -90,11 +108,14 @@ public static class SimilarityCalculator
         cancellationToken.ThrowIfCancellationRequested();
 
         // Sort candidates by similarity score and limit to prevent memory issues
-        candidateFiles.Sort((x, y) => y.SimilarityScore.CompareTo(x.SimilarityScore));
-        var topCandidates = candidateFiles.Take(MaxConcurrentImages).ToList();
+        var topCandidates = candidateFiles
+            .OrderByDescending(x => x.SimilarityScore)
+            .Take(MaxConcurrentImages)
+            .ToList();
 
         // Second pass: Load images only for top candidates
         var semaphore = new SemaphoreSlim(Environment.ProcessorCount, Environment.ProcessorCount);
+        var imageList = new ConcurrentBag<ImageData>();
 
         await Task.Run(() =>
         {
@@ -105,11 +126,9 @@ public static class SimilarityCalculator
                     semaphore.Wait(cancellationToken);
                     try
                     {
-                        // Load the image. ImageLoader is designed to handle all errors (including BitmapDecoder failures),
-                        // log them, and return null.
+                        cancellationToken.ThrowIfCancellationRequested();
                         var imageSource = ImageLoader.LoadImageToMemory(candidate.FilePath);
 
-                        // If loading failed, the error is already logged. We skip this file and continue.
                         if (imageSource == null) return;
 
                         var imageData = new ImageData(candidate.FilePath, candidate.ImageName, candidate.SimilarityScore)
@@ -117,10 +136,7 @@ public static class SimilarityCalculator
                             ImageSource = imageSource
                         };
 
-                        lock (lockObject)
-                        {
-                            tempList.Add(imageData);
-                        }
+                        imageList.Add(imageData);
                     }
                     finally
                     {
@@ -130,12 +146,10 @@ public static class SimilarityCalculator
             }
             catch (OperationCanceledException)
             {
-                // Expected on cancellation
                 throw;
             }
             catch (Exception ex)
             {
-                // Log parallel image loading errors
                 _ = LogErrors.LogErrorAsync(ex, $"Error in parallel image loading: {ex.Message}");
                 throw;
             }
@@ -143,22 +157,30 @@ public static class SimilarityCalculator
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        // Sort by similarity score in descending order
-        tempList.Sort((x, y) => y.SimilarityScore.CompareTo(x.SimilarityScore));
-
-        return tempList;
+        return imageList.OrderByDescending(x => x.SimilarityScore).ToList();
     }
+
 
     private static double CalculateLevenshteinSimilarity(string a, string b)
     {
-        // For long strings, use the memory-efficient version with two rows
-        if (a.Length > 1000 || b.Length > 1000)
+        // For very long strings, use the memory-efficient version
+        const int lengthThreshold = 500; // Lowered threshold for better memory management
+
+        if (a.Length > lengthThreshold || b.Length > lengthThreshold)
         {
             return CalculateLevenshteinSimilarityEfficient(a, b);
         }
 
         var lengthA = a.Length;
         var lengthB = b.Length;
+
+        // Add additional safeguard for moderately long strings
+        const long maxMemoryUsage = 100_000_000; // 100 MB
+        if ((long)(lengthA + 1) * (lengthB + 1) * sizeof(int) > maxMemoryUsage)
+        {
+            return CalculateLevenshteinSimilarityEfficient(a, b);
+        }
+
         var distances = new int[lengthA + 1, lengthB + 1];
 
         for (var i = 0; i <= lengthA; distances[i, 0] = i++)
@@ -178,8 +200,8 @@ public static class SimilarityCalculator
                 distances[i - 1, j - 1] + cost);
         }
 
-        var similarityThreshold = (1.0 - distances[lengthA, lengthB] / (double)Math.Max(a.Length, b.Length)) * 100;
-        return Math.Round(similarityThreshold, 2);
+        var similarity = (1.0 - distances[lengthA, lengthB] / (double)Math.Max(a.Length, b.Length)) * 100;
+        return Math.Round(similarity, 2);
     }
 
     private static double CalculateLevenshteinSimilarityEfficient(string a, string b)
@@ -220,16 +242,36 @@ public static class SimilarityCalculator
 
     private static double CalculateJaccardIndex(string a, string b)
     {
-        var setA = new HashSet<char>(a);
-        var setB = new HashSet<char>(b);
+        // Use 2-grams (bigrams) instead of individual characters to preserve some order information
+        var setA = GetNgrams(a, 2);
+        var setB = GetNgrams(b, 2);
 
-        var intersection = new HashSet<char>(setA);
+        var intersection = new HashSet<string>(setA);
         intersection.IntersectWith(setB);
 
-        var union = new HashSet<char>(setA);
+        var union = new HashSet<string>(setA);
         union.UnionWith(setB);
 
         return union.Count == 0 ? 0 : intersection.Count / (double)union.Count * 100;
+    }
+
+    private static HashSet<string> GetNgrams(string input, int n)
+    {
+        if (string.IsNullOrEmpty(input) || n <= 0)
+            return new HashSet<string>();
+
+        var ngrams = new HashSet<string>();
+
+        // Pad the string to handle boundaries
+        var padded = new string(' ', n - 1) + input + new string(' ', n - 1);
+
+        for (var i = 0; i <= padded.Length - n; i++)
+        {
+            var ngram = padded.Substring(i, n);
+            ngrams.Add(ngram);
+        }
+
+        return ngrams;
     }
 
     private static double CalculateJaroWinklerDistance(string s1, string s2)
