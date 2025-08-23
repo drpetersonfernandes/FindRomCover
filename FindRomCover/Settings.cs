@@ -142,7 +142,16 @@ public class Settings : INotifyPropertyChanged
             if (!File.Exists(SettingsFilePath))
             {
                 SetDefaultSettings();
-                SaveSettings();
+                try
+                {
+                    SaveSettings();
+                }
+                catch (Exception saveEx)
+                {
+                    // Log the error but continue with defaults
+                    _ = LogErrors.LogErrorAsync(saveEx, "Failed to save default settings to settings.xml");
+                }
+
                 return;
             }
 
@@ -186,19 +195,31 @@ public class Settings : INotifyPropertyChanged
                     .ToArray();
             }
 
-            if (_supportedExtensions.Length != 0) return;
+            // Check if supported extensions is null or empty (fixes issue #4)
+            if (_supportedExtensions == null || _supportedExtensions.Length == 0)
+            {
+                _supportedExtensions = GetDefaultExtensions();
+            }
 
-            _useMameDescription = bool.Parse(GetValue("UseMameDescription", "true"));
-
-            SetDefaultSettings();
-            SaveSettings();
+            // Safely parse UseMameDescription (fixes issue #5)
+            var useMameDescValue = GetValue("UseMameDescription", "true");
+            _useMameDescription = string.Equals(useMameDescValue, "true", StringComparison.OrdinalIgnoreCase);
         }
         catch (Exception ex)
         {
             MessageBox.Show($"Error loading settings from settings.xml: {ex.Message}\nUsing default settings.",
                 "Settings Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+
             SetDefaultSettings();
-            SaveSettings();
+            try
+            {
+                SaveSettings();
+            }
+            catch (Exception saveEx)
+            {
+                // Log the error but continue with defaults
+                _ = LogErrors.LogErrorAsync(saveEx, "Failed to save default settings after load error");
+            }
         }
     }
 
@@ -219,15 +240,26 @@ public class Settings : INotifyPropertyChanged
                     new XElement("SimilarityAlgorithm", SelectedSimilarityAlgorithm),
                     new XElement("BaseTheme", BaseTheme),
                     new XElement("AccentColor", AccentColor),
-                    new XElement("UseMameDescription", UseMameDescription)
+                    new XElement("UseMameDescription", UseMameDescription.ToString().ToLowerInvariant())
                 )
             );
             doc.Save(SettingsFilePath);
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error saving settings to settings.xml: {ex.Message}",
-                "Settings Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            var result = MessageBox.Show($"Error saving settings to settings.xml: {ex.Message}\n\n" +
+                                         "This could cause settings to be lost when the application closes.\n\n" +
+                                         "Would you like to continue anyway?", "Settings Error",
+                MessageBoxButton.YesNo, MessageBoxImage.Error);
+
+            if (result == MessageBoxResult.No)
+            {
+                // Re-throw if user doesn't want to continue
+                throw;
+            }
+
+            // Otherwise, log the error and continue
+            _ = LogErrors.LogErrorAsync(ex, "Failed to save settings");
         }
     }
 
@@ -235,7 +267,18 @@ public class Settings : INotifyPropertyChanged
     {
         // Directly set backing fields to avoid PropertyChanged events during default setting
         _similarityThreshold = 70;
-        _supportedExtensions =
+        _supportedExtensions = GetDefaultExtensions();
+        _imageWidth = 300;
+        _imageHeight = 300;
+        _selectedSimilarityAlgorithm = "Jaro-Winkler Distance";
+        _baseTheme = "Light";
+        _accentColor = "Blue";
+        _useMameDescription = true;
+    }
+
+    private static string[] GetDefaultExtensions()
+    {
+        return
         [
             "2hd", "3ds", "7z", "88d", "a78", "arc", "bat", "bin", "bs", "cas", "ccd", "cdi", "cdt", "chd", "cht",
             "ciso", "cmd", "col", "cpr", "cso", "cue", "cv", "d64", "d71", "d81", "d88", "dim", "dol", "dsk", "dup",
@@ -246,10 +289,5 @@ public class Settings : INotifyPropertyChanged
             "t64", "tap", "tgc", "toc", "trd", "tzx", "u1", "unf", "unif", "v64", "voc", "wad", "wbfs", "wua", "xci",
             "xdf", "z64", "z80", "zip", "zso"
         ];
-        _imageWidth = 300;
-        _imageHeight = 300;
-        _selectedSimilarityAlgorithm = "Jaro-Winkler Distance";
-        _baseTheme = "Light";
-        _accentColor = "Blue";
     }
 }
