@@ -27,12 +27,20 @@ public partial class AboutWindow
 
     private void Hyperlink_RequestNavigate(object sender, RequestNavigateEventArgs e)
     {
-        Process.Start(new ProcessStartInfo
+        try
         {
-            FileName = e.Uri.AbsoluteUri,
-            UseShellExecute = true
-        });
-        e.Handled = true;
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = e.Uri.AbsoluteUri,
+                UseShellExecute = true
+            });
+            e.Handled = true;
+        }
+        catch (Exception ex)
+        {
+            _ = LogErrors.LogErrorAsync(ex, "Error in Hyperlink_RequestNavigate");
+            throw;
+        }
     }
 
     private static string ApplicationVersion

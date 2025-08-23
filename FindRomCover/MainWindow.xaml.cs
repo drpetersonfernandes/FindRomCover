@@ -799,10 +799,8 @@ public partial class MainWindow : INotifyPropertyChanged
             {
                 _imageFolderPath = newPath;
             }
-            // If path is invalid but not empty, keep the old path
-            else if (!string.IsNullOrEmpty(newPath))
+            else if (!string.IsNullOrEmpty(newPath) && textBox.Text != _imageFolderPath)
             {
-                // Optionally show warning or revert text
                 textBox.Text = _imageFolderPath;
                 textBox.CaretIndex = textBox.Text.Length;
             }
