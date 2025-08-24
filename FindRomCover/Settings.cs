@@ -245,21 +245,33 @@ public class Settings : INotifyPropertyChanged
             );
             doc.Save(SettingsFilePath);
         }
+        catch (UnauthorizedAccessException ex)
+        {
+            MessageBox.Show($"Access denied to settings.xml: {ex.Message}\n\n" +
+                            "Try running as administrator or checking file permissions.\n\n" +
+                            "The application will close now.",
+                "Settings Error", MessageBoxButton.OK, MessageBoxImage.Error);
+
+            _ = LogErrors.LogErrorAsync(ex, "Failed to save settings");
+            Application.Current.Shutdown();
+        }
+        catch (IOException ex)
+        {
+            MessageBox.Show($"Error saving settings to settings.xml: {ex.Message}\n\n" +
+                            "The application will close now.",
+                "Settings Error", MessageBoxButton.OK, MessageBoxImage.Error);
+
+            _ = LogErrors.LogErrorAsync(ex, "Failed to save settings");
+            Application.Current.Shutdown();
+        }
         catch (Exception ex)
         {
-            var result = MessageBox.Show($"Error saving settings to settings.xml: {ex.Message}\n\n" +
-                                         "This could cause settings to be lost when the application closes.\n\n" +
-                                         "Would you like to continue anyway?", "Settings Error",
-                MessageBoxButton.YesNo, MessageBoxImage.Error);
+            MessageBox.Show($"Error saving settings to settings.xml: {ex.Message}\n\n" +
+                            "The application will close now.\n\n",
+                "Settings Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
-            if (result == MessageBoxResult.No)
-            {
-                // Re-throw if user doesn't want to continue
-                throw;
-            }
-
-            // Otherwise, log the error and continue
             _ = LogErrors.LogErrorAsync(ex, "Failed to save settings");
+            Application.Current.Shutdown();
         }
     }
 

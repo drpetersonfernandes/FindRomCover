@@ -1,4 +1,3 @@
-using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -13,16 +12,14 @@ namespace FindRomCover;
 
 public class ButtonFactory
 {
-    public static async Task<ObservableCollection<ImageData>> CreateSimilarImagesCollection(
+    public static async Task<List<ImageData>> CreateSimilarImagesCollection(
         string selectedRomFileName,
         string imageFolderPath,
         double similarityThreshold,
         string similarityAlgorithm,
         CancellationToken cancellationToken)
     {
-        var similarImages = new ObservableCollection<ImageData>();
-
-        // Logic to calculate similarity
+        // Perform all work off-thread safely
         var images = await SimilarityCalculator.CalculateSimilarityAsync(
             selectedRomFileName,
             imageFolderPath,
@@ -31,17 +28,10 @@ public class ButtonFactory
             cancellationToken
         );
 
-        if (cancellationToken.IsCancellationRequested)
-        {
-            return [];
-        }
-
-        foreach (var image in images)
-        {
-            similarImages.Add(image);
-        }
-
-        return similarImages;
+        // Return plain list — safe for cross-thread use
+        return cancellationToken.IsCancellationRequested
+            ? []
+            : images;
     }
 
     // Method to construct a context menu dynamically

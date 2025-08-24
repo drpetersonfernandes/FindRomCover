@@ -42,24 +42,25 @@ public static class ImageProcessor
         // Handle target file with retry logic
         if (File.Exists(targetPath))
         {
-            const int maxRetries = 3;
             var retryCount = 0;
+            const int maxRetriesBeforePrompt = 3;
 
-            while (retryCount < maxRetries)
+            while (true) // Infinite loop, controlled by break/return
             {
                 try
                 {
                     File.Delete(targetPath);
-                    break; // Success - exit retry loop
+                    break; // Success
                 }
                 catch (IOException ex) when (ex.Message.Contains("being used by another process"))
                 {
                     retryCount++;
-                    if (retryCount >= maxRetries)
+
+                    if (retryCount >= maxRetriesBeforePrompt)
                     {
                         var result = MessageBox.Show(
                             $"The file '{Path.GetFileName(targetPath)}' is in use by another process.\n\n" +
-                            $"Would you like to try again? (Attempt {retryCount}/{maxRetries})",
+                            "Would you like to keep trying?",
                             "File in Use",
                             MessageBoxButton.YesNo,
                             MessageBoxImage.Warning);
@@ -70,19 +71,18 @@ public static class ImageProcessor
                             return false;
                         }
 
-                        retryCount = 0; // Reset counter if user wants to try again
+                        // Reset counter and continue
+                        retryCount = 0;
                     }
                     else
                     {
-                        // Wait before retry
-                        Thread.Sleep(1000);
+                        Task.Delay(1000);
                     }
                 }
                 catch (UnauthorizedAccessException ex)
                 {
-                    MessageBox.Show($"Access denied to file: {targetPath}\n\n" +
-                                    "Try running as administrator.", "Permission Error",
-                        MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show($"Access denied to file: {targetPath}\n\nTry running as administrator.",
+                        "Permission Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     _ = LogErrors.LogErrorAsync(ex, $"Access denied: {targetPath}");
                     return false;
                 }

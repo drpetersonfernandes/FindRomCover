@@ -18,11 +18,10 @@ public static class PlaySound
             return;
         }
 
-        MediaPlayer? mediaPlayer = null;
         try
         {
             // Create a new instance for each playback to avoid state conflicts.
-            mediaPlayer = new MediaPlayer();
+            var mediaPlayer = new MediaPlayer();
 
             mediaPlayer.MediaOpened += static (sender, e) =>
             {
@@ -50,11 +49,6 @@ public static class PlaySound
         {
             // Notify developer
             _ = LogErrors.LogErrorAsync(ex, "Error in PlayClickSound");
-        }
-        finally
-        {
-            // Ensure the MediaPlayer is disposed if it was created
-            mediaPlayer?.Close();
         }
     }
 }

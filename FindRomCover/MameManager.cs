@@ -1,5 +1,6 @@
 using MessagePack;
 using System.IO;
+using System.Windows;
 
 namespace FindRomCover;
 
@@ -24,6 +25,8 @@ public class MameManager
             const string contextMessage = "The file 'mame.dat' could not be found in the application folder.";
             _ = LogErrors.LogErrorAsync(null, contextMessage);
 
+            MessageBox.Show(contextMessage, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+
             return []; // return an empty list
         }
 
@@ -41,6 +44,8 @@ public class MameManager
             const string contextMessage = "The file mame.dat is corrupted or not in the correct MessagePack format.";
             _ = LogErrors.LogErrorAsync(ex, contextMessage);
 
+            MessageBox.Show(contextMessage, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+
             return []; // return an empty list
         }
         catch (IOException ex)
@@ -48,6 +53,8 @@ public class MameManager
             // Handle file access issues
             const string contextMessage = "Error reading the file mame.dat (possibly locked by another process).";
             _ = LogErrors.LogErrorAsync(ex, contextMessage);
+
+            MessageBox.Show(contextMessage, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
             return []; // return an empty list
         }
@@ -57,13 +64,16 @@ public class MameManager
             const string contextMessage = "Access denied to the file mame.dat.";
             _ = LogErrors.LogErrorAsync(ex, contextMessage);
 
+            MessageBox.Show(contextMessage, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+
             return []; // return an empty list
         }
         catch (Exception ex)
         {
-            // Fallback for any other unexpected exceptions
             const string contextMessage = "An unexpected error occurred while loading mame.dat.";
             _ = LogErrors.LogErrorAsync(ex, contextMessage);
+
+            MessageBox.Show(contextMessage, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
             return []; // return an empty list
         }

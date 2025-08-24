@@ -19,6 +19,7 @@ public partial class MainWindow : INotifyPropertyChanged
     private readonly List<MameManager> _machines;
     private readonly Dictionary<string, string> _mameLookup;
 
+    private readonly Task? _currentFindTask;
     private CancellationTokenSource? _findSimilarCts;
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -107,8 +108,14 @@ public partial class MainWindow : INotifyPropertyChanged
     public object SimilarityThreshold { get; } = new(); // This property is not used in MainWindow, can be removed or bound to App.Settings.SimilarityThreshold
     public object SimilarityScore { get; } = new();
 
-    public MainWindow()
+    public MainWindow() : this(null)
     {
+        // This delegates to the existing constructor with null
+    }
+
+    public MainWindow(Task? currentFindTask)
+    {
+        _currentFindTask = currentFindTask;
         InitializeComponent();
         DataContext = this;
 
@@ -244,7 +251,7 @@ public partial class MainWindow : INotifyPropertyChanged
         {
             if (item is not MenuItem { Header: not null } menuItem) continue;
 
-            menuItem.IsChecked = menuItem.Header.ToString() == currentAccent;
+            menuItem.IsChecked = menuItem.Header.ToString()?.Replace("Accent", "") == currentAccent;
         }
     }
 
@@ -448,106 +455,105 @@ public partial class MainWindow : INotifyPropertyChanged
     {
         try
         {
-            // Cancel previous operation and wait for it to complete
+            // Cancel previous operation
             if (_findSimilarCts != null)
             {
                 await _findSimilarCts.CancelAsync();
-                await Task.Delay(10); // Small delay to ensure cancellation propagates
-                _findSimilarCts.Dispose();
-                _findSimilarCts = null;
-            }
-
-            // Create new cancellation token source
-            _findSimilarCts = new CancellationTokenSource();
-            var cancellationToken = _findSimilarCts.Token;
-
-            try
-            {
-                // Clear results if no selection
-                if (LstMissingImages.SelectedItem == null)
-                {
-                    SimilarImages.Clear();
-                    return;
-                }
-
-                // Get selection data
-                dynamic selectedItem = LstMissingImages.SelectedItem;
-                string romName = selectedItem.RomName;
-                string searchName = selectedItem.SearchName;
-
-                // Set loading state
-                IsFindingSimilar = true;
-
                 try
                 {
-                    _selectedRomFileName = romName;
-
-                    // Calculate similarity with cancellation support
-                    var newSimilarImages = await ButtonFactory.CreateSimilarImagesCollection(
-                        searchName,
-                        _imageFolderPath,
-                        App.Settings.SimilarityThreshold,
-                        SelectedSimilarityAlgorithm,
-                        cancellationToken
-                    );
-
-                    // Only update UI if operation wasn't cancelled
-                    if (!cancellationToken.IsCancellationRequested)
-                    {
-                        await Application.Current.Dispatcher.InvokeAsync(() =>
-                        {
-                            var textBlock = new TextBlock();
-                            textBlock.Inlines.Add(new Run("Search Query: "));
-                            textBlock.Inlines.Add(new Run($"{searchName} ") { FontWeight = FontWeights.Bold });
-                            textBlock.Inlines.Add(new Run("for ROM: "));
-                            textBlock.Inlines.Add(new Run($"{romName} ") { FontWeight = FontWeights.Bold });
-                            textBlock.Inlines.Add(new Run("with "));
-                            textBlock.Inlines.Add(new Run($"{SelectedSimilarityAlgorithm} ") { FontWeight = FontWeights.Bold });
-                            textBlock.Inlines.Add(new Run("algorithm"));
-                            LblSearchQuery.Content = textBlock;
-
-                            // Clear and update collection
-                            SimilarImages.Clear();
-                            foreach (var imageData in newSimilarImages)
-                            {
-                                SimilarImages.Add(imageData);
-                            }
-                        });
-                    }
+                    // Wait for the previous task to complete
+                    await _currentFindTask!; // Safe to suppress warning if you ensure non-null
                 }
                 catch (OperationCanceledException)
                 {
-                    // Expected when cancelled - just return
-                    return;
+                    // Expected — ignore
                 }
                 catch (Exception ex)
                 {
-                    if (!cancellationToken.IsCancellationRequested)
-                    {
-                        MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                        _ = LogErrors.LogErrorAsync(ex, "Error in LstMissingImages_SelectionChanged");
-                    }
+                    // Log unexpected errors from previous task
+                    _ = LogErrors.LogErrorAsync(ex, "Error in previous find operation");
                 }
                 finally
                 {
-                    // Only set IsFindingSimilar to false if not cancelled
-                    if (!cancellationToken.IsCancellationRequested)
-                    {
-                        IsFindingSimilar = false;
-                    }
-                }
-
-                // Scroll to top when new selection is made (only if not cancelled)
-                if (!cancellationToken.IsCancellationRequested)
-                {
-                    ImageScrollViewer.ScrollToTop();
+                    await _findSimilarCts.CancelAsync();
+                    _findSimilarCts.Dispose();
+                    _findSimilarCts = null;
                 }
             }
-            catch (Exception ex)
+
+            // Clear results if no selection
+            if (LstMissingImages.SelectedItem == null)
             {
+                SimilarImages.Clear();
+                LblSearchQuery.Content = null;
+                IsFindingSimilar = false;
+                return;
+            }
+
+            // Prepare for new operation
+            _findSimilarCts = new CancellationTokenSource();
+            var cancellationToken = _findSimilarCts.Token;
+
+            dynamic selectedItem = LstMissingImages.SelectedItem;
+            string romName = selectedItem.RomName;
+            string searchName = selectedItem.SearchName;
+
+            IsFindingSimilar = true;
+
+            try
+            {
+                _selectedRomFileName = romName;
+
+                var newSimilarImages = await ButtonFactory.CreateSimilarImagesCollection(
+                    searchName,
+                    _imageFolderPath,
+                    App.Settings.SimilarityThreshold,
+                    SelectedSimilarityAlgorithm,
+                    cancellationToken
+                );
+
                 if (!cancellationToken.IsCancellationRequested)
                 {
-                    _ = LogErrors.LogErrorAsync(ex, "Error in LstMissingImages_SelectionChanged");
+                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    {
+                        var textBlock = new TextBlock();
+                        textBlock.Inlines.Add(new Run("Search Query: "));
+                        textBlock.Inlines.Add(new Run($"{searchName} ") { FontWeight = FontWeights.Bold });
+                        textBlock.Inlines.Add(new Run("for ROM: "));
+                        textBlock.Inlines.Add(new Run($"{romName} ") { FontWeight = FontWeights.Bold });
+                        textBlock.Inlines.Add(new Run("with "));
+                        textBlock.Inlines.Add(new Run($"{SelectedSimilarityAlgorithm} ") { FontWeight = FontWeights.Bold });
+                        textBlock.Inlines.Add(new Run("algorithm"));
+                        LblSearchQuery.Content = textBlock;
+
+                        SimilarImages.Clear();
+                        foreach (var imageData in newSimilarImages)
+                        {
+                            SimilarImages.Add(imageData);
+                        }
+                    });
+
+                    if (!cancellationToken.IsCancellationRequested)
+                    {
+                        ImageScrollViewer.ScrollToTop();
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected — do nothing
+            }
+            catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+            {
+                MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _ = LogErrors.LogErrorAsync(ex, "Error in LstMissingImages_SelectionChanged");
+            }
+            finally
+            {
+                // Always reset UI state unless cancelled
+                if (!cancellationToken.IsCancellationRequested)
+                {
+                    IsFindingSimilar = false;
                 }
             }
         }
@@ -556,6 +562,7 @@ public partial class MainWindow : INotifyPropertyChanged
             _ = LogErrors.LogErrorAsync(ex, "Error in LstMissingImages_SelectionChanged");
         }
     }
+
 
     private void ImageCell_Click(object sender, RoutedEventArgs e)
     {
