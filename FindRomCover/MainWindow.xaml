@@ -151,9 +151,6 @@
             </MenuItem>
             <MenuItem Header="Settings">
                 <MenuItem x:Name="MenuUseMameDescription" Header="Use MAME Description" IsCheckable="True" Click="MenuUseMameDescription_Click">
-                    <MenuItem.Icon>
-                        <Image Source="pack://application:,,,/images/settings.png" Width="16" Height="16" />
-                    </MenuItem.Icon>
                 </MenuItem>
                 <MenuItem Click="EditExtensions_Click" Header="Edit Supported Extensions...">
                     <MenuItem.Icon>
