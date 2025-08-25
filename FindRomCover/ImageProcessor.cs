@@ -33,9 +33,11 @@ public static class ImageProcessor
         {
             MessageBox.Show($"Cannot write to directory: {directory}\n\n" +
                             $"Error: {ex.Message}\n\n" +
-                            $"Try running as administrator.", "Permission Error",
-                MessageBoxButton.OK, MessageBoxImage.Error);
+                            $"Try running as administrator.",
+                "Permission Error", MessageBoxButton.OK, MessageBoxImage.Error);
+
             _ = LogErrors.LogErrorAsync(ex, $"Cannot write to directory: {directory}");
+
             return false;
         }
 

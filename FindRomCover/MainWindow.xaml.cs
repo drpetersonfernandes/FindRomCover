@@ -329,7 +329,7 @@ public partial class MainWindow : INotifyPropertyChanged
 
     private async Task LoadMissingImagesList()
     {
-        if (App.Settings.SupportedExtensions.Length == 0)
+        if ((App.Settings.SupportedExtensions.Length == 0) | (false))
         {
             MessageBox.Show("No supported file extensions loaded. Please check file 'settings.xml' or edit them in the Settings menu.",
                 "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);

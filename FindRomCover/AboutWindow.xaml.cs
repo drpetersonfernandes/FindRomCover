@@ -38,8 +38,8 @@ public partial class AboutWindow
         }
         catch (Exception ex)
         {
+            MessageBox.Show("Unable to open the link.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             _ = LogErrors.LogErrorAsync(ex, "Error in Hyperlink_RequestNavigate");
-            throw;
         }
     }
 

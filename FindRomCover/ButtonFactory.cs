@@ -34,7 +34,6 @@ public class ButtonFactory
             : images;
     }
 
-    // Method to construct a context menu dynamically
     public static ContextMenu CreateContextMenu(string imagePath, Action<string?> useImageAction)
     {
         if (string.IsNullOrEmpty(imagePath))
@@ -44,23 +43,25 @@ public class ButtonFactory
 
         var contextMenu = new ContextMenu();
 
-        // "Use This Image" menu item
-        var useThisImageIcon = new Image
+        // Only add "Use This Image" menu item if the action is provided
+        if (useImageAction != null)
         {
-            Source = new BitmapImage(new Uri("pack://application:,,,/images/usethis.png")),
-            Width = 16,
-            Height = 16,
-            Margin = new Thickness(2)
-        };
-        var useThisImageMenuItem = new MenuItem
-        {
-            Header = "Use This Image",
-            // Use a new command that invokes the passed-in action
-            Command = new DelegateCommand(p => useImageAction?.Invoke(p as string)),
-            CommandParameter = imagePath,
-            Icon = useThisImageIcon
-        };
-        contextMenu.Items.Add(useThisImageMenuItem);
+            var useThisImageIcon = new Image
+            {
+                Source = new BitmapImage(new Uri("pack://application:,,,/images/usethis.png")),
+                Width = 16,
+                Height = 16,
+                Margin = new Thickness(2)
+            };
+            var useThisImageMenuItem = new MenuItem
+            {
+                Header = "Use This Image",
+                Command = new DelegateCommand(p => useImageAction.Invoke(p as string)),
+                CommandParameter = imagePath,
+                Icon = useThisImageIcon
+            };
+            contextMenu.Items.Add(useThisImageMenuItem);
+        }
 
         // "Copy Image Filename" menu item
         var copyIcon = new Image

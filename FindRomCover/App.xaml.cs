@@ -21,10 +21,16 @@ public partial class App
         Settings.SaveSettings(); // Saves the public static Settings instance
     }
 
-    // This method was missing in the previous response's code block for App.xaml.cs. Re-adding it.
     private static void ApplyTheme(string baseTheme, string accentColor)
     {
-        ThemeManager.Current.ChangeTheme(Current, $"{baseTheme}.{accentColor}");
+        try
+        {
+            ThemeManager.Current.ChangeTheme(Current, $"{baseTheme}.{accentColor}");
+        }
+        catch (Exception ex)
+        {
+            _ = LogErrors.LogErrorAsync(ex, $"Error applying theme: {baseTheme}.{accentColor}");
+        }
     }
 
     public static void ApplyThemeToWindow(Window window)

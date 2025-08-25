@@ -12,12 +12,12 @@ public static class LogErrors
     private const string ApiKey = "hjh7yu6t56tyr540o9u8767676r5674534453235264c75b6t7ggghgg76trf564e";
     private const string BugReportApiUrl = "https://www.purelogiccode.com/bugreport/api/send-bug-report";
     private static readonly string LogFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "LogError.txt");
+    private static readonly string UserLogFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "UserLogError.txt");
 
     public static async Task LogErrorAsync(Exception? ex, string? contextMessage = null)
     {
-        var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
-        var errorLogPath = Path.Combine(baseDirectory, "error.log");
-        var userLogPath = Path.Combine(baseDirectory, "error_user.log");
+        var errorLogPath = LogFilePath;
+        var userLogPath = UserLogFilePath;
         var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString();
         version ??= "Unknown";
 

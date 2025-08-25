@@ -249,29 +249,26 @@ public class Settings : INotifyPropertyChanged
         {
             MessageBox.Show($"Access denied to settings.xml: {ex.Message}\n\n" +
                             "Try running as administrator or checking file permissions.\n\n" +
-                            "The application will close now.",
+                            "You settings will not be saved!",
                 "Settings Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
             _ = LogErrors.LogErrorAsync(ex, "Failed to save settings");
-            Application.Current.Shutdown();
         }
         catch (IOException ex)
         {
             MessageBox.Show($"Error saving settings to settings.xml: {ex.Message}\n\n" +
-                            "The application will close now.",
+                            "You settings will not be saved!",
                 "Settings Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
             _ = LogErrors.LogErrorAsync(ex, "Failed to save settings");
-            Application.Current.Shutdown();
         }
         catch (Exception ex)
         {
             MessageBox.Show($"Error saving settings to settings.xml: {ex.Message}\n\n" +
-                            "The application will close now.\n\n",
+                            "You settings will not be saved!",
                 "Settings Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
             _ = LogErrors.LogErrorAsync(ex, "Failed to save settings");
-            Application.Current.Shutdown();
         }
     }
 

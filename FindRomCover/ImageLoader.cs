@@ -8,7 +8,6 @@ public static class ImageLoader
 {
     public static BitmapImage? LoadImageToMemory(string? imagePath)
     {
-        // Check if the path is null/empty
         if (string.IsNullOrEmpty(imagePath))
         {
             _ = LogErrors.LogErrorAsync(new ArgumentNullException(nameof(imagePath)),
@@ -16,8 +15,6 @@ public static class ImageLoader
             return null;
         }
 
-        // Don't check File.Exists() here - let the FileStream handle it
-        // This avoids the race condition between existence check and file access
         try
         {
             var memoryImage = new BitmapImage();
