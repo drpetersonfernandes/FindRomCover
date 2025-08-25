@@ -201,9 +201,15 @@ public class Settings : INotifyPropertyChanged
                 _supportedExtensions = GetDefaultExtensions();
             }
 
-            // Safely parse UseMameDescription (fixes issue #5)
             var useMameDescValue = GetValue("UseMameDescription", "true");
-            _useMameDescription = string.Equals(useMameDescValue, "true", StringComparison.OrdinalIgnoreCase);
+            if (string.IsNullOrEmpty(useMameDescValue))
+            {
+                _useMameDescription = false;
+            }
+            else
+            {
+                _useMameDescription = string.Equals(useMameDescValue, "true", StringComparison.OrdinalIgnoreCase);
+            }
         }
         catch (Exception ex)
         {
@@ -249,7 +255,7 @@ public class Settings : INotifyPropertyChanged
         {
             MessageBox.Show($"Access denied to settings.xml: {ex.Message}\n\n" +
                             "Try running as administrator or checking file permissions.\n\n" +
-                            "You settings will not be saved!",
+                            "Your settings will not be saved!",
                 "Settings Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
             _ = LogErrors.LogErrorAsync(ex, "Failed to save settings");
@@ -257,7 +263,7 @@ public class Settings : INotifyPropertyChanged
         catch (IOException ex)
         {
             MessageBox.Show($"Error saving settings to settings.xml: {ex.Message}\n\n" +
-                            "You settings will not be saved!",
+                            "Your settings will not be saved!",
                 "Settings Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
             _ = LogErrors.LogErrorAsync(ex, "Failed to save settings");
@@ -265,7 +271,7 @@ public class Settings : INotifyPropertyChanged
         catch (Exception ex)
         {
             MessageBox.Show($"Error saving settings to settings.xml: {ex.Message}\n\n" +
-                            "You settings will not be saved!",
+                            "Your settings will not be saved!",
                 "Settings Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
             _ = LogErrors.LogErrorAsync(ex, "Failed to save settings");
@@ -274,7 +280,6 @@ public class Settings : INotifyPropertyChanged
 
     private void SetDefaultSettings()
     {
-        // Directly set backing fields to avoid PropertyChanged events during default setting
         _similarityThreshold = 70;
         _supportedExtensions = GetDefaultExtensions();
         _imageWidth = 300;

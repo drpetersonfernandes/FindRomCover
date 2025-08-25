@@ -10,11 +10,11 @@ public static class PlaySound
 
     public static void PlayClickSound()
     {
-        // Check if the sound file exists before attempting to play it
         if (!File.Exists(SoundPath))
         {
             _ = LogErrors.LogErrorAsync(new FileNotFoundException($"Sound file not found: {SoundPath}"),
                 "Sound file missing");
+
             return;
         }
 
@@ -25,7 +25,6 @@ public static class PlaySound
 
             mediaPlayer.MediaOpened += static (sender, e) =>
             {
-                // The sender is the new mediaPlayer instance
                 ((MediaPlayer?)sender)?.Play();
             };
 
@@ -39,6 +38,7 @@ public static class PlaySound
             {
                 // Clean up on failure and log the error
                 ((MediaPlayer?)sender)?.Close();
+
                 _ = LogErrors.LogErrorAsync(e.ErrorException, $"Failed to play sound: {SoundPath}");
             };
 
@@ -47,7 +47,6 @@ public static class PlaySound
         }
         catch (Exception ex)
         {
-            // Notify developer
             _ = LogErrors.LogErrorAsync(ex, "Error in PlayClickSound");
         }
     }

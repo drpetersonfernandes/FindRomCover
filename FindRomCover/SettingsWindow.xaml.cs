@@ -50,20 +50,21 @@ public partial class SettingsWindow
                 return;
             }
 
+            // Check for duplicates BEFORE normalization to catch any case variations
+            if (_supportedExtensions.Contains(newExtension, StringComparer.OrdinalIgnoreCase))
+            {
+                await this.ShowMessageAsync("Duplicate",
+                    $"The extension '{newExtension}' already exists (case-insensitive match).");
+                return;
+            }
+
             // Normalize to lowercase for consistency
             newExtension = newExtension.ToLowerInvariant();
 
-            if (_supportedExtensions.Contains(newExtension, StringComparer.OrdinalIgnoreCase))
-            {
-                await this.ShowMessageAsync("Duplicate", $"The extension '{newExtension}' already exists.");
-            }
-            else
-            {
-                var insertIndex = FindInsertIndex(newExtension);
-                _supportedExtensions.Insert(insertIndex, newExtension);
+            var insertIndex = FindInsertIndex(newExtension);
+            _supportedExtensions.Insert(insertIndex, newExtension);
 
-                LstSupportedExtensions.SelectedItem = newExtension;
-            }
+            LstSupportedExtensions.SelectedItem = newExtension;
         }
         catch (Exception ex)
         {
@@ -135,6 +136,15 @@ public partial class SettingsWindow
                     {
                         _supportedExtensions.Remove(invalid);
                     }
+
+                    // Re-sort the ObservableCollection to maintain UI consistency
+                    var sortedExtensions = _supportedExtensions.OrderBy(static ext => ext, StringComparer.OrdinalIgnoreCase)
+                        .ToList();
+                    _supportedExtensions.Clear();
+                    foreach (var ext in sortedExtensions)
+                    {
+                        _supportedExtensions.Add(ext);
+                    }
                 }
                 else
                 {
@@ -145,8 +155,8 @@ public partial class SettingsWindow
 
             // Ensure extensions are lowercase for consistency
             var normalizedExtensions = _supportedExtensions
-                .Select(ext => ext.ToLowerInvariant())
-                .OrderBy(ext => ext, StringComparer.OrdinalIgnoreCase)
+                .Select(static ext => ext.ToLowerInvariant())
+                .OrderBy(static ext => ext, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
 
             _settings.SupportedExtensions = normalizedExtensions;

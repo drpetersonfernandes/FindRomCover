@@ -16,6 +16,8 @@ namespace FindRomCover;
 
 public partial class MainWindow : INotifyPropertyChanged
 {
+    private CancellationTokenSource? _loadMissingCts;
+
     private readonly List<MameManager> _machines;
     private readonly Dictionary<string, string> _mameLookup;
 
@@ -198,7 +200,7 @@ public partial class MainWindow : INotifyPropertyChanged
             case nameof(Settings.AccentColor):
                 // Accent color is handled by App.ChangeTheme, which applies globally.
                 // Ensure menu checks are updated.
-                UpdateAccentColorChecks(); // This is the call that was reported as "Cannot resolve symbol"
+                UpdateAccentColorChecks();
                 break;
             case nameof(Settings.ImageWidth):
             case nameof(Settings.ImageHeight):
@@ -319,7 +321,15 @@ public partial class MainWindow : INotifyPropertyChanged
     {
         try
         {
-            await LoadMissingImagesList();
+            // Cancel any existing operation
+            if (_loadMissingCts != null)
+            {
+                await _loadMissingCts.CancelAsync();
+                _loadMissingCts.Dispose();
+            }
+
+            _loadMissingCts = new CancellationTokenSource();
+            await LoadMissingImagesList(_loadMissingCts.Token);
         }
         catch (Exception ex)
         {
@@ -327,11 +337,12 @@ public partial class MainWindow : INotifyPropertyChanged
         }
     }
 
-    private async Task LoadMissingImagesList()
+    private async Task LoadMissingImagesList(CancellationToken cancellationToken = default)
     {
         if ((App.Settings.SupportedExtensions.Length == 0) | (false))
         {
-            MessageBox.Show("No supported file extensions loaded. Please check file 'settings.xml' or edit them in the Settings menu.",
+            MessageBox.Show(
+                "No supported file extensions loaded. Please check file 'settings.xml' or edit them in the Settings menu.",
                 "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
@@ -353,16 +364,46 @@ public partial class MainWindow : INotifyPropertyChanged
             {
                 try
                 {
+                    // Check for cancellation at the start
+                    cancellationToken.ThrowIfCancellationRequested();
+
                     var searchPatterns = App.Settings.SupportedExtensions.Select(ext => "*." + ext).ToArray();
-                    var allRomNames = searchPatterns
-                        .SelectMany(pattern => Directory.GetFiles(romFolderPath, pattern))
-                        .Select(Path.GetFileNameWithoutExtension)
-                        .Distinct(StringComparer.OrdinalIgnoreCase)
-                        .ToList();
+                    var allRomNames = new List<string>();
+
+                    // Process each pattern with cancellation checks
+                    foreach (var pattern in searchPatterns)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        try
+                        {
+                            var files = Directory.GetFiles(romFolderPath, pattern);
+                            var names = files.Select(Path.GetFileNameWithoutExtension)
+                                .Where(name => name != null)
+                                .Cast<string>();
+                            allRomNames.AddRange(names);
+                        }
+                        catch (DirectoryNotFoundException)
+                        {
+                            // Skip this pattern if directory issues occur
+                            continue;
+                        }
+                    }
+
+                    // Remove duplicates
+                    allRomNames = allRomNames.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 
                     var missing = new List<(string RomName, string SearchName)>();
+                    var processedCount = 0;
+
                     foreach (var romName in allRomNames)
                     {
+                        // Check for cancellation periodically (every 100 items)
+                        if (++processedCount % 100 == 0)
+                        {
+                            cancellationToken.ThrowIfCancellationRequested();
+                        }
+
                         if (romName != null && FindCorrespondingImage(romName, imageFolderPath) == null)
                         {
                             if (App.Settings.UseMameDescription &&
@@ -378,7 +419,15 @@ public partial class MainWindow : INotifyPropertyChanged
                         }
                     }
 
+                    // Final cancellation check before returning
+                    cancellationToken.ThrowIfCancellationRequested();
+
                     return missing.OrderBy(x => x.RomName).ToList();
+                }
+                catch (OperationCanceledException)
+                {
+                    // Re-throw cancellation exceptions
+                    throw;
                 }
                 catch (UnauthorizedAccessException ex)
                 {
@@ -392,7 +441,10 @@ public partial class MainWindow : INotifyPropertyChanged
                 {
                     throw new InvalidOperationException($"Error scanning folders: {ex.Message}", ex);
                 }
-            });
+            }, cancellationToken);
+
+            // Check cancellation before updating UI
+            cancellationToken.ThrowIfCancellationRequested();
 
             // Only update UI if we got valid results
             LstMissingImages.Items.Clear();
@@ -405,14 +457,13 @@ public partial class MainWindow : INotifyPropertyChanged
 
             UpdateMissingCount();
         }
+        catch (OperationCanceledException)
+        {
+            // Operation was cancelled - clean up UI state but don't show error
+            return;
+        }
         catch (Exception ex)
         {
-            // Operation is cancelled - just return
-            if (ex is OperationCanceledException)
-            {
-                return;
-            }
-
             // Show user-friendly error
             string userMessage;
             if (ex is InvalidOperationException ioEx)
@@ -421,7 +472,8 @@ public partial class MainWindow : INotifyPropertyChanged
             }
             else
             {
-                userMessage = "There was an error checking for missing image files.\n\nCheck if the provided folders are valid.";
+                userMessage =
+                    "There was an error checking for missing image files.\n\nCheck if the provided folders are valid.";
             }
 
             MessageBox.Show(userMessage, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -462,7 +514,7 @@ public partial class MainWindow : INotifyPropertyChanged
                 try
                 {
                     // Wait for the previous task to complete
-                    await _currentFindTask!; // Safe to suppress warning if you ensure non-null
+                    if (_currentFindTask != null) await _currentFindTask;
                 }
                 catch (OperationCanceledException)
                 {
@@ -541,7 +593,7 @@ public partial class MainWindow : INotifyPropertyChanged
             }
             catch (OperationCanceledException)
             {
-                // Expected — do nothing
+                MessageBox.Show("Search cancelled.", "Cancelled", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
             {
@@ -641,23 +693,30 @@ public partial class MainWindow : INotifyPropertyChanged
         if (LstMissingImages.SelectedItem == null || LstMissingImages.SelectedIndex < 0)
             return;
 
-        var oldIndex = LstMissingImages.SelectedIndex;
-        LstMissingImages.Items.RemoveAt(oldIndex);
-
-        // Select next logical item
-        if (LstMissingImages.Items.Count > 0)
+        try
         {
-            // Calculate new index - ensure it's valid
-            var newIndex = Math.Min(oldIndex, LstMissingImages.Items.Count - 1);
+            var oldIndex = LstMissingImages.SelectedIndex;
+            LstMissingImages.Items.RemoveAt(oldIndex);
 
-            LstMissingImages.SelectedIndex = newIndex;
-
-            // Only scroll if we have a valid item to scroll to
-            if (newIndex >= 0 && LstMissingImages.Items.Count > newIndex)
+            // Select next logical item
+            if (LstMissingImages.Items.Count > 0)
             {
-                var itemToScrollTo = LstMissingImages.Items[newIndex];
-                if (itemToScrollTo != null) LstMissingImages.ScrollIntoView(itemToScrollTo);
+                // Calculate new index - ensure it's valid
+                var newIndex = Math.Min(oldIndex, LstMissingImages.Items.Count - 1);
+
+                LstMissingImages.SelectedIndex = newIndex;
+
+                // Only scroll if we have a valid item to scroll to
+                if (newIndex >= 0 && LstMissingImages.Items.Count > newIndex)
+                {
+                    var itemToScrollTo = LstMissingImages.Items[newIndex];
+                    if (itemToScrollTo != null) LstMissingImages.ScrollIntoView(itemToScrollTo);
+                }
             }
+        }
+        catch (Exception ex)
+        {
+            _ = LogErrors.LogErrorAsync(ex, "Error in RemoveSelectedItem");
         }
 
         UpdateMissingCount();
@@ -690,24 +749,34 @@ public partial class MainWindow : INotifyPropertyChanged
 
     private void SetSimilarityThreshold_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is not MenuItem clickedItem) return;
-
-        var headerText = clickedItem.Header.ToString()?.Replace("%", "") ?? "70";
-
-        if (double.TryParse(headerText, out var rate))
+        if (sender is not MenuItem clickedItem)
         {
-            App.Settings.SimilarityThreshold = rate; // Use App.Settings
-            App.Settings.SaveSettings(); // Save the settings
+            return;
         }
-        else
-        {
-            MessageBox.Show("Invalid similarity threshold selected.\n\n" +
-                            "The error was reported to the developer that will try to fix the issue.",
-                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
-            const string formattedException = "Invalid similarity threshold selected.";
-            var ex = new Exception(formattedException);
-            _ = LogErrors.LogErrorAsync(ex, formattedException);
+        try
+        {
+            var headerText = clickedItem.Header.ToString()?.Replace("%", "") ?? "70";
+
+            if (double.TryParse(headerText, out var rate))
+            {
+                App.Settings.SimilarityThreshold = rate;
+                App.Settings.SaveSettings();
+            }
+            else
+            {
+                MessageBox.Show("Invalid similarity threshold selected.\n\n" +
+                                "The error was reported to the developer that will try to fix the issue.",
+                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+
+                const string formattedException = "Invalid similarity threshold selected.";
+                var ex = new Exception(formattedException);
+                _ = LogErrors.LogErrorAsync(ex, formattedException);
+            }
+        }
+        catch (Exception ex)
+        {
+            _ = LogErrors.LogErrorAsync(ex, "Error in SetSimilarityThreshold_Click");
         }
     }
 
@@ -733,25 +802,36 @@ public partial class MainWindow : INotifyPropertyChanged
     private void SetThumbnailSize_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not MenuItem { Header: not null } menuItem)
-            return;
-
-        // Extract number from header using regex for robustness
-        var headerText = menuItem.Header.ToString();
-        if (string.IsNullOrEmpty(headerText))
-            return;
-
-        var match = Regex.Match(headerText, @"\d+");
-
-        if (!match.Success || !int.TryParse(match.Value, out var size))
         {
-            MessageBox.Show("Invalid thumbnail size selected.", "Error",
-                MessageBoxButton.OK, MessageBoxImage.Error);
             return;
         }
 
-        App.Settings.ImageWidth = size;
-        App.Settings.ImageHeight = size;
-        App.Settings.SaveSettings();
+        var headerText = menuItem.Header.ToString();
+        if (string.IsNullOrEmpty(headerText))
+        {
+            return;
+        }
+
+        try
+        {
+            var match = Regex.Match(headerText, @"\d+");
+
+            if (!match.Success || !int.TryParse(match.Value, out var size))
+            {
+                MessageBox.Show("Invalid thumbnail size selected.",
+                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+
+                return;
+            }
+
+            App.Settings.ImageWidth = size;
+            App.Settings.ImageHeight = size;
+            App.Settings.SaveSettings();
+        }
+        catch (Exception ex)
+        {
+            _ = LogErrors.LogErrorAsync(ex, "Error in SetThumbnailSize_Click");
+        }
     }
 
     private void UpdateThumbnailSizeMenuChecks()
@@ -801,24 +881,17 @@ public partial class MainWindow : INotifyPropertyChanged
         {
             var newPath = textBox.Text.Trim();
 
-            // Only update if path is valid
-            if (!string.IsNullOrEmpty(newPath) && Directory.Exists(newPath))
+            switch (string.IsNullOrEmpty(newPath))
             {
-                _imageFolderPath = newPath;
-            }
-            else if (!string.IsNullOrEmpty(newPath) && textBox.Text != _imageFolderPath)
-            {
-                textBox.Text = _imageFolderPath;
-                textBox.CaretIndex = textBox.Text.Length;
+                case false when Directory.Exists(newPath):
+                    _imageFolderPath = newPath;
+                    break;
+                case false when textBox.Text != _imageFolderPath:
+                    textBox.Text = _imageFolderPath;
+                    textBox.CaretIndex = textBox.Text.Length;
+                    break;
             }
         }
-    }
-
-    // Unsubscribe from PropertyChanged when the window closes to prevent memory leaks
-    protected override void OnClosed(EventArgs e)
-    {
-        App.Settings.PropertyChanged -= AppSettings_PropertyChanged;
-        base.OnClosed(e);
     }
 
     private void LstMissingImages_KeyDown(object sender, KeyEventArgs e)
@@ -852,5 +925,16 @@ public partial class MainWindow : INotifyPropertyChanged
         RemoveSelectedItem();
         SimilarImages.Clear();
         PlaySound.PlayClickSound();
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        App.Settings.PropertyChanged -= AppSettings_PropertyChanged;
+
+        // Clean up cancellation tokens
+        _findSimilarCts?.Dispose();
+        _loadMissingCts?.Dispose();
+
+        base.OnClosed(e);
     }
 }
