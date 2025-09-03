@@ -57,18 +57,24 @@ public static class ImageProcessor
                     MessageBoxButton.OK, MessageBoxImage.Error);
 
                 _ = LogErrors.LogErrorAsync(ex, $"User cancelled retry for file in use: {targetPath}");
+
+                return false;
             }
             catch (UnauthorizedAccessException ex)
             {
                 MessageBox.Show($"Access denied to file: {targetPath}\n\nTry running as administrator.",
                     "Permission Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 _ = LogErrors.LogErrorAsync(ex, $"Access denied: {targetPath}");
+
+                return false;
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Error deleting file: {ex.Message}", "Error",
                     MessageBoxButton.OK, MessageBoxImage.Error);
                 _ = LogErrors.LogErrorAsync(ex, $"Error deleting file: {targetPath}");
+
+                return false;
             }
         }
 
@@ -281,21 +287,6 @@ public static class ImageProcessor
             bitmap.Save(targetPath, ImageFormat.Png);
             bitmap.Dispose();
             return true;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-
-    private static bool TrySaveAsJpg(string sourcePath, string targetPath)
-    {
-        try
-        {
-            using var sourceImage = Image.FromFile(sourcePath);
-            sourceImage.Save(targetPath, ImageFormat.Jpeg);
-            return File.Exists(targetPath);
         }
         catch
         {

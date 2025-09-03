@@ -21,12 +21,6 @@ public class MameManager
 
         if (!File.Exists(datPath))
         {
-            // Notify developer
-            const string contextMessage = "The file 'mame.dat' could not be found in the application folder.";
-            _ = LogErrors.LogErrorAsync(null, contextMessage);
-
-            MessageBox.Show(contextMessage, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-
             return []; // return an empty list
         }
 

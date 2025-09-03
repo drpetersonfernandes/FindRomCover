@@ -245,9 +245,10 @@
                                 <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <TextBox x:Name="TxtImageFolder" Grid.Column="0"
-                                     controls:TextBoxHelper.Watermark="Path to your image folder..." 
-                                     TextChanged="TxtImageFolder_TextChanged" 
-                                     LostFocus="TxtImageFolder_LostFocus" />
+                                     controls:TextBoxHelper.Watermark="Path to your image folder..."
+                                     TextChanged="TxtImageFolder_TextChanged"
+                                     LostFocus="TxtImageFolder_LostFocus"
+                                     PreviewKeyDown="TxtImageFolder_PreviewKeyDown" />
                             <Button Grid.Column="1" Content="Browse..." Margin="5,0,0,0"
                                     Click="BtnBrowseImageFolder_Click" />
                         </Grid>

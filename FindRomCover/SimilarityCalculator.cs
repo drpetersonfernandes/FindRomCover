@@ -9,8 +9,12 @@ public static class SimilarityCalculator
     // Add a configurable limit for maximum concurrent image loading
     private const int MaxConcurrentImages = 30;
 
-    public static async Task<List<ImageData>> CalculateSimilarityAsync(string selectedFileName, string imageFolderPath,
-        double similarityThreshold, string algorithm, CancellationToken cancellationToken)
+    public static async Task<List<ImageData>> CalculateSimilarityAsync(
+        string selectedFileName,
+        string imageFolderPath,
+        double similarityThreshold,
+        string algorithm,
+        CancellationToken cancellationToken)
     {
         var tempList = new List<ImageData>();
 
@@ -19,49 +23,8 @@ public static class SimilarityCalculator
         string[] imageExtensions = ["*.png", "*.jpg", "*.jpeg"];
 
         // Use Directory.EnumerateFiles for memory efficiency with large directories
-        // and limit the total number of files processed
-        var allImageFiles = new List<string>();
-        const int maxFilesToProcess = 10000;
-        var totalFileCount = 0;
-
-        try
-        {
-            foreach (var ext in imageExtensions)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                // Process files with a limit to prevent memory issues
-                foreach (var file in Directory.EnumerateFiles(imageFolderPath, ext))
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    allImageFiles.Add(file);
-                    totalFileCount++;
-
-                    // Stop if we've reached the maximum number of files to process
-                    if (totalFileCount >= maxFilesToProcess)
-                    {
-                        break;
-                    }
-
-                    // Yield periodically to allow cancellation checks
-                    if (totalFileCount % 1000 == 0)
-                    {
-                        await Task.Delay(1, cancellationToken);
-                    }
-                }
-
-                // Break outer loop too if we've reached the limit
-                if (totalFileCount >= maxFilesToProcess)
-                {
-                    break;
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            throw new IOException($"Failed to access the directory: {imageFolderPath}", ex);
-        }
+        var allImageFiles = imageExtensions
+            .SelectMany(ext => Directory.EnumerateFiles(imageFolderPath, ext));
 
         // First pass: Calculate similarity scores without loading images
         var candidateFiles = new ConcurrentBag<(string FilePath, string ImageName, double SimilarityScore)>();
@@ -166,6 +129,7 @@ public static class SimilarityCalculator
 
         return imageList.OrderByDescending(x => x.SimilarityScore).ToList();
     }
+
 
     private static double CalculateLevenshteinSimilarity(string a, string b)
     {

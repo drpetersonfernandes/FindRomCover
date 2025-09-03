@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System.Diagnostics;
+using System.IO;
 using System.Net.Http;
 using System.Reflection;
 using System.Text.Json;
@@ -207,8 +208,7 @@ public static class LogErrors
         }
         catch
         {
-            // If we can't write to the log file, there's nothing else we can do.
-            // This prevents an infinite loop of logging failures.
+            Debug.Print("Failed to write to log file.");
         }
     }
 }

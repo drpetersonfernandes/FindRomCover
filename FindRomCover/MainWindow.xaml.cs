@@ -18,8 +18,8 @@ public partial class MainWindow : INotifyPropertyChanged
 {
     private CancellationTokenSource? _loadMissingCts;
 
-    private readonly List<MameManager> _machines;
-    private readonly Dictionary<string, string> _mameLookup;
+    private List<MameManager>? _machines;
+    private Dictionary<string, string>? _mameLookup;
 
     private Task? _currentFindTask;
     private CancellationTokenSource? _findSimilarCts;
@@ -57,7 +57,6 @@ public partial class MainWindow : INotifyPropertyChanged
 
             _imageHeight = value;
             OnPropertyChanged(nameof(ImageHeight));
-            // Removed direct App.Settings update here. Handled by SetThumbnailSize_Click.
         }
     }
 
@@ -104,15 +103,12 @@ public partial class MainWindow : INotifyPropertyChanged
         }
     }
 
-    public object DisplayImage { get; }
-    public object ImageName { get; }
-    public object SimilarityScore { get; }
+    public object DisplayImage { get; } = new();
+    public object ImageName { get; } = new();
+    public object SimilarityScore { get; } = new();
 
-    public MainWindow(object displayImage, object imageName, object similarityScore)
+    public MainWindow()
     {
-        DisplayImage = displayImage;
-        ImageName = imageName;
-        SimilarityScore = similarityScore;
         InitializeComponent();
         DataContext = this;
 
@@ -169,10 +165,26 @@ public partial class MainWindow : INotifyPropertyChanged
         App.Settings.PropertyChanged += AppSettings_PropertyChanged;
 
         // Load _machines and _mameLookup
-        _machines = MameManager.LoadFromDat();
-        _mameLookup = _machines
-            .GroupBy(static m => m.MachineName, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(static g => g.Key, static g => g.First().Description, StringComparer.OrdinalIgnoreCase);
+        LoadMameData();
+    }
+
+    private void LoadMameData()
+    {
+        try
+        {
+            _machines = MameManager.LoadFromDat();
+            _mameLookup = _machines
+                .GroupBy(static m => m.MachineName, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(static g => g.Key, static g => g.First().Description, StringComparer.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            // Notify developer
+            const string contextMessage = "The file 'mame.dat' could not be found in the application folder.";
+            _ = LogErrors.LogErrorAsync(null, contextMessage);
+
+            MessageBox.Show(contextMessage, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private void UpdateBaseThemeMenuChecks()
@@ -336,9 +348,9 @@ public partial class MainWindow : INotifyPropertyChanged
     {
         if ((App.Settings.SupportedExtensions.Length == 0) | (false))
         {
-            MessageBox.Show(
-                "No supported file extensions loaded. Please check file 'settings.xml' or edit them in the Settings menu.",
-                "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show("No supported file extensions loaded. Please check file 'settings.xml' or edit them in the Settings menu.", "Warning",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+
             return;
         }
 
@@ -347,8 +359,9 @@ public partial class MainWindow : INotifyPropertyChanged
 
         if (string.IsNullOrEmpty(romFolderPath) || string.IsNullOrEmpty(imageFolderPath))
         {
-            MessageBox.Show("Please select both ROM and Image folders.",
-                "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show("Please select both ROM and Image folders.", "Warning",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+
             return;
         }
 
@@ -362,7 +375,7 @@ public partial class MainWindow : INotifyPropertyChanged
                     // Check for cancellation at the start
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    var searchPatterns = App.Settings.SupportedExtensions.Select(ext => "*." + ext).ToArray();
+                    var searchPatterns = App.Settings.SupportedExtensions.Select(static ext => "*." + ext).ToArray();
                     var allRomNames = new List<string>();
 
                     // Process each pattern with cancellation checks
@@ -372,7 +385,7 @@ public partial class MainWindow : INotifyPropertyChanged
 
                         try
                         {
-                            var files = Directory.GetFiles(romFolderPath, pattern);
+                            var files = Directory.EnumerateFiles(romFolderPath, pattern);
                             var names = files.Select(Path.GetFileNameWithoutExtension)
                                 .Where(name => name != null)
                                 .Cast<string>();
@@ -402,6 +415,7 @@ public partial class MainWindow : INotifyPropertyChanged
                         if (romName != null && FindCorrespondingImage(romName, imageFolderPath) == null)
                         {
                             if (App.Settings.UseMameDescription &&
+                                _mameLookup != null &&
                                 _mameLookup.TryGetValue(romName, out var description) &&
                                 !string.IsNullOrEmpty(description))
                             {
@@ -591,7 +605,8 @@ public partial class MainWindow : INotifyPropertyChanged
             }
             catch (OperationCanceledException)
             {
-                MessageBox.Show("Search cancelled.", "Cancelled", MessageBoxButton.OK, MessageBoxImage.Information);
+                // MessageBox.Show("Search cancelled.", "Cancelled", MessageBoxButton.OK, MessageBoxImage.Information);
+                // Ignore
             }
             catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
             {
@@ -684,6 +699,11 @@ public partial class MainWindow : INotifyPropertyChanged
                     var itemToScrollTo = LstMissingImages.Items[newIndex];
                     if (itemToScrollTo != null) LstMissingImages.ScrollIntoView(itemToScrollTo);
                 }
+            }
+            else
+            {
+                // If no items remain, explicitly clear the search query label
+                LblSearchQuery.Content = null;
             }
         }
         catch (Exception ex)
@@ -849,17 +869,12 @@ public partial class MainWindow : INotifyPropertyChanged
 
     private void TxtImageFolder_TextChanged(object sender, TextChangedEventArgs e)
     {
-        if (sender is TextBox textBox)
-        {
-            var newPath = textBox.Text.Trim();
-
-            // Only update _imageFolderPath if the new path actually exists
-            // This prevents setting invalid paths while still allowing user to type
-            if (!string.IsNullOrEmpty(newPath) && Directory.Exists(newPath))
-            {
-                _imageFolderPath = newPath;
-            }
-        }
+        // Do NOT update _imageFolderPath here.
+        // This allows the user to type freely without prematurely setting the backing field.
+        // The _imageFolderPath field should only be updated when a valid path is confirmed
+        // (e.g., in LostFocus or when pressing Enter).
+        // The current logic of only updating if Directory.Exists is the source of the inconsistency.
+        // Simply let the user type. Validation happens on LostFocus or Enter.
     }
 
     private void LstMissingImages_KeyDown(object sender, KeyEventArgs e)
@@ -888,35 +903,34 @@ public partial class MainWindow : INotifyPropertyChanged
         {
             var newPath = textBox.Text.Trim();
 
-            // If the path is empty, that's okay - just clear the internal field
-            if (string.IsNullOrEmpty(newPath))
-            {
-                _imageFolderPath = string.Empty;
-                return;
-            }
+            // --- New Logic Starts Here ---
+            // Scenario 1: User typed a valid path and moved focus (e.g., clicked elsewhere).
+            // Scenario 2: User typed an invalid path and moved focus.
+            // Scenario 3: User cleared the textbox and moved focus.
 
-            // If the path is valid, update our internal field
-            if (Directory.Exists(newPath))
+            // If the path in the textbox is valid, update the internal field.
+            if (!string.IsNullOrEmpty(newPath) && Directory.Exists(newPath))
             {
+                // Commit the valid path
                 _imageFolderPath = newPath;
+                // Ensure the textbox reflects the committed path (handles trailing spaces etc.)
+                textBox.Text = newPath;
+                // Optional: Move caret to the end if text was trimmed
+                textBox.CaretIndex = textBox.Text.Length;
             }
             else
             {
-                // If the path is invalid, show an error and reset to the last valid path
+                // If the path is invalid (doesn't exist) or empty, revert the textbox
+                // to show the last known good path stored in _imageFolderPath.
+                // This gives clear visual feedback that the typed path was not accepted.
+                textBox.Text = _imageFolderPath;
+                // Optional: Move caret to the end
                 if (!string.IsNullOrEmpty(_imageFolderPath))
                 {
-                    MessageBox.Show($"The path '{newPath}' does not exist. Reverting to previous path.",
-                        "Invalid Path", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    textBox.Text = _imageFolderPath;
                     textBox.CaretIndex = textBox.Text.Length;
                 }
-                else
-                {
-                    // If we don't have a previous valid path, just clear the field
-                    textBox.Text = string.Empty;
-                    _imageFolderPath = string.Empty;
-                }
             }
+            // --- New Logic Ends Here ---
         }
     }
 
@@ -930,6 +944,17 @@ public partial class MainWindow : INotifyPropertyChanged
         RemoveSelectedItem();
         SimilarImages.Clear();
         PlaySound.PlayClickSound();
+    }
+
+    private void TxtImageFolder_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter && sender is TextBox)
+        {
+            // Trigger the same logic as LostFocus when Enter is pressed
+            TxtImageFolder_LostFocus(sender, new RoutedEventArgs(LostFocusEvent, sender));
+            // Prevent the Enter key from being processed further (e.g., adding a newline)
+            e.Handled = true;
+        }
     }
 
     protected override void OnClosed(EventArgs e)

@@ -5,8 +5,7 @@ namespace FindRomCover;
 
 public static class PlaySound
 {
-    private static readonly string
-        SoundPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "audio", "click.mp3");
+    private static readonly string SoundPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "audio", "click.mp3");
 
     public static void PlayClickSound()
     {
