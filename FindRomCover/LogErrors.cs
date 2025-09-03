@@ -17,7 +17,7 @@ public static class LogErrors
 
     public static async Task LogErrorAsync(Exception? ex, string? contextMessage = null)
     {
-        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString();
+        var version = Assembly.GetEntryAssembly()?.GetName().Version?.ToString();
         version ??= "Unknown";
 
         if (ex == null)

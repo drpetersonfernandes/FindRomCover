@@ -125,8 +125,14 @@ public class ButtonFactory
 
         if (File.Exists(imagePath))
         {
-            // Open the folder containing the file and select it
-            System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{imagePath}\"");
+            // Open the folder containing the file and select it using ProcessStartInfo for safer execution
+            var processStartInfo = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "explorer.exe",
+                Arguments = $"/select,\"{imagePath}\"",
+                UseShellExecute = true
+            };
+            System.Diagnostics.Process.Start(processStartInfo);
         }
     });
 }

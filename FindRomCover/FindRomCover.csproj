@@ -41,6 +41,8 @@
     </Resource>
     <None Remove="images\settings.png" />
     <Resource Include="images\settings.png" />
+    <None Remove="images\brokenimage.png" />
+    <Resource Include="images\brokenimage.png" />
   </ItemGroup>
 
   <ItemGroup>

@@ -79,7 +79,7 @@ public partial class SettingsWindow
         if (string.IsNullOrEmpty(extension))
             return false;
 
-        return extension.All(c => char.IsLetterOrDigit(c) || c == '-');
+        return extension.All(static c => char.IsLetterOrDigit(c) || c == '-');
     }
 
     private int FindInsertIndex(string newExtension)

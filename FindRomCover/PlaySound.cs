@@ -13,19 +13,16 @@ public static class PlaySound
         {
             _ = LogErrors.LogErrorAsync(new FileNotFoundException($"Sound file not found: {SoundPath}"),
                 "Sound file missing");
-
             return;
         }
 
+        MediaPlayer? mediaPlayer = null;
         try
         {
             // Create a new instance for each playback to avoid state conflicts.
-            var mediaPlayer = new MediaPlayer();
+            mediaPlayer = new MediaPlayer();
 
-            mediaPlayer.MediaOpened += static (sender, e) =>
-            {
-                ((MediaPlayer?)sender)?.Play();
-            };
+            mediaPlayer.MediaOpened += static (sender, e) => { ((MediaPlayer?)sender)?.Play(); };
 
             mediaPlayer.MediaEnded += static (sender, e) =>
             {
@@ -37,7 +34,6 @@ public static class PlaySound
             {
                 // Clean up on failure and log the error
                 ((MediaPlayer?)sender)?.Close();
-
                 _ = LogErrors.LogErrorAsync(e.ErrorException, $"Failed to play sound: {SoundPath}");
             };
 
@@ -46,6 +42,8 @@ public static class PlaySound
         }
         catch (Exception ex)
         {
+            // Ensure cleanup if an exception occurs during setup
+            mediaPlayer?.Close();
             _ = LogErrors.LogErrorAsync(ex, "Error in PlayClickSound");
         }
     }

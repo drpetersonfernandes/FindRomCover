@@ -10,7 +10,7 @@ public class ImageData(string? imagePath, string? imageName, double similaritySc
     {
         try
         {
-            var bitmap = new BitmapImage(new Uri("pack://application:,,,/images/broken.png"));
+            var bitmap = new BitmapImage(new Uri("pack://application:,,,/images/brokenimage.png"));
             if (bitmap.CanFreeze)
                 bitmap.Freeze();
             return bitmap;
