@@ -19,41 +19,48 @@ public static class SimilarityCalculator
         string[] imageExtensions = ["*.png", "*.jpg", "*.jpeg"];
 
         // Use Directory.EnumerateFiles for memory efficiency with large directories
+        // and limit the total number of files processed
         var allImageFiles = new List<string>();
+        const int maxFilesToProcess = 10000;
+        var totalFileCount = 0;
+
         try
         {
             foreach (var ext in imageExtensions)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                // Process in batches to avoid memory issues with huge directories
-                const int batchSize = 1000;
-                var fileCount = 0;
-
+                // Process files with a limit to prevent memory issues
                 foreach (var file in Directory.EnumerateFiles(imageFolderPath, ext))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    allImageFiles.Add(file);
-                    fileCount++;
 
-                    // Process in batches to avoid memory spikes
-                    if (fileCount % batchSize == 0)
+                    allImageFiles.Add(file);
+                    totalFileCount++;
+
+                    // Stop if we've reached the maximum number of files to process
+                    if (totalFileCount >= maxFilesToProcess)
                     {
-                        await Task.Delay(1, cancellationToken); // Yield to allow cancellation checks
+                        break;
                     }
+
+                    // Yield periodically to allow cancellation checks
+                    if (totalFileCount % 1000 == 0)
+                    {
+                        await Task.Delay(1, cancellationToken);
+                    }
+                }
+
+                // Break outer loop too if we've reached the limit
+                if (totalFileCount >= maxFilesToProcess)
+                {
+                    break;
                 }
             }
         }
         catch (Exception ex)
         {
             throw new IOException($"Failed to access the directory: {imageFolderPath}", ex);
-        }
-
-        // Limit total files to prevent memory issues
-        const int maxFilesToProcess = 10000;
-        if (allImageFiles.Count > maxFilesToProcess)
-        {
-            allImageFiles = allImageFiles.Take(maxFilesToProcess).ToList();
         }
 
         // First pass: Calculate similarity scores without loading images
@@ -159,7 +166,6 @@ public static class SimilarityCalculator
 
         return imageList.OrderByDescending(x => x.SimilarityScore).ToList();
     }
-
 
     private static double CalculateLevenshteinSimilarity(string a, string b)
     {

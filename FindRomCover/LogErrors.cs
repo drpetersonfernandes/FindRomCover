@@ -16,8 +16,6 @@ public static class LogErrors
 
     public static async Task LogErrorAsync(Exception? ex, string? contextMessage = null)
     {
-        var errorLogPath = LogFilePath;
-        var userLogPath = UserLogFilePath;
         var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString();
         version ??= "Unknown";
 
@@ -39,20 +37,25 @@ public static class LogErrors
 
         try
         {
-            // Append the error message to the general log
-            await File.AppendAllTextAsync(errorLogPath, fullErrorMessage);
+            // Read and send any existing log content first
+            await SendExistingLogContent();
 
             // Append the error message to the user-specific log
             var userErrorMessage = fullErrorMessage + "--------------------------------------------------------------------------------------------------------------\n\n\n";
-            await File.AppendAllTextAsync(userLogPath, userErrorMessage);
+            await File.AppendAllTextAsync(UserLogFilePath, userErrorMessage);
 
-            // Attempt to send the error log content to the new API.
-            // Pass the full error message including exception details
+            // Write new error to the general log file
+            await File.AppendAllTextAsync(LogFilePath, fullErrorMessage);
+
+            // Attempt to send the new error log content to the API
             if (await SendLogToApiAsync(fullErrorMessage))
             {
                 // If the log was successfully sent, delete the general log file to clean up.
                 // Keep the user log file for the user's reference.
-                File.Delete(errorLogPath);
+                if (File.Exists(LogFilePath))
+                {
+                    File.Delete(LogFilePath);
+                }
             }
         }
         catch (Exception loggingEx)
@@ -60,6 +63,37 @@ public static class LogErrors
             // Ignore any exceptions raised during logging to avoid interrupting the main flow
             // Write this internal logging error to the dedicated local log file
             await WriteToLogFileAsync($"Failed to write error log files or send to API: {loggingEx.Message}");
+        }
+    }
+
+    private static async Task SendExistingLogContent()
+    {
+        try
+        {
+            // Check if there's an existing log file to send
+            if (File.Exists(LogFilePath))
+            {
+                var existingContent = await File.ReadAllTextAsync(LogFilePath);
+                if (!string.IsNullOrEmpty(existingContent))
+                {
+                    // Send the existing content
+                    if (await SendLogToApiAsync(existingContent))
+                    {
+                        // If successfully sent, delete the file
+                        File.Delete(LogFilePath);
+                    }
+                }
+                else
+                {
+                    // If the file is empty, just delete it
+                    File.Delete(LogFilePath);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log this error but don't let it interrupt the main logging process
+            await WriteToLogFileAsync($"Failed to send existing log content: {ex.Message}");
         }
     }
 

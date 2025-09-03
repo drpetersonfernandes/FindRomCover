@@ -89,16 +89,8 @@
                     <Image
                         Width="{Binding Path=ImageWidth, RelativeSource={RelativeSource AncestorType=Window}}"
                         Height="{Binding Path=ImageHeight, RelativeSource={RelativeSource AncestorType=Window}}"
-                        Source="{Binding ImageSource}" d:DataContext="{d:DesignInstance }">
-                        <Image.Style>
-                            <Style TargetType="Image">
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding ImageSource}" Value="{x:Null}">
-                                        <Setter Property="Source" Value="{Binding ImagePath}" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Image.Style>
+                        Source="{Binding DisplayImage}" d:DataContext="{d:DesignInstance }">
+                        <!-- Removed the DataTrigger that was causing UI freezing -->
                     </Image>
                     <TextBlock HorizontalAlignment="Center" Text="{Binding ImageName}" FontWeight="Bold"
                                Margin="0,5,0,0" TextTrimming="CharacterEllipsis" ToolTip="{Binding ImageName}"
@@ -254,7 +246,8 @@
                             </Grid.ColumnDefinitions>
                             <TextBox x:Name="TxtImageFolder" Grid.Column="0"
                                      controls:TextBoxHelper.Watermark="Path to your image folder..." 
-                                     TextChanged="TxtImageFolder_TextChanged" />
+                                     TextChanged="TxtImageFolder_TextChanged" 
+                                     LostFocus="TxtImageFolder_LostFocus" />
                             <Button Grid.Column="1" Content="Browse..." Margin="5,0,0,0"
                                     Click="BtnBrowseImageFolder_Click" />
                         </Grid>

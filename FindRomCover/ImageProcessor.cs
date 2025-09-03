@@ -12,7 +12,10 @@ public static class ImageProcessor
     public static bool ConvertAndSaveImage(string sourcePath, string targetPath)
     {
         var directory = Path.GetDirectoryName(targetPath);
-        if (directory == null) return false;
+        if (directory == null)
+        {
+            return false;
+        }
 
         if (sourcePath == targetPath)
         {
@@ -41,64 +44,34 @@ public static class ImageProcessor
             return false;
         }
 
-        // Handle target file with retry logic
         if (File.Exists(targetPath))
         {
-            var retryCount = 0;
-            const int maxRetriesBeforePrompt = 3;
-
-            while (true) // Infinite loop, controlled by break/return
+            try
             {
-                try
-                {
-                    File.Delete(targetPath);
-                    break; // Success
-                }
-                catch (IOException ex) when (ex.Message.Contains("being used by another process"))
-                {
-                    retryCount++;
+                File.Delete(targetPath);
+            }
+            catch (IOException ex)
+            {
+                MessageBox.Show($"The file '{Path.GetFileName(targetPath)}' is in use by another process.",
+                    "File in Use",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
 
-                    if (retryCount >= maxRetriesBeforePrompt)
-                    {
-                        var result = MessageBox.Show(
-                            $"The file '{Path.GetFileName(targetPath)}' is in use by another process.\n\n" +
-                            "Would you like to keep trying?",
-                            "File in Use",
-                            MessageBoxButton.YesNo,
-                            MessageBoxImage.Warning);
-
-                        if (result == MessageBoxResult.No)
-                        {
-                            _ = LogErrors.LogErrorAsync(ex, $"User cancelled retry for file in use: {targetPath}");
-                            return false;
-                        }
-
-                        // Reset counter and continue
-                        retryCount = 0;
-                    }
-                    else
-                    {
-                        Task.Delay(1000);
-                    }
-                }
-                catch (UnauthorizedAccessException ex)
-                {
-                    MessageBox.Show($"Access denied to file: {targetPath}\n\nTry running as administrator.",
-                        "Permission Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    _ = LogErrors.LogErrorAsync(ex, $"Access denied: {targetPath}");
-                    return false;
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Error deleting file: {ex.Message}", "Error",
-                        MessageBoxButton.OK, MessageBoxImage.Error);
-                    _ = LogErrors.LogErrorAsync(ex, $"Error deleting file: {targetPath}");
-                    return false;
-                }
+                _ = LogErrors.LogErrorAsync(ex, $"User cancelled retry for file in use: {targetPath}");
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                MessageBox.Show($"Access denied to file: {targetPath}\n\nTry running as administrator.",
+                    "Permission Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _ = LogErrors.LogErrorAsync(ex, $"Access denied: {targetPath}");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error deleting file: {ex.Message}", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                _ = LogErrors.LogErrorAsync(ex, $"Error deleting file: {targetPath}");
             }
         }
 
-        // Continue with image processing...
         return ProcessImage(sourcePath, targetPath);
     }
 
@@ -251,22 +224,6 @@ public static class ImageProcessor
         catch (Exception fallbackEx)
         {
             _ = LogErrors.LogErrorAsync(fallbackEx, "Pixel copy fallback failed");
-        }
-
-        // Fallback 3: Try different format
-        try
-        {
-            var alternativePath = Path.ChangeExtension(targetPath, ".jpg");
-            if (TrySaveAsJpg(sourcePath, alternativePath))
-            {
-                MessageBox.Show($"Image saved as JPG: {Path.GetFileName(alternativePath)}", "Success",
-                    MessageBoxButton.OK, MessageBoxImage.Information);
-                return true;
-            }
-        }
-        catch (Exception fallbackEx)
-        {
-            _ = LogErrors.LogErrorAsync(fallbackEx, "JPG save fallback failed");
         }
 
         // All fallbacks failed

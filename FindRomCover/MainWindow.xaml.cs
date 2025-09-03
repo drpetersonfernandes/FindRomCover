@@ -21,7 +21,7 @@ public partial class MainWindow : INotifyPropertyChanged
     private readonly List<MameManager> _machines;
     private readonly Dictionary<string, string> _mameLookup;
 
-    private readonly Task? _currentFindTask;
+    private Task? _currentFindTask;
     private CancellationTokenSource? _findSimilarCts;
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -104,20 +104,15 @@ public partial class MainWindow : INotifyPropertyChanged
         }
     }
 
-    public object ImageSource { get; } = new();
-    public object ImagePath { get; } = new();
-    public object ImageName { get; } = new();
-    public object SimilarityThreshold { get; } = new(); // This property is not used in MainWindow, can be removed or bound to App.Settings.SimilarityThreshold
-    public object SimilarityScore { get; } = new();
+    public object DisplayImage { get; }
+    public object ImageName { get; }
+    public object SimilarityScore { get; }
 
-    public MainWindow() : this(null)
+    public MainWindow(object displayImage, object imageName, object similarityScore)
     {
-        // This delegates to the existing constructor with null
-    }
-
-    public MainWindow(Task? currentFindTask)
-    {
-        _currentFindTask = currentFindTask;
+        DisplayImage = displayImage;
+        ImageName = imageName;
+        SimilarityScore = similarityScore;
         InitializeComponent();
         DataContext = this;
 
@@ -527,8 +522,7 @@ public partial class MainWindow : INotifyPropertyChanged
                 }
                 finally
                 {
-                    await _findSimilarCts.CancelAsync();
-                    _findSimilarCts.Dispose();
+                    _findSimilarCts?.Dispose();
                     _findSimilarCts = null;
                 }
             }
@@ -552,17 +546,21 @@ public partial class MainWindow : INotifyPropertyChanged
 
             IsFindingSimilar = true;
 
+            // Create the task and store it
+            var findTask = ButtonFactory.CreateSimilarImagesCollection(
+                searchName,
+                _imageFolderPath,
+                App.Settings.SimilarityThreshold,
+                SelectedSimilarityAlgorithm,
+                cancellationToken
+            );
+            _currentFindTask = findTask;
+
             try
             {
                 _selectedRomFileName = romName;
 
-                var newSimilarImages = await ButtonFactory.CreateSimilarImagesCollection(
-                    searchName,
-                    _imageFolderPath,
-                    App.Settings.SimilarityThreshold,
-                    SelectedSimilarityAlgorithm,
-                    cancellationToken
-                );
+                var newSimilarImages = await findTask;
 
                 if (!cancellationToken.IsCancellationRequested)
                 {
@@ -607,11 +605,15 @@ public partial class MainWindow : INotifyPropertyChanged
                 {
                     IsFindingSimilar = false;
                 }
+
+                _currentFindTask = null; // Clear the task reference when done
             }
         }
         catch (Exception ex)
         {
             _ = LogErrors.LogErrorAsync(ex, "Error in LstMissingImages_SelectionChanged");
+            IsFindingSimilar = false;
+            _currentFindTask = null;
         }
     }
 
@@ -646,23 +648,8 @@ public partial class MainWindow : INotifyPropertyChanged
             }
             else
             {
-                var result = MessageBox.Show(
-                    "Failed to save the image. Would you like to try a different method?",
-                    "Save Failed",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Question);
-
-                if (result == MessageBoxResult.Yes)
-                {
-                    // Try alternative save method
-                    if (TryAlternativeSave(imagePath, newFileName))
-                    {
-                        PlaySound.PlayClickSound();
-                        RemoveSelectedItem();
-                        SimilarImages.Clear();
-                        UpdateMissingCount();
-                    }
-                }
+                MessageBox.Show("Failed to save the image.", "Save Failed",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
         catch (Exception ex)
@@ -670,21 +657,6 @@ public partial class MainWindow : INotifyPropertyChanged
             MessageBox.Show($"Unexpected error saving image: {ex.Message}", "Error",
                 MessageBoxButton.OK, MessageBoxImage.Error);
             _ = LogErrors.LogErrorAsync(ex, $"Unexpected error in UseImage: {imagePath}");
-        }
-    }
-
-    private bool TryAlternativeSave(string sourcePath, string targetPath)
-    {
-        try
-        {
-            // Try direct byte copy as fallback
-            var bytes = File.ReadAllBytes(sourcePath);
-            File.WriteAllBytes(targetPath, bytes);
-            return true;
-        }
-        catch
-        {
-            return false;
         }
     }
 
@@ -881,15 +853,11 @@ public partial class MainWindow : INotifyPropertyChanged
         {
             var newPath = textBox.Text.Trim();
 
-            switch (string.IsNullOrEmpty(newPath))
+            // Only update _imageFolderPath if the new path actually exists
+            // This prevents setting invalid paths while still allowing user to type
+            if (!string.IsNullOrEmpty(newPath) && Directory.Exists(newPath))
             {
-                case false when Directory.Exists(newPath):
-                    _imageFolderPath = newPath;
-                    break;
-                case false when textBox.Text != _imageFolderPath:
-                    textBox.Text = _imageFolderPath;
-                    textBox.CaretIndex = textBox.Text.Length;
-                    break;
+                _imageFolderPath = newPath;
             }
         }
     }
@@ -914,6 +882,43 @@ public partial class MainWindow : INotifyPropertyChanged
         }
     }
 
+    private void TxtImageFolder_LostFocus(object sender, RoutedEventArgs e)
+    {
+        if (sender is TextBox textBox)
+        {
+            var newPath = textBox.Text.Trim();
+
+            // If the path is empty, that's okay - just clear the internal field
+            if (string.IsNullOrEmpty(newPath))
+            {
+                _imageFolderPath = string.Empty;
+                return;
+            }
+
+            // If the path is valid, update our internal field
+            if (Directory.Exists(newPath))
+            {
+                _imageFolderPath = newPath;
+            }
+            else
+            {
+                // If the path is invalid, show an error and reset to the last valid path
+                if (!string.IsNullOrEmpty(_imageFolderPath))
+                {
+                    MessageBox.Show($"The path '{newPath}' does not exist. Reverting to previous path.",
+                        "Invalid Path", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    textBox.Text = _imageFolderPath;
+                    textBox.CaretIndex = textBox.Text.Length;
+                }
+                else
+                {
+                    // If we don't have a previous valid path, just clear the field
+                    textBox.Text = string.Empty;
+                    _imageFolderPath = string.Empty;
+                }
+            }
+        }
+    }
 
     private void UpdateMameDescriptionCheck()
     {
