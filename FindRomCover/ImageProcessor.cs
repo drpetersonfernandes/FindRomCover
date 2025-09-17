@@ -217,59 +217,12 @@ public static class ImageProcessor
             _ = LogErrors.LogErrorAsync(fallbackEx, "Pixel copy fallback failed");
         }
 
-        // Fallback 2: Try to copy bytes directly (bypass GDI+)
-        try
-        {
-            if (TryDirectCopy(sourcePath, targetPath))
-            {
-                MessageBox.Show("Image saved successfully using direct copy method.", "Success",
-                    MessageBoxButton.OK, MessageBoxImage.Information);
-                return true;
-            }
-        }
-        catch (Exception fallbackEx)
-        {
-            _ = LogErrors.LogErrorAsync(fallbackEx, "Direct copy fallback failed");
-        }
-
         // All fallbacks failed
         MessageBox.Show("All save methods failed.\n" +
                         "The image file may be severely corrupted.", "Save Failed",
             MessageBoxButton.OK, MessageBoxImage.Error);
 
         return false;
-    }
-
-
-    private static bool TryDirectCopy(string sourcePath, string targetPath)
-    {
-        try
-        {
-            var bytes = File.ReadAllBytes(sourcePath);
-
-            // Validate we got some data
-            if (bytes.Length == 0)
-            {
-                return false;
-            }
-
-            // For PNG files, ensure they have proper header
-            if (Path.GetExtension(sourcePath).Equals(".png", StringComparison.OrdinalIgnoreCase))
-            {
-                if (bytes.Length < 8 ||
-                    !(bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47))
-                {
-                    return false; // Invalid PNG header
-                }
-            }
-
-            File.WriteAllBytes(targetPath, bytes);
-            return File.Exists(targetPath);
-        }
-        catch
-        {
-            return false;
-        }
     }
 
     private static bool TryPixelCopy(string sourcePath, string targetPath)

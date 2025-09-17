@@ -9,15 +9,15 @@ public partial class SettingsWindow
     private readonly Settings _settings; // This will now always be App.Settings
     private readonly ObservableCollection<string> _supportedExtensions;
 
-    public SettingsWindow(Settings settings) // This 'settings' parameter will be App.Settings
+    public SettingsWindow(Settings settings)
     {
         InitializeComponent();
         App.ApplyThemeToWindow(this);
 
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
 
-        _supportedExtensions = new ObservableCollection<string>(_settings.SupportedExtensions.OrderBy(e => e));
-        LstSupportedExtensions.ItemsSource = _supportedExtensions;
+        _supportedExtensions = new ObservableCollection<string>(_settings.SupportedExtensions.OrderBy(e => e, StringComparer.OrdinalIgnoreCase));
+        DataContext = new { SupportedExtensions = _supportedExtensions };
     }
 
     private async void BtnAdd_Click(object sender, RoutedEventArgs e)
@@ -61,8 +61,7 @@ public partial class SettingsWindow
             // Normalize to lowercase for consistency
             newExtension = newExtension.ToLowerInvariant();
 
-            var insertIndex = FindInsertIndex(newExtension);
-            _supportedExtensions.Insert(insertIndex, newExtension);
+            _supportedExtensions.Add(newExtension);
 
             LstSupportedExtensions.SelectedItem = newExtension;
         }

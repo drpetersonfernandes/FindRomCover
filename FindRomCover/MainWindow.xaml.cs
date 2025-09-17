@@ -16,6 +16,9 @@ namespace FindRomCover;
 
 public partial class MainWindow : INotifyPropertyChanged
 {
+    private string? _lastValidRomFolderPath;
+    private string? _lastValidImageFolderPath;
+
     private CancellationTokenSource? _loadMissingCts;
 
     private List<MameManager>? _machines;
@@ -116,6 +119,10 @@ public partial class MainWindow : INotifyPropertyChanged
         _imageWidth = App.Settings.ImageWidth;
         _imageHeight = App.Settings.ImageHeight;
         _selectedSimilarityAlgorithm = App.Settings.SelectedSimilarityAlgorithm;
+
+        // Initialize stored folder paths
+        _lastValidRomFolderPath = "";
+        _lastValidImageFolderPath = "";
 
         // Check for command-line arguments
         var args = Environment.GetCommandLineArgs();
@@ -666,12 +673,7 @@ public partial class MainWindow : INotifyPropertyChanged
                 }
                 finally
                 {
-                    // Always reset UI state unless explicitly cancelled
-                    if (!cancellationToken.IsCancellationRequested)
-                    {
-                        IsFindingSimilar = false;
-                    }
-
+                    IsFindingSimilar = false; // Always reset UI state
                     _currentFindTask = null; // Clear the task reference when done
                 }
             }
@@ -1012,26 +1014,25 @@ public partial class MainWindow : INotifyPropertyChanged
         if (sender is TextBox textBox)
         {
             var newPath = textBox.Text.Trim();
-            var currentValidPath = GetValidatedImageFolderPath(false); // Get current valid path without re-validating the textbox
 
             if (!string.IsNullOrEmpty(newPath) && Directory.Exists(newPath))
             {
-                // Commit the valid path
-                textBox.Text = newPath; // Ensure textbox reflects the committed path (handles trailing spaces etc.)
+                // Commit the valid path and update stored last valid path
+                textBox.Text = newPath;
+                _lastValidImageFolderPath = newPath; // Store the valid path
                 textBox.CaretIndex = textBox.Text.Length;
             }
             else
             {
-                // If the path is invalid (doesn't exist) or empty, revert the textbox
-                // to show the last known good path. If no good path, clear it.
-                textBox.Text = currentValidPath ?? string.Empty;
+                // Revert to last known good path instead of current invalid text
+                textBox.Text = _lastValidImageFolderPath ?? string.Empty;
                 if (!string.IsNullOrEmpty(textBox.Text))
                 {
                     textBox.CaretIndex = textBox.Text.Length;
                 }
             }
 
-            UpdateUiStateForFolderPaths(); // Update UI state after focus change
+            UpdateUiStateForFolderPaths();
         }
     }
 
@@ -1063,16 +1064,18 @@ public partial class MainWindow : INotifyPropertyChanged
         if (sender is TextBox textBox)
         {
             var newPath = textBox.Text.Trim();
-            var currentValidPath = GetValidatedRomFolderPath(false);
 
             if (!string.IsNullOrEmpty(newPath) && Directory.Exists(newPath))
             {
+                // Commit the valid path and update stored last valid path
                 textBox.Text = newPath;
+                _lastValidRomFolderPath = newPath; // Store the valid path
                 textBox.CaretIndex = textBox.Text.Length;
             }
             else
             {
-                textBox.Text = currentValidPath ?? string.Empty;
+                // Revert to last known good path instead of current invalid text
+                textBox.Text = _lastValidRomFolderPath ?? string.Empty;
                 if (!string.IsNullOrEmpty(textBox.Text))
                 {
                     textBox.CaretIndex = textBox.Text.Length;
@@ -1161,14 +1164,24 @@ public partial class MainWindow : INotifyPropertyChanged
         return null;
     }
 
-    /// <summary>
-    /// Updates the enabled/disabled state of UI elements based on folder path validity.
-    /// This method performs the actual Directory.Exists checks.
-    /// </summary>
     private void UpdateUiStateForFolderPaths()
     {
-        var romPathValid = Directory.Exists(TxtRomFolder.Text.Trim());
-        var imagePathValid = Directory.Exists(TxtImageFolder.Text.Trim());
+        var romPath = TxtRomFolder.Text.Trim();
+        var imagePath = TxtImageFolder.Text.Trim();
+
+        var romPathValid = !string.IsNullOrEmpty(romPath) && Directory.Exists(romPath);
+        var imagePathValid = !string.IsNullOrEmpty(imagePath) && Directory.Exists(imagePath);
+
+        // Store valid paths when detected
+        if (romPathValid)
+        {
+            _lastValidRomFolderPath = romPath;
+        }
+
+        if (imagePathValid)
+        {
+            _lastValidImageFolderPath = imagePath;
+        }
 
         BtnCheckForMissingImages.IsEnabled = romPathValid && imagePathValid;
         LstMissingImages.IsEnabled = romPathValid && imagePathValid;

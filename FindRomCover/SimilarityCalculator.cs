@@ -160,49 +160,6 @@ public static class SimilarityCalculator
 
     private static double CalculateLevenshteinSimilarity(string a, string b)
     {
-        // For very long strings, use the memory-efficient version
-        const int lengthThreshold = 500; // Lowered threshold for better memory management
-
-        if (a.Length > lengthThreshold || b.Length > lengthThreshold)
-        {
-            return CalculateLevenshteinSimilarityEfficient(a, b);
-        }
-
-        var lengthA = a.Length;
-        var lengthB = b.Length;
-
-        // Add additional safeguard for moderately long strings
-        const long maxMemoryUsage = 100_000_000; // 100 MB
-        if ((long)(lengthA + 1) * (lengthB + 1) * sizeof(int) > maxMemoryUsage)
-        {
-            return CalculateLevenshteinSimilarityEfficient(a, b);
-        }
-
-        var distances = new int[lengthA + 1, lengthB + 1];
-
-        for (var i = 0; i <= lengthA; distances[i, 0] = i++)
-        {
-        }
-
-        for (var j = 0; j <= lengthB; distances[0, j] = j++)
-        {
-        }
-
-        for (var i = 1; i <= lengthA; i++)
-        for (var j = 1; j <= lengthB; j++)
-        {
-            var cost = b[j - 1] == a[i - 1] ? 0 : 1;
-            distances[i, j] = Math.Min(
-                Math.Min(distances[i - 1, j] + 1, distances[i, j - 1] + 1),
-                distances[i - 1, j - 1] + cost);
-        }
-
-        var similarity = (1.0 - distances[lengthA, lengthB] / (double)Math.Max(a.Length, b.Length)) * 100;
-        return Math.Round(similarity, 2);
-    }
-
-    private static double CalculateLevenshteinSimilarityEfficient(string a, string b)
-    {
         // Only store two rows rather than the full matrix
         var lengthA = a.Length;
         var lengthB = b.Length;
