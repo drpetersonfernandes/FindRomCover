@@ -1,8 +1,9 @@
-using System.ComponentModel; // Added for INotifyPropertyChanged
+using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.Windows;
 using System.Xml.Linq;
+// Added for INotifyPropertyChanged
 
 namespace FindRomCover;
 
@@ -32,7 +33,7 @@ public class Settings : INotifyPropertyChanged
         }
     }
 
-    private bool _useMameDescription = true;
+    private bool _useMameDescription;
 
     public bool UseMameDescription
     {
@@ -201,7 +202,7 @@ public class Settings : INotifyPropertyChanged
                 _supportedExtensions = GetDefaultExtensions();
             }
 
-            var useMameDescValue = GetValue("UseMameDescription", "true");
+            var useMameDescValue = GetValue("UseMameDescription", "false");
             if (string.IsNullOrEmpty(useMameDescValue))
             {
                 _useMameDescription = false;
@@ -237,7 +238,7 @@ public class Settings : INotifyPropertyChanged
                 new XElement("Settings",
                     new XElement("SimilarityThreshold", SimilarityThreshold.ToString(CultureInfo.InvariantCulture)),
                     new XElement("SupportedExtensions",
-                        SupportedExtensions.Select(ext => new XElement("Extension", ext))
+                        SupportedExtensions.Select(static ext => new XElement("Extension", ext))
                     ),
                     new XElement("ImageSize",
                         new XElement("Width", ImageWidth),
@@ -287,7 +288,7 @@ public class Settings : INotifyPropertyChanged
         _selectedSimilarityAlgorithm = "Jaro-Winkler Distance";
         _baseTheme = "Light";
         _accentColor = "Blue";
-        _useMameDescription = true;
+        _useMameDescription = false;
     }
 
     private static string[] GetDefaultExtensions()
