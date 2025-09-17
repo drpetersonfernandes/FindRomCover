@@ -269,7 +269,7 @@
                             <RowDefinition Height="*" />
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
-                        <Button Grid.Row="0" Content="Check for Missing Images" Click="BtnCheckForMissingImages_Click"
+                        <Button Grid.Row="0" Content="Check for Missing Images" x:Name="BtnCheckForMissingImages" Click="BtnCheckForMissingImages_Click"
                                 Margin="5"/>
 
                         <Grid Grid.Row="1">

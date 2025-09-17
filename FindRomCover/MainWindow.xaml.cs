@@ -21,11 +21,11 @@ public partial class MainWindow : INotifyPropertyChanged
     private List<MameManager>? _machines;
     private Dictionary<string, string>? _mameLookup;
 
-    private Task? _currentFindTask;
-    private CancellationTokenSource? _findSimilarCts;
+    private Task? _currentFindTask; // Task for the current image similarity search
+    private CancellationTokenSource? _findSimilarCts; // CancellationTokenSource for the current image similarity search
+    private readonly SemaphoreSlim _findSimilarSemaphore = new(1, 1); // Semaphore to ensure only one search runs at a time
 
     public event PropertyChangedEventHandler? PropertyChanged;
-    private string _imageFolderPath;
     private string _selectedRomFileName = string.Empty;
 
     public ObservableCollection<ImageData> SimilarImages { get; set; } = [];
@@ -126,8 +126,7 @@ public partial class MainWindow : INotifyPropertyChanged
 
             if (Directory.Exists(imageFolderPath) && Directory.Exists(romFolderPath))
             {
-                _imageFolderPath = imageFolderPath;
-                TxtImageFolder.Text = _imageFolderPath;
+                TxtImageFolder.Text = imageFolderPath;
                 TxtRomFolder.Text = romFolderPath;
             }
             else
@@ -142,14 +141,12 @@ public partial class MainWindow : INotifyPropertyChanged
                     $"The following command-line paths are invalid or do not exist:\n\n{string.Join("\n", invalidPaths)}\n\nThe application will start with empty folder paths.",
                     "Invalid Command-Line Arguments", MessageBoxButton.OK, MessageBoxImage.Warning);
 
-                _imageFolderPath = "";
                 TxtImageFolder.Text = "";
                 TxtRomFolder.Text = "";
             }
         }
         else
         {
-            _imageFolderPath = "";
             TxtImageFolder.Text = "";
             TxtRomFolder.Text = "";
         }
@@ -166,6 +163,9 @@ public partial class MainWindow : INotifyPropertyChanged
 
         // Load _machines and _mameLookup
         LoadMameData();
+
+        // Initial UI state update based on folder paths
+        UpdateUiStateForFolderPaths();
     }
 
     private void LoadMameData()
@@ -176,12 +176,25 @@ public partial class MainWindow : INotifyPropertyChanged
             _mameLookup = _machines
                 .GroupBy(static m => m.MachineName, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(static g => g.Key, static g => g.First().Description, StringComparer.OrdinalIgnoreCase);
+
+            // If MAME data loaded successfully, ensure menu item is enabled
+            MenuUseMameDescription.IsEnabled = true;
+            MenuUseMameDescription.ToolTip = null;
         }
         catch
         {
             // Notify developer
             const string contextMessage = "The file 'mame.dat' could not be found in the application folder.";
             _ = LogErrors.LogErrorAsync(null, contextMessage);
+
+            // Disable MAME description option if data is not available
+            MenuUseMameDescription.IsEnabled = false;
+            MenuUseMameDescription.ToolTip = "MAME data (mame.dat) could not be loaded or is corrupted.";
+            if (App.Settings.UseMameDescription) // If it was previously enabled, turn it off
+            {
+                App.Settings.UseMameDescription = false;
+                App.Settings.SaveSettings();
+            }
 
             MessageBox.Show(contextMessage, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
@@ -230,7 +243,9 @@ public partial class MainWindow : INotifyPropertyChanged
                 case nameof(Settings.UseMameDescription):
                     UpdateMameDescriptionCheck();
                     // Refresh the list immediately after the setting changes
-                    await RefreshMissingImagesList();
+                    // Only refresh if MAME data is actually available, otherwise it's pointless
+                    if (_mameLookup != null && _mameLookup.Count > 0)
+                        await RefreshMissingImagesList();
                     break;
             }
         }
@@ -316,6 +331,7 @@ public partial class MainWindow : INotifyPropertyChanged
         if (dialog.ShowDialog() == true)
         {
             TxtRomFolder.Text = dialog.FolderName;
+            UpdateUiStateForFolderPaths(); // Update UI state after browsing
         }
     }
 
@@ -329,7 +345,7 @@ public partial class MainWindow : INotifyPropertyChanged
         if (dialog.ShowDialog() != true) return;
 
         TxtImageFolder.Text = dialog.FolderName;
-        _imageFolderPath = dialog.FolderName;
+        UpdateUiStateForFolderPaths(); // Update UI state after browsing
     }
 
     private async void BtnCheckForMissingImages_Click(object sender, RoutedEventArgs e)
@@ -354,8 +370,8 @@ public partial class MainWindow : INotifyPropertyChanged
             return;
         }
 
-        var romFolderPath = TxtRomFolder.Text;
-        var imageFolderPath = TxtImageFolder.Text;
+        var romFolderPath = GetValidatedRomFolderPath();
+        var imageFolderPath = GetValidatedImageFolderPath();
 
         if (string.IsNullOrEmpty(romFolderPath) || string.IsNullOrEmpty(imageFolderPath))
         {
@@ -516,122 +532,165 @@ public partial class MainWindow : INotifyPropertyChanged
     {
         try
         {
-            // Cancel previous operation
-            if (_findSimilarCts != null)
-            {
-                await _findSimilarCts.CancelAsync();
-                try
-                {
-                    // Wait for the previous task to complete
-                    if (_currentFindTask != null) await _currentFindTask;
-                }
-                catch (OperationCanceledException)
-                {
-                    // Expected — ignore
-                }
-                catch (Exception ex)
-                {
-                    // Log unexpected errors from previous task
-                    _ = LogErrors.LogErrorAsync(ex, "Error in previous find operation");
-                }
-                finally
-                {
-                    _findSimilarCts?.Dispose();
-                    _findSimilarCts = null;
-                }
-            }
-
-            // Clear results if no selection
-            if (LstMissingImages.SelectedItem == null)
-            {
-                SimilarImages.Clear();
-                LblSearchQuery.Content = null;
-                IsFindingSimilar = false;
-                return;
-            }
-
-            // Prepare for new operation
-            _findSimilarCts = new CancellationTokenSource();
-            var cancellationToken = _findSimilarCts.Token;
-
-            dynamic selectedItem = LstMissingImages.SelectedItem;
-            string romName = selectedItem.RomName;
-            string searchName = selectedItem.SearchName;
-
-            IsFindingSimilar = true;
-
-            // Create the task and store it
-            var findTask = ButtonFactory.CreateSimilarImagesCollection(
-                searchName,
-                _imageFolderPath,
-                App.Settings.SimilarityThreshold,
-                SelectedSimilarityAlgorithm,
-                cancellationToken
-            );
-            _currentFindTask = findTask;
+            // Acquire semaphore before starting any async work
+            await _findSimilarSemaphore.WaitAsync();
 
             try
             {
-                _selectedRomFileName = romName;
-
-                var newSimilarImages = await findTask;
-
-                if (!cancellationToken.IsCancellationRequested)
+                // Cancel previous operation
+                if (_findSimilarCts != null)
                 {
-                    await Application.Current.Dispatcher.InvokeAsync(() =>
+                    await _findSimilarCts.CancelAsync();
+                    try
                     {
-                        var textBlock = new TextBlock();
-                        textBlock.Inlines.Add(new Run("Search Query: "));
-                        textBlock.Inlines.Add(new Run($"{searchName} ") { FontWeight = FontWeights.Bold });
-                        textBlock.Inlines.Add(new Run("for ROM: "));
-                        textBlock.Inlines.Add(new Run($"{romName} ") { FontWeight = FontWeights.Bold });
-                        textBlock.Inlines.Add(new Run("with "));
-                        textBlock.Inlines.Add(new Run($"{SelectedSimilarityAlgorithm} ") { FontWeight = FontWeights.Bold });
-                        textBlock.Inlines.Add(new Run("algorithm"));
-                        LblSearchQuery.Content = textBlock;
+                        // Wait for the previous task to complete
+                        if (_currentFindTask != null) await _currentFindTask;
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // Expected — ignore
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log unexpected errors from previous task
+                        _ = LogErrors.LogErrorAsync(ex, "Error in previous find operation");
+                    }
+                    finally
+                    {
+                        _findSimilarCts?.Dispose();
+                        _findSimilarCts = null;
+                        _currentFindTask = null; // Ensure task reference is cleared
+                    }
+                }
 
-                        SimilarImages.Clear();
-                        foreach (var imageData in newSimilarImages)
-                        {
-                            SimilarImages.Add(imageData);
-                        }
-                    });
+                // Clear results if no selection
+                if (LstMissingImages.SelectedItem == null)
+                {
+                    SimilarImages.Clear();
+                    LblSearchQuery.Content = null;
+                    IsFindingSimilar = false;
+                    return;
+                }
+
+                // --- FIX: Get the image folder path correctly ---
+                // Use the validated path getter. If it's invalid, show a message and abort.
+                var imageFolderPath = GetValidatedImageFolderPath();
+                if (string.IsNullOrEmpty(imageFolderPath))
+                {
+                    // GetValidatedImageFolderPath already shows a MessageBox on failure if showWarning is true (default).
+                    // If we reach here, it means the path was invalid or the user was warned.
+                    IsFindingSimilar = false; // Ensure the loading indicator turns off
+                    return; // Abort the search
+                }
+                // --- END FIX ---
+
+                // Prepare for new operation
+                _findSimilarCts = new CancellationTokenSource();
+                var cancellationToken = _findSimilarCts.Token;
+
+                dynamic selectedItem = LstMissingImages.SelectedItem;
+                string romName = selectedItem.RomName;
+                string searchName = selectedItem.SearchName;
+
+                IsFindingSimilar = true;
+
+                // Create the task and store it
+                // --- FIX: Pass the correctly obtained imageFolderPath ---
+                var findTask = ButtonFactory.CreateSimilarImagesCollection(
+                    searchName,
+                    imageFolderPath, // Use the validated path obtained above
+                    App.Settings.SimilarityThreshold,
+                    SelectedSimilarityAlgorithm,
+                    cancellationToken
+                );
+                // --- END FIX ---
+                _currentFindTask = findTask; // This is now Task<SimilarityCalculationResult>
+
+                try
+                {
+                    _selectedRomFileName = romName;
+
+                    // Await the task to get the result
+                    var similarityResult = await findTask; // Get the new result object
 
                     if (!cancellationToken.IsCancellationRequested)
                     {
-                        ImageScrollViewer.ScrollToTop();
+                        await Application.Current.Dispatcher.InvokeAsync(() =>
+                        {
+                            var textBlock = new TextBlock();
+                            textBlock.Inlines.Add(new Run("Search Query: "));
+                            textBlock.Inlines.Add(new Run($"{searchName} ") { FontWeight = FontWeights.Bold });
+                            textBlock.Inlines.Add(new Run("for ROM: "));
+                            textBlock.Inlines.Add(new Run($"{romName} ") { FontWeight = FontWeights.Bold });
+                            textBlock.Inlines.Add(new Run("with "));
+                            textBlock.Inlines.Add(new Run($"{SelectedSimilarityAlgorithm} ") { FontWeight = FontWeights.Bold });
+                            textBlock.Inlines.Add(new Run("algorithm"));
+                            LblSearchQuery.Content = textBlock;
+
+                            SimilarImages.Clear();
+                            foreach (var imageData in similarityResult.SimilarImages) // Use SimilarImages from result
+                            {
+                                SimilarImages.Add(imageData);
+                            }
+
+                            // --- NEW: Display processing errors to the user ---
+                            if (similarityResult.ProcessingErrors.Count > 0)
+                            {
+                                var errorSummary = $"Encountered {similarityResult.ProcessingErrors.Count} issues while processing images:\n\n";
+                                errorSummary += string.Join("\n", similarityResult.ProcessingErrors.Take(5)); // Show first 5 errors
+                                if (similarityResult.ProcessingErrors.Count > 5)
+                                {
+                                    errorSummary += $"\n...and {similarityResult.ProcessingErrors.Count - 5} more. Check the application log for full details.";
+                                }
+
+                                MessageBox.Show(errorSummary, "Image Processing Warnings", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            }
+                            // --- END NEW ---
+                        });
+
+                        if (!cancellationToken.IsCancellationRequested)
+                        {
+                            ImageScrollViewer.ScrollToTop();
+                        }
                     }
                 }
+                catch (OperationCanceledException)
+                {
+                    // MessageBox.Show("Search cancelled.", "Cancelled", MessageBoxButton.OK, MessageBoxImage.Information);
+                    // Ignore
+                }
+                catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+                {
+                    MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _ = LogErrors.LogErrorAsync(ex, "Error in LstMissingImages_SelectionChanged");
+                }
+                finally
+                {
+                    // Always reset UI state unless explicitly cancelled
+                    if (!cancellationToken.IsCancellationRequested)
+                    {
+                        IsFindingSimilar = false;
+                    }
+
+                    _currentFindTask = null; // Clear the task reference when done
+                }
             }
-            catch (OperationCanceledException)
+            catch (Exception ex)
             {
-                // MessageBox.Show("Search cancelled.", "Cancelled", MessageBoxButton.OK, MessageBoxImage.Information);
-                // Ignore
-            }
-            catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
-            {
-                MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                _ = LogErrors.LogErrorAsync(ex, "Error in LstMissingImages_SelectionChanged");
+                _ = LogErrors.LogErrorAsync(ex, "Error in LstMissingImages_SelectionChanged outer catch");
+                IsFindingSimilar = false;
+                _currentFindTask = null;
             }
             finally
             {
-                // Always reset UI state unless cancelled
-                if (!cancellationToken.IsCancellationRequested)
-                {
-                    IsFindingSimilar = false;
-                }
-
-                _currentFindTask = null; // Clear the task reference when done
+                _findSimilarSemaphore.Release(); // Release semaphore
             }
         }
         catch (Exception ex)
         {
-            _ = LogErrors.LogErrorAsync(ex, "Error in LstMissingImages_SelectionChanged");
-            IsFindingSimilar = false;
-            _currentFindTask = null;
+            _ = LogErrors.LogErrorAsync(ex, "Error in LstMissingImages_SelectionChanged outer catch");
         }
     }
-
 
     private void ImageCell_Click(object sender, RoutedEventArgs e)
     {
@@ -643,14 +702,16 @@ public partial class MainWindow : INotifyPropertyChanged
 
     public void UseImage(string? imagePath)
     {
+        var imageFolderPath = GetValidatedImageFolderPath(); // Get validated path
+
         if (string.IsNullOrEmpty(_selectedRomFileName) ||
             string.IsNullOrEmpty(imagePath) ||
-            string.IsNullOrEmpty(_imageFolderPath))
+            string.IsNullOrEmpty(imageFolderPath)) // Use the validated path
         {
             return;
         }
 
-        var newFileName = Path.Combine(_imageFolderPath, _selectedRomFileName + ".png");
+        var newFileName = Path.Combine(imageFolderPath, _selectedRomFileName + ".png"); // Use the validated path
 
         try
         {
@@ -869,12 +930,17 @@ public partial class MainWindow : INotifyPropertyChanged
 
     private void TxtImageFolder_TextChanged(object sender, TextChangedEventArgs e)
     {
-        // Do NOT update _imageFolderPath here.
-        // This allows the user to type freely without prematurely setting the backing field.
-        // The _imageFolderPath field should only be updated when a valid path is confirmed
-        // (e.g., in LostFocus or when pressing Enter).
-        // The current logic of only updating if Directory.Exists is the source of the inconsistency.
-        // Simply let the user type. Validation happens on LostFocus or Enter.
+        // Only update button enabled state based on non-empty text,
+        // full Directory.Exists validation happens on LostFocus/Enter.
+        BtnCheckForMissingImages.IsEnabled = !string.IsNullOrEmpty(TxtRomFolder.Text.Trim()) && !string.IsNullOrEmpty(TxtImageFolder.Text.Trim());
+        LstMissingImages.IsEnabled = BtnCheckForMissingImages.IsEnabled; // Keep LstMissingImages enabled state in sync
+        if (!BtnCheckForMissingImages.IsEnabled)
+        {
+            LstMissingImages.Items.Clear();
+            SimilarImages.Clear();
+            LblSearchQuery.Content = null;
+            UpdateMissingCount();
+        }
     }
 
     private void LstMissingImages_KeyDown(object sender, KeyEventArgs e)
@@ -898,7 +964,9 @@ public partial class MainWindow : INotifyPropertyChanged
                 App.Settings.SaveSettings();
 
                 // Refresh the list immediately after the setting changes
-                await RefreshMissingImagesList();
+                // Only refresh if MAME data is actually available, otherwise it's pointless
+                if (_mameLookup != null && _mameLookup.Count > 0)
+                    await RefreshMissingImagesList();
             }
         }
         catch (Exception ex)
@@ -944,35 +1012,26 @@ public partial class MainWindow : INotifyPropertyChanged
         if (sender is TextBox textBox)
         {
             var newPath = textBox.Text.Trim();
+            var currentValidPath = GetValidatedImageFolderPath(false); // Get current valid path without re-validating the textbox
 
-            // --- New Logic Starts Here ---
-            // Scenario 1: User typed a valid path and moved focus (e.g., clicked elsewhere).
-            // Scenario 2: User typed an invalid path and moved focus.
-            // Scenario 3: User cleared the textbox and moved focus.
-
-            // If the path in the textbox is valid, update the internal field.
             if (!string.IsNullOrEmpty(newPath) && Directory.Exists(newPath))
             {
                 // Commit the valid path
-                _imageFolderPath = newPath;
-                // Ensure the textbox reflects the committed path (handles trailing spaces etc.)
-                textBox.Text = newPath;
-                // Optional: Move caret to the end if text was trimmed
+                textBox.Text = newPath; // Ensure textbox reflects the committed path (handles trailing spaces etc.)
                 textBox.CaretIndex = textBox.Text.Length;
             }
             else
             {
                 // If the path is invalid (doesn't exist) or empty, revert the textbox
-                // to show the last known good path stored in _imageFolderPath.
-                // This gives clear visual feedback that the typed path was not accepted.
-                textBox.Text = _imageFolderPath;
-                // Optional: Move caret to the end
-                if (!string.IsNullOrEmpty(_imageFolderPath))
+                // to show the last known good path. If no good path, clear it.
+                textBox.Text = currentValidPath ?? string.Empty;
+                if (!string.IsNullOrEmpty(textBox.Text))
                 {
                     textBox.CaretIndex = textBox.Text.Length;
                 }
             }
-            // --- New Logic Ends Here ---
+
+            UpdateUiStateForFolderPaths(); // Update UI state after focus change
         }
     }
 
@@ -999,13 +1058,139 @@ public partial class MainWindow : INotifyPropertyChanged
         }
     }
 
+    private void TxtRomFolder_LostFocus(object sender, RoutedEventArgs e)
+    {
+        if (sender is TextBox textBox)
+        {
+            var newPath = textBox.Text.Trim();
+            var currentValidPath = GetValidatedRomFolderPath(false);
+
+            if (!string.IsNullOrEmpty(newPath) && Directory.Exists(newPath))
+            {
+                textBox.Text = newPath;
+                textBox.CaretIndex = textBox.Text.Length;
+            }
+            else
+            {
+                textBox.Text = currentValidPath ?? string.Empty;
+                if (!string.IsNullOrEmpty(textBox.Text))
+                {
+                    textBox.CaretIndex = textBox.Text.Length;
+                }
+            }
+
+            UpdateUiStateForFolderPaths();
+        }
+    }
+
+    private void TxtRomFolder_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter && sender is TextBox)
+        {
+            TxtRomFolder_LostFocus(sender, new RoutedEventArgs(LostFocusEvent, sender));
+            e.Handled = true;
+        }
+    }
+
+    private void TxtRomFolder_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        // Only update button enabled state based on non-empty text,
+        // full Directory.Exists validation happens on LostFocus/Enter.
+        BtnCheckForMissingImages.IsEnabled = !string.IsNullOrEmpty(TxtRomFolder.Text.Trim()) && !string.IsNullOrEmpty(TxtImageFolder.Text.Trim());
+        LstMissingImages.IsEnabled = BtnCheckForMissingImages.IsEnabled; // Keep LstMissingImages enabled state in sync
+        if (!BtnCheckForMissingImages.IsEnabled)
+        {
+            LstMissingImages.Items.Clear();
+            SimilarImages.Clear();
+            LblSearchQuery.Content = null;
+            UpdateMissingCount();
+        }
+    }
+
+    /// <summary>
+    /// Gets the currently displayed image folder path if it is valid and exists.
+    /// </summary>
+    /// <param name="showWarning">Whether to show a warning message if the path is invalid.</param>
+    /// <returns>The validated image folder path, or null/empty if invalid.</returns>
+    private string? GetValidatedImageFolderPath(bool showWarning = true)
+    {
+        var path = TxtImageFolder.Text.Trim();
+        if (string.IsNullOrEmpty(path))
+        {
+            return null;
+        }
+
+        if (Directory.Exists(path))
+        {
+            return path;
+        }
+
+        if (showWarning)
+        {
+            MessageBox.Show($"The image folder path '{path}' is invalid or does not exist. Please correct it.",
+                "Invalid Image Folder", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Gets the currently displayed ROM folder path if it is valid and exists.
+    /// </summary>
+    /// <param name="showWarning">Whether to show a warning message if the path is invalid.</param>
+    /// <returns>The validated ROM folder path, or null/empty if invalid.</returns>
+    private string? GetValidatedRomFolderPath(bool showWarning = true)
+    {
+        var path = TxtRomFolder.Text.Trim();
+        if (string.IsNullOrEmpty(path))
+        {
+            return null;
+        }
+
+        if (Directory.Exists(path))
+        {
+            return path;
+        }
+
+        if (showWarning)
+        {
+            MessageBox.Show($"The ROM folder path '{path}' is invalid or does not exist. Please correct it.",
+                "Invalid ROM Folder", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Updates the enabled/disabled state of UI elements based on folder path validity.
+    /// This method performs the actual Directory.Exists checks.
+    /// </summary>
+    private void UpdateUiStateForFolderPaths()
+    {
+        var romPathValid = Directory.Exists(TxtRomFolder.Text.Trim());
+        var imagePathValid = Directory.Exists(TxtImageFolder.Text.Trim());
+
+        BtnCheckForMissingImages.IsEnabled = romPathValid && imagePathValid;
+        LstMissingImages.IsEnabled = romPathValid && imagePathValid;
+
+        // Also clear suggestions if paths become invalid
+        if (!romPathValid || !imagePathValid)
+        {
+            LstMissingImages.Items.Clear();
+            SimilarImages.Clear();
+            LblSearchQuery.Content = null;
+            UpdateMissingCount();
+        }
+    }
+
     protected override void OnClosed(EventArgs e)
     {
         App.Settings.PropertyChanged -= AppSettings_PropertyChanged;
 
-        // Clean up cancellation tokens
+        // Clean up cancellation tokens and semaphore
         _findSimilarCts?.Dispose();
         _loadMissingCts?.Dispose();
+        _findSimilarSemaphore.Dispose();
 
         base.OnClosed(e);
     }

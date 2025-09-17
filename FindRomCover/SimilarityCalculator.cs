@@ -9,16 +9,16 @@ public static class SimilarityCalculator
     // Add a configurable limit for maximum concurrent image loading
     private const int MaxConcurrentImages = 30;
 
-    public static async Task<List<ImageData>> CalculateSimilarityAsync(
+    public static async Task<SimilarityCalculationResult> CalculateSimilarityAsync( // Changed return type
         string selectedFileName,
         string imageFolderPath,
         double similarityThreshold,
         string algorithm,
         CancellationToken cancellationToken)
     {
-        var tempList = new List<ImageData>();
+        var result = new SimilarityCalculationResult(); // New result object
 
-        if (string.IsNullOrEmpty(imageFolderPath)) return tempList;
+        if (string.IsNullOrEmpty(imageFolderPath)) return result;
 
         string[] imageExtensions = ["*.png", "*.jpg", "*.jpeg"];
 
@@ -28,6 +28,8 @@ public static class SimilarityCalculator
 
         // First pass: Calculate similarity scores without loading images
         var candidateFiles = new ConcurrentBag<(string FilePath, string ImageName, double SimilarityScore)>();
+        var processingErrors = new ConcurrentBag<string>(); // Collect errors here
+
         var parallelOptions = new ParallelOptions
         {
             MaxDegreeOfParallelism = Environment.ProcessorCount,
@@ -58,9 +60,15 @@ public static class SimilarityCalculator
                             candidateFiles.Add((imageFile, imageName, similarityScore));
                         }
                     }
+                    catch (OperationCanceledException)
+                    {
+                        throw; // Re-throw cancellation
+                    }
                     catch (Exception ex)
                     {
-                        _ = LogErrors.LogErrorAsync(ex, $"Error processing file {imageFile}: {ex.Message}");
+                        // Log the error and add to the collection for user notification
+                        _ = LogErrors.LogErrorAsync(ex, $"Error processing file {imageFile} for similarity: {ex.Message}");
+                        processingErrors.Add($"Could not process image '{Path.GetFileName(imageFile)}' for similarity: {ex.Message}");
                     }
                 });
             }
@@ -70,8 +78,9 @@ public static class SimilarityCalculator
             }
             catch (Exception ex)
             {
-                _ = LogErrors.LogErrorAsync(ex, $"Error in parallel processing: {ex.Message}");
-                throw;
+                _ = LogErrors.LogErrorAsync(ex, $"Error in parallel processing of image files: {ex.Message}");
+                processingErrors.Add($"An unexpected error occurred during image file scanning: {ex.Message}");
+                // Do not re-throw here, let the process continue to load other images if possible.
             }
         }, cancellationToken);
 
@@ -99,7 +108,12 @@ public static class SimilarityCalculator
                         cancellationToken.ThrowIfCancellationRequested();
                         var imageSource = ImageLoader.LoadImageToMemory(candidate.FilePath);
 
-                        if (imageSource == null) return;
+                        if (imageSource == null)
+                        {
+                            // ImageLoader already logs specific errors, but we can add a generic one here too
+                            processingErrors.Add($"Could not load image '{Path.GetFileName(candidate.FilePath)}' for display.");
+                            return;
+                        }
 
                         var imageData = new ImageData(candidate.FilePath, candidate.ImageName, candidate.SimilarityScore)
                         {
@@ -107,6 +121,16 @@ public static class SimilarityCalculator
                         };
 
                         imageList.Add(imageData);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        throw; // Re-throw cancellation
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log the error and add to the collection for user notification
+                        _ = LogErrors.LogErrorAsync(ex, $"Error loading image {candidate.FilePath} for display: {ex.Message}");
+                        processingErrors.Add($"Could not load image '{Path.GetFileName(candidate.FilePath)}' for display: {ex.Message}");
                     }
                     finally
                     {
@@ -120,16 +144,19 @@ public static class SimilarityCalculator
             }
             catch (Exception ex)
             {
-                _ = LogErrors.LogErrorAsync(ex, $"Error in parallel image loading: {ex.Message}");
-                throw;
+                _ = LogErrors.LogErrorAsync(ex, $"Error in parallel image loading for display: {ex.Message}");
+                processingErrors.Add($"An unexpected error occurred during image loading for display: {ex.Message}");
+                // Do not re-throw here, let the process continue to load other images if possible.
             }
         }, cancellationToken);
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        return imageList.OrderByDescending(x => x.SimilarityScore).ToList();
-    }
+        result.SimilarImages = imageList.OrderByDescending(x => x.SimilarityScore).ToList();
+        result.ProcessingErrors = processingErrors.ToList(); // Convert to List for the result object
 
+        return result;
+    }
 
     private static double CalculateLevenshteinSimilarity(string a, string b)
     {

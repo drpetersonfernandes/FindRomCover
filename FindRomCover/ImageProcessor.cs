@@ -202,22 +202,7 @@ public static class ImageProcessor
 
         _ = LogErrors.LogErrorAsync(ex, $"GDI+ Error: {sourcePath}");
 
-        // Fallback 1: Try to copy bytes directly (bypass GDI+)
-        try
-        {
-            if (TryDirectCopy(sourcePath, targetPath))
-            {
-                MessageBox.Show("Image saved successfully using direct copy method.", "Success",
-                    MessageBoxButton.OK, MessageBoxImage.Information);
-                return true;
-            }
-        }
-        catch (Exception fallbackEx)
-        {
-            _ = LogErrors.LogErrorAsync(fallbackEx, "Direct copy fallback failed");
-        }
-
-        // Fallback 2: Try to create a new image from pixel data
+        // Fallback 1: Try to create a new image from pixel data
         try
         {
             if (TryPixelCopy(sourcePath, targetPath))
@@ -230,6 +215,21 @@ public static class ImageProcessor
         catch (Exception fallbackEx)
         {
             _ = LogErrors.LogErrorAsync(fallbackEx, "Pixel copy fallback failed");
+        }
+
+        // Fallback 2: Try to copy bytes directly (bypass GDI+)
+        try
+        {
+            if (TryDirectCopy(sourcePath, targetPath))
+            {
+                MessageBox.Show("Image saved successfully using direct copy method.", "Success",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return true;
+            }
+        }
+        catch (Exception fallbackEx)
+        {
+            _ = LogErrors.LogErrorAsync(fallbackEx, "Direct copy fallback failed");
         }
 
         // All fallbacks failed
