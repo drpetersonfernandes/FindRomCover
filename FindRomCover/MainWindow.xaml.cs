@@ -193,42 +193,50 @@ public partial class MainWindow : INotifyPropertyChanged
         DarkTheme.IsChecked = App.Settings.BaseTheme == "Dark";
     }
 
-    // Handle settings changes from other parts of the application (e.g., SettingsWindow)
-    private void AppSettings_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    private async void AppSettings_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        switch (e.PropertyName)
+        try
         {
-            case nameof(Settings.BaseTheme):
-                // Base theme is handled by App.ChangeTheme, which applies globally.
-                // Ensure menu checks are updated.
-                LightTheme.IsChecked = App.Settings.BaseTheme == "Light";
-                DarkTheme.IsChecked = App.Settings.BaseTheme == "Dark";
-                break;
-            case nameof(Settings.AccentColor):
-                // Accent color is handled by App.ChangeTheme, which applies globally.
-                // Ensure menu checks are updated.
-                UpdateAccentColorChecks();
-                break;
-            case nameof(Settings.ImageWidth):
-            case nameof(Settings.ImageHeight):
-                // Update local properties and trigger UI update
-                _imageWidth = App.Settings.ImageWidth;
-                _imageHeight = App.Settings.ImageHeight;
-                OnPropertyChanged(nameof(ImageWidth));
-                OnPropertyChanged(nameof(ImageHeight));
-                UpdateThumbnailSizeMenuChecks();
-                break;
-            case nameof(Settings.SelectedSimilarityAlgorithm):
-                _selectedSimilarityAlgorithm = App.Settings.SelectedSimilarityAlgorithm;
-                OnPropertyChanged(nameof(SelectedSimilarityAlgorithm));
-                UpdateSimilarityAlgorithmChecks();
-                break;
-            case nameof(Settings.SimilarityThreshold):
-                UpdateSimilarityThresholdChecks();
-                break;
-            case nameof(Settings.UseMameDescription):
-                UpdateMameDescriptionCheck();
-                break;
+            switch (e.PropertyName)
+            {
+                case nameof(Settings.BaseTheme):
+                    // Base theme is handled by App.ChangeTheme, which applies globally.
+                    // Ensure menu checks are updated.
+                    LightTheme.IsChecked = App.Settings.BaseTheme == "Light";
+                    DarkTheme.IsChecked = App.Settings.BaseTheme == "Dark";
+                    break;
+                case nameof(Settings.AccentColor):
+                    // Accent color is handled by App.ChangeTheme, which applies globally.
+                    // Ensure menu checks are updated.
+                    UpdateAccentColorChecks();
+                    break;
+                case nameof(Settings.ImageWidth):
+                case nameof(Settings.ImageHeight):
+                    // Update local properties and trigger UI update
+                    _imageWidth = App.Settings.ImageWidth;
+                    _imageHeight = App.Settings.ImageHeight;
+                    OnPropertyChanged(nameof(ImageWidth));
+                    OnPropertyChanged(nameof(ImageHeight));
+                    UpdateThumbnailSizeMenuChecks();
+                    break;
+                case nameof(Settings.SelectedSimilarityAlgorithm):
+                    _selectedSimilarityAlgorithm = App.Settings.SelectedSimilarityAlgorithm;
+                    OnPropertyChanged(nameof(SelectedSimilarityAlgorithm));
+                    UpdateSimilarityAlgorithmChecks();
+                    break;
+                case nameof(Settings.SimilarityThreshold):
+                    UpdateSimilarityThresholdChecks();
+                    break;
+                case nameof(Settings.UseMameDescription):
+                    UpdateMameDescriptionCheck();
+                    // Refresh the list immediately after the setting changes
+                    await RefreshMissingImagesList();
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            _ = LogErrors.LogErrorAsync(ex, "Error in AppSettings_PropertyChanged");
         }
     }
 
@@ -328,15 +336,7 @@ public partial class MainWindow : INotifyPropertyChanged
     {
         try
         {
-            // Cancel any existing operation
-            if (_loadMissingCts != null)
-            {
-                await _loadMissingCts.CancelAsync();
-                _loadMissingCts.Dispose();
-            }
-
-            _loadMissingCts = new CancellationTokenSource();
-            await LoadMissingImagesList(_loadMissingCts.Token);
+            await RefreshMissingImagesList();
         }
         catch (Exception ex)
         {
@@ -886,14 +886,56 @@ public partial class MainWindow : INotifyPropertyChanged
         }
     }
 
-    private void MenuUseMameDescription_Click(object sender, RoutedEventArgs e)
+    private async void MenuUseMameDescription_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is MenuItem menuItem)
+        try
         {
-            // Handle nullable bool properly
-            var isChecked = menuItem.IsChecked == true;
-            App.Settings.UseMameDescription = isChecked;
-            App.Settings.SaveSettings();
+            if (sender is MenuItem menuItem)
+            {
+                // Handle nullable bool properly
+                var isChecked = menuItem.IsChecked == true;
+                App.Settings.UseMameDescription = isChecked;
+                App.Settings.SaveSettings();
+
+                // Refresh the list immediately after the setting changes
+                await RefreshMissingImagesList();
+            }
+        }
+        catch (Exception ex)
+        {
+            _ = LogErrors.LogErrorAsync(ex, "Error in MenuUseMameDescription_Click");
+        }
+    }
+
+    private async Task RefreshMissingImagesList()
+    {
+        // Cancel any existing operation
+        if (_loadMissingCts != null)
+        {
+            await _loadMissingCts.CancelAsync();
+            _loadMissingCts.Dispose();
+            _loadMissingCts = null;
+        }
+
+        _loadMissingCts = new CancellationTokenSource();
+        try
+        {
+            await LoadMissingImagesList(_loadMissingCts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected if a previous operation was cancelled or if this one was cancelled quickly.
+            // No need to log this as an error.
+        }
+        catch (Exception ex)
+        {
+            _ = LogErrors.LogErrorAsync(ex, "Error refreshing missing images list.");
+        }
+        finally
+        {
+            // Ensure CTS is disposed even if an exception occurs during LoadMissingImagesList
+            _loadMissingCts?.Dispose();
+            _loadMissingCts = null;
         }
     }
 

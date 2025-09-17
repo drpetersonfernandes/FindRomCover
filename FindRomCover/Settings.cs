@@ -3,7 +3,6 @@ using System.Globalization;
 using System.IO;
 using System.Windows;
 using System.Xml.Linq;
-// Added for INotifyPropertyChanged
 
 namespace FindRomCover;
 
