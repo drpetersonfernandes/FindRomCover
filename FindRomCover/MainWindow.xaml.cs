@@ -14,7 +14,7 @@ using MessageBox = System.Windows.MessageBox;
 
 namespace FindRomCover;
 
-public partial class MainWindow : INotifyPropertyChanged
+public partial class MainWindow : INotifyPropertyChanged, IDisposable
 {
     private string? _lastValidRomFolderPath;
     private string? _lastValidImageFolderPath;
@@ -1206,5 +1206,14 @@ public partial class MainWindow : INotifyPropertyChanged
         _findSimilarSemaphore.Dispose();
 
         base.OnClosed(e);
+    }
+
+    public void Dispose()
+    {
+        _findSimilarCts?.Dispose();
+        _findSimilarSemaphore?.Dispose();
+        _loadMissingCts?.Dispose();
+
+        GC.SuppressFinalize(this);
     }
 }

@@ -106,6 +106,10 @@ public static class SimilarityCalculator
                     try
                     {
                         cancellationToken.ThrowIfCancellationRequested();
+
+                        // A little delay to avoid file locks
+                        Task.Delay(200, cancellationToken);
+
                         var imageSource = ImageLoader.LoadImageToMemory(candidate.FilePath);
 
                         if (imageSource == null)
