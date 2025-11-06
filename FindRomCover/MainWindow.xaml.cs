@@ -408,9 +408,9 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
                         try
                         {
-                            var files = Directory.EnumerateFiles(romFolderPath, pattern);
+                            var files = Directory.EnumerateFiles(romFolderPath, pattern, SearchOption.AllDirectories);
                             var names = files.Select(Path.GetFileNameWithoutExtension)
-                                .Where(name => name != null)
+                                .Where(static name => name != null)
                                 .Cast<string>();
                             allRomNames.AddRange(names);
                         }
