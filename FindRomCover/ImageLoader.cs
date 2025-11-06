@@ -15,76 +15,91 @@ public static class ImageLoader
             return null;
         }
 
-        try
-        {
-            var memoryImage = new BitmapImage();
+        const int maxRetries = 5; // Number of retries for locked files
+        const int delayMilliseconds = 200; // Delay between retries
 
-            // Use FileStream with FileShare.Read to allow other processes to read
-            // The critical improvement: wrap in try-catch to handle locked files
-            using (var stream = new FileStream(imagePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+        for (var i = 0; i < maxRetries; i++)
+        {
+            try
             {
-                // Check for zero-length files
-                if (stream.Length == 0)
+                var memoryImage = new BitmapImage();
+
+                // Use FileStream with FileShare.Read to allow other processes to read
+                using (var stream = new FileStream(imagePath, FileMode.Open, FileAccess.Read, FileShare.Read))
                 {
-                    _ = LogErrors.LogErrorAsync(new InvalidDataException($"Image file is empty (0 bytes): {imagePath}"),
-                        $"Image file is empty: {imagePath}");
+                    // Check for zero-length files
+                    if (stream.Length == 0)
+                    {
+                        _ = LogErrors.LogErrorAsync(new InvalidDataException($"Image file is empty (0 bytes): {imagePath}"),
+                            $"Image file is empty: {imagePath}");
+                        return null;
+                    }
+
+                    memoryImage.BeginInit();
+                    memoryImage.CacheOption = BitmapCacheOption.OnLoad;
+                    memoryImage.StreamSource = stream;
+                    memoryImage.EndInit();
+                }
+
+                // Validate loaded image dimensions
+                if (memoryImage.PixelWidth == 0 || memoryImage.PixelHeight == 0)
+                {
+                    _ = LogErrors.LogErrorAsync(new InvalidOperationException($"Loaded image has zero dimensions: {imagePath}"),
+                        $"Invalid image dimensions: {imagePath}");
                     return null;
                 }
 
-                memoryImage.BeginInit();
-                memoryImage.CacheOption = BitmapCacheOption.OnLoad;
-                memoryImage.StreamSource = stream;
-                memoryImage.EndInit();
-            }
+                // Freeze for cross-thread safety
+                if (memoryImage.CanFreeze)
+                    memoryImage.Freeze();
 
-            // Validate loaded image dimensions
-            if (memoryImage.PixelWidth == 0 || memoryImage.PixelHeight == 0)
+                return memoryImage; // Success
+            }
+            catch (IOException ex) when (ex.Message.Contains("being used by another process"))
             {
-                _ = LogErrors.LogErrorAsync(new InvalidOperationException($"Loaded image has zero dimensions: {imagePath}"),
-                    $"Invalid image dimensions: {imagePath}");
+                if (i < maxRetries - 1)
+                {
+                    Thread.Sleep(delayMilliseconds); // Wait before retrying
+                }
+                else
+                {
+                    // Last attempt failed, log and exit loop
+                    _ = LogErrors.LogErrorAsync(ex, $"Image file is locked by another process after {maxRetries} retries: {imagePath}");
+                    break;
+                }
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                _ = LogErrors.LogErrorAsync(ex, $"Access denied to image file: {imagePath}");
                 return null;
             }
+            catch (DirectoryNotFoundException ex)
+            {
+                _ = LogErrors.LogErrorAsync(ex, $"Directory not found for image: {imagePath}");
+                return null;
+            }
+            catch (FileNotFoundException ex)
+            {
+                _ = LogErrors.LogErrorAsync(ex, $"Image file not found: {imagePath}");
+                return null;
+            }
+            catch (IOException ex)
+            {
+                _ = LogErrors.LogErrorAsync(ex, $"IO error loading image: {imagePath}");
+                return null;
+            }
+            catch (ExternalException ex)
+            {
+                _ = LogErrors.LogErrorAsync(ex, $"Image format error: {imagePath}\n{ex.Message}");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _ = LogErrors.LogErrorAsync(ex, $"Failed to load image: {imagePath}\n{ex.GetType().Name}: {ex.Message}");
+                return null;
+            }
+        }
 
-            // Freeze for cross-thread safety
-            if (memoryImage.CanFreeze)
-                memoryImage.Freeze();
-
-            return memoryImage;
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            _ = LogErrors.LogErrorAsync(ex, $"Access denied to image file: {imagePath}");
-            return null;
-        }
-        catch (DirectoryNotFoundException ex)
-        {
-            _ = LogErrors.LogErrorAsync(ex, $"Directory not found for image: {imagePath}");
-            return null;
-        }
-        catch (FileNotFoundException ex)
-        {
-            _ = LogErrors.LogErrorAsync(ex, $"Image file not found: {imagePath}");
-            return null;
-        }
-        catch (IOException ex) when (ex.Message.Contains("being used by another process"))
-        {
-            _ = LogErrors.LogErrorAsync(ex, $"Image file is locked by another process: {imagePath}");
-            return null;
-        }
-        catch (IOException ex)
-        {
-            _ = LogErrors.LogErrorAsync(ex, $"IO error loading image: {imagePath}");
-            return null;
-        }
-        catch (ExternalException ex)
-        {
-            _ = LogErrors.LogErrorAsync(ex, $"Image format error: {imagePath}\n{ex.Message}");
-            return null;
-        }
-        catch (Exception ex)
-        {
-            _ = LogErrors.LogErrorAsync(ex, $"Failed to load image: {imagePath}\n{ex.GetType().Name}: {ex.Message}");
-            return null;
-        }
+        return null; // Return null if all retries fail
     }
 }

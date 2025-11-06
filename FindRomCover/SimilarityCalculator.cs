@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.IO;
 using FindRomCover.models;
 
@@ -106,9 +106,6 @@ public static class SimilarityCalculator
                     try
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-
-                        // A little delay to avoid file locks
-                        Task.Delay(500, cancellationToken);
 
                         var imageSource = ImageLoader.LoadImageToMemory(candidate.FilePath);
 
