@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -719,7 +719,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         {
             if (ImageProcessor.ConvertAndSaveImage(imagePath, newFileName))
             {
-                PlaySound.PlayClickSound();
+                App.AudioService.PlayClickSound();
                 RemoveSelectedItem();
                 SimilarImages.Clear();
                 UpdateMissingCount();
@@ -950,7 +950,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         if (e.Key == Key.Delete)
         {
             RemoveSelectedItem();
-            PlaySound.PlayClickSound();
+            App.AudioService.PlayClickSound();
         }
     }
 
@@ -1045,7 +1045,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
     {
         RemoveSelectedItem();
         SimilarImages.Clear();
-        PlaySound.PlayClickSound();
+        App.AudioService.PlayClickSound();
     }
 
     private void TxtImageFolder_PreviewKeyDown(object sender, KeyEventArgs e)

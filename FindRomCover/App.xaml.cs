@@ -1,16 +1,29 @@
-﻿using System.Windows;
+using System.Windows;
 using ControlzEx.Theming;
+using FindRomCover.Services;
 
 namespace FindRomCover;
 
 public partial class App
 {
     public static readonly Settings Settings = new(); // Made public for global access
+    public static IAudioService AudioService { get; private set; } = null!;
 
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        AudioService = new AudioService();
         ApplyTheme(Settings.BaseTheme, Settings.AccentColor);
+    }
+
+    protected override void OnExit(ExitEventArgs e)
+    {
+        if (AudioService is IDisposable disposableAudioService)
+        {
+            disposableAudioService.Dispose();
+        }
+
+        base.OnExit(e);
     }
 
     public static void ChangeTheme(string baseTheme, string accentColor)
