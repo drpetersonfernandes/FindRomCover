@@ -1,11 +1,12 @@
 using System.IO;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using FindRomCover.models;
 using Clipboard = System.Windows.Clipboard;
+using ContextMenu = System.Windows.Controls.ContextMenu;
 using Image = System.Windows.Controls.Image;
+using MenuItem = System.Windows.Controls.MenuItem;
 using MessageBox = System.Windows.MessageBox;
 
 namespace FindRomCover;

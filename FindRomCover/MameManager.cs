@@ -1,6 +1,7 @@
 using MessagePack;
 using System.IO;
 using System.Windows;
+using MessageBox = System.Windows.MessageBox;
 
 namespace FindRomCover;
 

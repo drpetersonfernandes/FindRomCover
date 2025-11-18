@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Windows;
 using MahApps.Metro.Controls.Dialogs;
+using MessageBox = System.Windows.MessageBox;
 
 namespace FindRomCover;
 

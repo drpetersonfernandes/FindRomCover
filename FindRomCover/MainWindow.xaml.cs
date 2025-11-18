@@ -10,7 +10,10 @@ using System.Windows.Input;
 using FindRomCover.models;
 using Microsoft.Win32;
 using Application = System.Windows.Application;
+using KeyEventArgs = System.Windows.Input.KeyEventArgs;
+using MenuItem = System.Windows.Controls.MenuItem;
 using MessageBox = System.Windows.MessageBox;
+using TextBox = System.Windows.Controls.TextBox;
 
 namespace FindRomCover;
 
@@ -1044,14 +1047,14 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         App.AudioService.PlayClickSound();
     }
 
-    private void TxtImageFolder_PreviewKeyDown(object sender, KeyEventArgs e)
+    private void TxtImageFolder_PreviewKeyDown(object sender, KeyEventArgs keyEventArgs)
     {
-        if (e.Key == Key.Enter && sender is TextBox)
+        if (keyEventArgs.Key == Key.Enter && sender is TextBox) // Corrected line
         {
             // Trigger the same logic as LostFocus when Enter is pressed
             TxtImageFolder_LostFocus(sender, new RoutedEventArgs(LostFocusEvent, sender));
             // Prevent the Enter key from being processed further (e.g., adding a newline)
-            e.Handled = true;
+            keyEventArgs.Handled = true; // Corrected line
         }
     }
 

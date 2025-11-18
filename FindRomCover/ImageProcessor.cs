@@ -1,6 +1,5 @@
 using System.IO;
 using System.Windows;
-using System.Drawing;
 using System.Drawing.Imaging;
 using Image = System.Drawing.Image;
 using MessageBox = System.Windows.MessageBox;
