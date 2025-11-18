@@ -12,23 +12,23 @@ Main window with dark theme:
 
 -   **Browse:** Select the folders where your ROMs and cover images are stored.
 -   **Command-line Support:** Optionally launch the application with ROM and Image folder paths provided as arguments.
--   **List:** It will list which cover images are missing for your ROM collection.
+-   **List:** It will list which cover images are missing for your ROM collection, optionally using MAME descriptions for better readability.
 -   **Match:** The app will search within the Cover Image folder for an image with a similar filename using a configurable similarity algorithm. Adjust the similarity threshold to find the best matches.
 -   **Display:** Displays suggestions for cover images on the right panel for the selected ROM, along with their calculated similarity percentage. You can adjust the size of the image previews.
--   **Organize:** Manually select the best cover images from the suggestions provided.
 -   **Copy:** Click on an image or use the right-click context menu ("Use This Image") to copy it to the Cover Image folder, renaming the image to match the ROM filename and converting it to PNG format. The context menu also provides options to copy the image filename or open its location in File Explorer.
 
 ## Features:
 
--   **Easy ROM and Cover Image Matching:** Automatically matches your ROM files with their corresponding cover images based on name similarity.
+-   **Easy ROM and Cover Image Matching:** Automatically matches your ROM files with their corresponding cover images based on name similarity, with robust image loading and processing.
 -   **Multiple Similarity Algorithms:** Choose between [Jaro-Winkler Distance](https://en.wikipedia.org/wiki/Jaro%E2%80%93Winkler_distance) (default), [Levenshtein Distance](https://en.wikipedia.org/wiki/Levenshtein_distance), and [Jaccard Similarity](https://en.wikipedia.org/wiki/Jaccard_index) to find the best matches for your needs.
 -   **Adjustable Similarity Threshold:** Fine-tune how strict the matching criteria should be, whether you prefer exact matches or broader suggestions.
 -   **Thumbnail Size Customization:** Choose how large or small you want the cover image thumbnails to appear, making it easier to view and select the right covers.
 -   **Manual Selection & Context Menu:** Browse through suggested images, view similarity scores, and use the right-click context menu for actions like using the image, copying its filename, or opening its folder location.
--   **Missing Image Finder:** Quickly identify which ROMs are missing cover images, helping you complete your collection.
+-   **Missing Image Finder:** Quickly identify which ROMs are missing cover images, helping you complete your collection. Now includes an option to use MAME descriptions for ROM names.
 -   **Theme Customization:** Switch between Light and Dark base themes and choose from a variety of accent colors.
--   **Simple Interface:** Designed for ease of use, making it accessible to everyone.
--   **Automatic Error Reporting:** The application includes an automatic error reporting mechanism to help developers quickly identify and fix issues, ensuring a more stable experience.
+-   **Simple Interface:** Designed for ease of use, with improved folder path validation and enhanced settings management for supported extensions.
+-   **Audio Feedback:** Get audible confirmation for successful actions like copying images or removing items from the list.
+-   **Automatic Error Reporting:** The application includes an automatic error reporting mechanism to help developers quickly identify and fix issues, ensuring a more stable experience. This now includes more detailed logging and internal error tracking.
 
 ## Where can I find ROM Cover Images?
 
@@ -37,7 +37,7 @@ You can find cover images on websites such as [Libretro Thumbnails](https://gith
 ## Requirements
 
 - Windows 7 or later
-- [.NET 9.0 Runtime](https://dotnet.microsoft.com/download/dotnet/9.0)
+- [.NET 10.0 Runtime](https://dotnet.microsoft.com/download/dotnet/10.0)
 
 ## Installation
 
@@ -47,8 +47,13 @@ You can find cover images on websites such as [Libretro Thumbnails](https://gith
 
 ## Recent Updates
 - Switched to System.Text.Json for all JSON handling (removed Newtonsoft.Json dependency).
-- Updated dependencies for better performance and compatibility (e.g., ControlzEx to 7.0.1).
-- Improved error logging in key areas for better debugging.
+- Updated dependencies for better performance and compatibility (e.g., ControlzEx to 7.0.2, MahApps.Metro to 3.0.0-rc0529, MessagePack to 3.1.4).
+- Improved error logging in key areas for better debugging, including an internal log for logging system issues.
+- Added audio feedback for successful actions.
+- Enhanced image loading and processing with retries for locked files, validation checks, and GDI+ error fallbacks.
+- Improved folder path validation and UI responsiveness during long-running tasks with cancellation support.
+- Added MAME description support for ROM matching.
+- Enhanced supported extensions management with input validation and sorting in the settings window.
 
 ## Support the Project
 
