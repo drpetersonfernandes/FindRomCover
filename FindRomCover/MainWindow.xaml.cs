@@ -63,30 +63,26 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         }
     }
 
-    private bool _isCheckingMissing;
-
     public bool IsCheckingMissing
     {
-        get => _isCheckingMissing;
+        get;
         set
         {
-            if (_isCheckingMissing == value) return;
+            if (field == value) return;
 
-            _isCheckingMissing = value;
+            field = value;
             OnPropertyChanged(nameof(IsCheckingMissing));
         }
     }
 
-    private bool _isFindingSimilar;
-
     public bool IsFindingSimilar
     {
-        get => _isFindingSimilar;
+        get;
         set
         {
-            if (_isFindingSimilar == value) return;
+            if (field == value) return;
 
-            _isFindingSimilar = value;
+            field = value;
             OnPropertyChanged(nameof(IsFindingSimilar));
         }
     }

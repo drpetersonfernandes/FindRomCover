@@ -194,7 +194,7 @@ public static class ImageProcessor
         }
     }
 
-    private static bool HandleGdiPlusError(string sourcePath, string targetPath, Exception ex)
+    private static bool HandleGdiPlusError(string sourcePath, string targetPath, System.Runtime.InteropServices.ExternalException ex)
     {
         MessageBox.Show($"GDI+ Error: {ex.Message}\n\n" +
                         "Trying alternative methods...", "Image Processing",
