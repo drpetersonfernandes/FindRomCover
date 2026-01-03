@@ -9,9 +9,9 @@ using Image = System.Windows.Controls.Image;
 using MenuItem = System.Windows.Controls.MenuItem;
 using MessageBox = System.Windows.MessageBox;
 
-namespace FindRomCover;
+namespace FindRomCover.Services;
 
-public class ButtonFactory
+public static class ButtonFactory
 {
     public static async Task<SimilarityCalculationResult> CreateSimilarImagesCollection( // Changed return type
         string selectedRomFileName,

@@ -1,9 +1,10 @@
-using MessagePack;
 using System.IO;
 using System.Windows;
+using FindRomCover.Services;
+using MessagePack;
 using MessageBox = System.Windows.MessageBox;
 
-namespace FindRomCover;
+namespace FindRomCover.Managers;
 
 [MessagePackObject]
 public class MameManager

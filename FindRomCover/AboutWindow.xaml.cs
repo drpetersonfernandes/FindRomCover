@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Windows.Navigation;
 using System.Reflection;
+using FindRomCover.Services;
 using MessageBox = System.Windows.MessageBox;
 
 namespace FindRomCover;

@@ -1,10 +1,10 @@
+using System.Drawing.Imaging;
 using System.IO;
 using System.Windows;
-using System.Drawing.Imaging;
 using Image = System.Drawing.Image;
 using MessageBox = System.Windows.MessageBox;
 
-namespace FindRomCover;
+namespace FindRomCover.Services;
 
 public static class ImageProcessor
 {

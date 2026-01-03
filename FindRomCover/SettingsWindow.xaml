@@ -4,14 +4,14 @@
                       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                       xmlns:controls="http://metro.mahapps.com/winfx/xaml/controls"
-                      xmlns:local="clr-namespace:FindRomCover"
                       xmlns:componentModel="clr-namespace:System.ComponentModel;assembly=WindowsBase"
+                      xmlns:services="clr-namespace:FindRomCover.Services"
                       mc:Ignorable="d"
                       Title="Edit Supported Extensions" Height="450" Width="400"
                       WindowStartupLocation="CenterScreen"
                       ResizeMode="NoResize" d:DataContext="{d:DesignInstance }">
     <controls:MetroWindow.Resources>
-        <local:ObjectToBoolConverter x:Key="IsNotNullConverter" />
+        <services:ObjectToBoolConverter x:Key="IsNotNullConverter" />
         <CollectionViewSource x:Key="SortedExtensions" Source="{Binding SupportedExtensions}" >
             <CollectionViewSource.SortDescriptions>
                 <componentModel:SortDescription PropertyName="." Direction="Ascending"/>

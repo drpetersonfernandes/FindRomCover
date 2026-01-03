@@ -2,7 +2,7 @@ using System.Collections.Concurrent;
 using System.IO;
 using FindRomCover.models;
 
-namespace FindRomCover;
+namespace FindRomCover.Services;
 
 public static class SimilarityCalculator
 {

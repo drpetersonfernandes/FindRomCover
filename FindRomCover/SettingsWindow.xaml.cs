@@ -1,5 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Windows;
+using FindRomCover.Managers;
+using FindRomCover.Services;
 using MahApps.Metro.Controls.Dialogs;
 using MessageBox = System.Windows.MessageBox;
 
@@ -7,17 +9,17 @@ namespace FindRomCover;
 
 public partial class SettingsWindow
 {
-    private readonly Settings _settings; // This will now always be App.Settings
+    private readonly SettingsManager _settingsManager; // This will now always be App.Settings
     private readonly ObservableCollection<string> _supportedExtensions;
 
-    public SettingsWindow(Settings settings)
+    public SettingsWindow(SettingsManager settingsManager)
     {
         InitializeComponent();
         App.ApplyThemeToWindow(this);
 
-        _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+        _settingsManager = settingsManager ?? throw new ArgumentNullException(nameof(settingsManager));
 
-        _supportedExtensions = new ObservableCollection<string>(_settings.SupportedExtensions.OrderBy(e => e, StringComparer.OrdinalIgnoreCase));
+        _supportedExtensions = new ObservableCollection<string>(_settingsManager.SupportedExtensions.OrderBy(e => e, StringComparer.OrdinalIgnoreCase));
         DataContext = new { SupportedExtensions = _supportedExtensions };
     }
 
@@ -159,8 +161,8 @@ public partial class SettingsWindow
                 .OrderBy(static ext => ext, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
 
-            _settings.SupportedExtensions = normalizedExtensions;
-            _settings.SaveSettings();
+            _settingsManager.SupportedExtensions = normalizedExtensions;
+            _settingsManager.SaveSettings();
 
             DialogResult = true;
             Close();

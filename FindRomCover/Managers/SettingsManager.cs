@@ -3,11 +3,12 @@ using System.Globalization;
 using System.IO;
 using System.Windows;
 using System.Xml.Linq;
+using FindRomCover.Services;
 using MessageBox = System.Windows.MessageBox;
 
-namespace FindRomCover;
+namespace FindRomCover.Managers;
 
-public class Settings : INotifyPropertyChanged
+public class SettingsManager : INotifyPropertyChanged
 {
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -131,7 +132,7 @@ public class Settings : INotifyPropertyChanged
         }
     }
 
-    public Settings()
+    public SettingsManager()
     {
         LoadSettings();
     }

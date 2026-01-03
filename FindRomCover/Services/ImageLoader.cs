@@ -2,7 +2,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows.Media.Imaging;
 
-namespace FindRomCover;
+namespace FindRomCover.Services;
 
 public static class ImageLoader
 {

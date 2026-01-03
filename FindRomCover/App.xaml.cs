@@ -1,19 +1,20 @@
 using System.Windows;
 using ControlzEx.Theming;
+using FindRomCover.Managers;
 using FindRomCover.Services;
 
 namespace FindRomCover;
 
 public partial class App
 {
-    public static readonly Settings Settings = new(); // Made public for global access
+    public static readonly SettingsManager SettingsManager = new(); // Made public for global access
     public static IAudioService AudioService { get; private set; } = null!;
 
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
         AudioService = new AudioService();
-        ApplyTheme(Settings.BaseTheme, Settings.AccentColor);
+        ApplyTheme(SettingsManager.BaseTheme, SettingsManager.AccentColor);
     }
 
     protected override void OnExit(ExitEventArgs e)
@@ -29,9 +30,9 @@ public partial class App
     public static void ChangeTheme(string baseTheme, string accentColor)
     {
         ApplyTheme(baseTheme, accentColor); // This call is now valid
-        Settings.BaseTheme = baseTheme; // Updates the public static Settings instance
-        Settings.AccentColor = accentColor; // Updates the public static Settings instance
-        Settings.SaveSettings(); // Saves the public static Settings instance
+        SettingsManager.BaseTheme = baseTheme; // Updates the public static Settings instance
+        SettingsManager.AccentColor = accentColor; // Updates the public static Settings instance
+        SettingsManager.SaveSettings(); // Saves the public static Settings instance
     }
 
     private static void ApplyTheme(string baseTheme, string accentColor)
@@ -48,8 +49,8 @@ public partial class App
 
     public static void ApplyThemeToWindow(Window window)
     {
-        var baseTheme = Settings.BaseTheme;
-        var accentColor = Settings.AccentColor;
+        var baseTheme = SettingsManager.BaseTheme;
+        var accentColor = SettingsManager.AccentColor;
         ThemeManager.Current.ChangeTheme(window, $"{baseTheme}.{accentColor}");
     }
 }

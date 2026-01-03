@@ -5,6 +5,7 @@
                       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                       xmlns:local="clr-namespace:FindRomCover"
+                      xmlns:services="clr-namespace:FindRomCover.Services"
                       mc:Ignorable="d"
                       d:DataContext="{d:DesignInstance Type=local:MainWindow, IsDesignTimeCreatable=True}"
                       Title="Find ROM Cover"
@@ -13,7 +14,7 @@
                       WindowStartupLocation="CenterScreen">
 
     <Window.Resources>
-        <local:ObjectToBoolConverter x:Key="IsNotNullConverter" />
+        <services:ObjectToBoolConverter x:Key="IsNotNullConverter" />
 
         <Style x:Key="ImageSuggestionButtonStyle" TargetType="Button">
             <Setter Property="Margin" Value="10" />

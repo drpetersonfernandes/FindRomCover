@@ -1,6 +1,6 @@
 using System.Windows.Input;
 
-namespace FindRomCover;
+namespace FindRomCover.Services;
 
 public class DelegateCommand(Action<object?> execute, Func<object?, bool>? canExecute = null) : ICommand
 {

@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Windows.Data;
 
-namespace FindRomCover;
+namespace FindRomCover.Services;
 
 /// <summary>
 /// Converts an object to a boolean value. Returns true if the object is not null, otherwise false.

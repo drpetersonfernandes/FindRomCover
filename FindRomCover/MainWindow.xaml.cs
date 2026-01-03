@@ -7,7 +7,9 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Windows.Documents;
 using System.Windows.Input;
+using FindRomCover.Managers;
 using FindRomCover.models;
+using FindRomCover.Services;
 using Microsoft.Win32;
 using Application = System.Windows.Application;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
@@ -115,9 +117,9 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         DataContext = this;
 
         // Initialize local properties from App.Settings (direct backing field assignment to avoid PropertyChanged during init)
-        _imageWidth = App.Settings.ImageWidth;
-        _imageHeight = App.Settings.ImageHeight;
-        _selectedSimilarityAlgorithm = App.Settings.SelectedSimilarityAlgorithm;
+        _imageWidth = App.SettingsManager.ImageWidth;
+        _imageHeight = App.SettingsManager.ImageHeight;
+        _selectedSimilarityAlgorithm = App.SettingsManager.SelectedSimilarityAlgorithm;
 
         // Initialize stored folder paths
         _lastValidRomFolderPath = "";
@@ -165,7 +167,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         UpdateMameDescriptionCheck();
 
         // Subscribe to App.Settings PropertyChanged to update UI if settings change elsewhere (e.g. SettingsWindow)
-        App.Settings.PropertyChanged += AppSettings_PropertyChanged;
+        App.SettingsManager.PropertyChanged += AppSettingsManagerPropertyChanged;
 
         // Load _machines and _mameLookup
         LoadMameData();
@@ -196,10 +198,10 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
             // Disable MAME description option if data is not available
             MenuUseMameDescription.IsEnabled = false;
             MenuUseMameDescription.ToolTip = "MAME data (mame.dat) could not be loaded or is corrupted.";
-            if (App.Settings.UseMameDescription) // If it was previously enabled, turn it off
+            if (App.SettingsManager.UseMameDescription) // If it was previously enabled, turn it off
             {
-                App.Settings.UseMameDescription = false;
-                App.Settings.SaveSettings();
+                App.SettingsManager.UseMameDescription = false;
+                App.SettingsManager.SaveSettings();
             }
 
             MessageBox.Show(contextMessage, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -208,45 +210,45 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
     private void UpdateBaseThemeMenuChecks()
     {
-        LightTheme.IsChecked = App.Settings.BaseTheme == "Light";
-        DarkTheme.IsChecked = App.Settings.BaseTheme == "Dark";
+        LightTheme.IsChecked = App.SettingsManager.BaseTheme == "Light";
+        DarkTheme.IsChecked = App.SettingsManager.BaseTheme == "Dark";
     }
 
-    private async void AppSettings_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    private async void AppSettingsManagerPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         try
         {
             switch (e.PropertyName)
             {
-                case nameof(Settings.BaseTheme):
+                case nameof(SettingsManager.BaseTheme):
                     // Base theme is handled by App.ChangeTheme, which applies globally.
                     // Ensure menu checks are updated.
-                    LightTheme.IsChecked = App.Settings.BaseTheme == "Light";
-                    DarkTheme.IsChecked = App.Settings.BaseTheme == "Dark";
+                    LightTheme.IsChecked = App.SettingsManager.BaseTheme == "Light";
+                    DarkTheme.IsChecked = App.SettingsManager.BaseTheme == "Dark";
                     break;
-                case nameof(Settings.AccentColor):
+                case nameof(SettingsManager.AccentColor):
                     // Accent color is handled by App.ChangeTheme, which applies globally.
                     // Ensure menu checks are updated.
                     UpdateAccentColorChecks();
                     break;
-                case nameof(Settings.ImageWidth):
-                case nameof(Settings.ImageHeight):
+                case nameof(SettingsManager.ImageWidth):
+                case nameof(SettingsManager.ImageHeight):
                     // Update local properties and trigger UI update
-                    _imageWidth = App.Settings.ImageWidth;
-                    _imageHeight = App.Settings.ImageHeight;
+                    _imageWidth = App.SettingsManager.ImageWidth;
+                    _imageHeight = App.SettingsManager.ImageHeight;
                     OnPropertyChanged(nameof(ImageWidth));
                     OnPropertyChanged(nameof(ImageHeight));
                     UpdateThumbnailSizeMenuChecks();
                     break;
-                case nameof(Settings.SelectedSimilarityAlgorithm):
-                    _selectedSimilarityAlgorithm = App.Settings.SelectedSimilarityAlgorithm;
+                case nameof(SettingsManager.SelectedSimilarityAlgorithm):
+                    _selectedSimilarityAlgorithm = App.SettingsManager.SelectedSimilarityAlgorithm;
                     OnPropertyChanged(nameof(SelectedSimilarityAlgorithm));
                     UpdateSimilarityAlgorithmChecks();
                     break;
-                case nameof(Settings.SimilarityThreshold):
+                case nameof(SettingsManager.SimilarityThreshold):
                     UpdateSimilarityThresholdChecks();
                     break;
-                case nameof(Settings.UseMameDescription):
+                case nameof(SettingsManager.UseMameDescription):
                     UpdateMameDescriptionCheck();
                     // Refresh the list immediately after the setting changes
                     // Only refresh if MAME data is actually available, otherwise it's pointless
@@ -271,7 +273,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         if (sender is not MenuItem menuItem) return;
 
         var theme = menuItem.Name == "LightTheme" ? "Light" : "Dark";
-        App.ChangeTheme(theme, App.Settings.AccentColor); // Use static App.ChangeTheme
+        App.ChangeTheme(theme, App.SettingsManager.AccentColor); // Use static App.ChangeTheme
     }
 
     private void ChangeAccentColor_Click(object sender, RoutedEventArgs e)
@@ -279,12 +281,12 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         if (sender is not MenuItem menuItem) return;
 
         var accent = menuItem.Name.Replace("Accent", "");
-        App.ChangeTheme(App.Settings.BaseTheme, accent); // Use static App.ChangeTheme
+        App.ChangeTheme(App.SettingsManager.BaseTheme, accent); // Use static App.ChangeTheme
     }
 
     private void UpdateAccentColorChecks()
     {
-        var currentAccent = App.Settings.AccentColor;
+        var currentAccent = App.SettingsManager.AccentColor;
         foreach (var item in MenuAccentColors.Items)
         {
             if (item is not MenuItem { Header: not null } menuItem) continue;
@@ -368,7 +370,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
     private async Task LoadMissingImagesList(CancellationToken cancellationToken = default)
     {
-        if ((App.Settings.SupportedExtensions.Length == 0))
+        if ((App.SettingsManager.SupportedExtensions.Length == 0))
         {
             MessageBox.Show("No supported file extensions loaded. Please check file 'settings.xml' or edit them in the Settings menu.", "Warning",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -397,7 +399,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
                     // Check for cancellation at the start
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    var searchPatterns = App.Settings.SupportedExtensions.Select(static ext => "*." + ext).ToArray();
+                    var searchPatterns = App.SettingsManager.SupportedExtensions.Select(static ext => "*." + ext).ToArray();
                     var allRomNames = new List<string>();
 
                     // Process each pattern with cancellation checks
@@ -436,7 +438,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
                         if (romName != null && FindCorrespondingImage(romName, imageFolderPath) == null)
                         {
-                            if (App.Settings.UseMameDescription &&
+                            if (App.SettingsManager.UseMameDescription &&
                                 _mameLookup != null &&
                                 _mameLookup.TryGetValue(romName, out var description) &&
                                 !string.IsNullOrEmpty(description))
@@ -605,7 +607,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
                 var findTask = ButtonFactory.CreateSimilarImagesCollection(
                     searchName,
                     imageFolderPath, // Use the validated path obtained above
-                    App.Settings.SimilarityThreshold,
+                    App.SettingsManager.SimilarityThreshold,
                     SelectedSimilarityAlgorithm,
                     cancellationToken
                 );
@@ -786,8 +788,8 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         if (sender is not MenuItem menuItem) return;
 
         var algorithm = menuItem.Header.ToString() ?? DefaultSimilarityAlgorithm;
-        App.Settings.SelectedSimilarityAlgorithm = algorithm; // Update App.Settings
-        App.Settings.SaveSettings(); // Save the settings
+        App.SettingsManager.SelectedSimilarityAlgorithm = algorithm; // Update App.Settings
+        App.SettingsManager.SaveSettings(); // Save the settings
     }
 
     private void UpdateSimilarityAlgorithmChecks()
@@ -796,7 +798,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         {
             if (item is MenuItem menuItem)
             {
-                menuItem.IsChecked = menuItem.Header.ToString() == App.Settings.SelectedSimilarityAlgorithm; // Use App.Settings
+                menuItem.IsChecked = menuItem.Header.ToString() == App.SettingsManager.SelectedSimilarityAlgorithm; // Use App.Settings
             }
         }
     }
@@ -814,8 +816,8 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
             if (double.TryParse(headerText, out var rate))
             {
-                App.Settings.SimilarityThreshold = rate;
-                App.Settings.SaveSettings();
+                App.SettingsManager.SimilarityThreshold = rate;
+                App.SettingsManager.SaveSettings();
             }
             else
             {
@@ -836,7 +838,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
     private void UpdateSimilarityThresholdChecks()
     {
-        var currentThreshold = App.Settings.SimilarityThreshold;
+        var currentThreshold = App.SettingsManager.SimilarityThreshold;
 
         foreach (var item in MySimilarityMenu.Items)
         {
@@ -878,9 +880,9 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
                 return;
             }
 
-            App.Settings.ImageWidth = size;
-            App.Settings.ImageHeight = size;
-            App.Settings.SaveSettings();
+            App.SettingsManager.ImageWidth = size;
+            App.SettingsManager.ImageHeight = size;
+            App.SettingsManager.SaveSettings();
         }
         catch (Exception ex)
         {
@@ -890,7 +892,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
     private void UpdateThumbnailSizeMenuChecks()
     {
-        var currentSize = App.Settings.ImageWidth;
+        var currentSize = App.SettingsManager.ImageWidth;
 
         foreach (var item in ImageSizeMenu.Items)
         {
@@ -922,7 +924,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
     private void EditExtensions_Click(object sender, RoutedEventArgs e)
     {
-        var settingsWindow = new SettingsWindow(App.Settings) // Pass App.Settings
+        var settingsWindow = new SettingsWindow(App.SettingsManager) // Pass App.Settings
         {
             Owner = this
         };
@@ -961,8 +963,8 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
             {
                 // Handle nullable bool properly
                 var isChecked = menuItem.IsChecked == true;
-                App.Settings.UseMameDescription = isChecked;
-                App.Settings.SaveSettings();
+                App.SettingsManager.UseMameDescription = isChecked;
+                App.SettingsManager.SaveSettings();
 
                 // Refresh the list immediately after the setting changes
                 // Only refresh if MAME data is actually available, otherwise it's pointless
@@ -1037,7 +1039,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
     private void UpdateMameDescriptionCheck()
     {
-        MenuUseMameDescription.IsChecked = App.Settings.UseMameDescription;
+        MenuUseMameDescription.IsChecked = App.SettingsManager.UseMameDescription;
     }
 
     private void BtnRemoveSelectedItem_Click(object sender, RoutedEventArgs e)
@@ -1197,7 +1199,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
     protected override void OnClosed(EventArgs e)
     {
-        App.Settings.PropertyChanged -= AppSettings_PropertyChanged;
+        App.SettingsManager.PropertyChanged -= AppSettingsManagerPropertyChanged;
 
         // Clean up cancellation tokens and semaphore
         _findSimilarCts?.Dispose();

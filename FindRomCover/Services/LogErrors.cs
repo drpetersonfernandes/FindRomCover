@@ -1,11 +1,11 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Reflection;
 using System.Text.Json;
 using FindRomCover.models;
 
-namespace FindRomCover;
+namespace FindRomCover.Services;
 
 public static class LogErrors
 {
@@ -35,8 +35,45 @@ public static class LogErrors
             ex = new Exception("No exception provided");
         }
 
+        // Get OS and environment details
+        var osVersion = System.Runtime.InteropServices.RuntimeInformation.OSDescription;
+        var osArchitecture = System.Runtime.InteropServices.RuntimeInformation.OSArchitecture.ToString();
+        var bitness = Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit";
+        string friendlyWindowsVersion;
+        var os = Environment.OSVersion;
+        if (os.Platform == PlatformID.Win32NT)
+        {
+            if (os.Version.Major >= 10)
+            {
+                friendlyWindowsVersion = "Windows 10 or Windows 11";
+            }
+            else if (os.Version.Major == 6)
+            {
+                switch (os.Version.Minor)
+                {
+                    case 1: friendlyWindowsVersion = "Windows 7"; break;
+                    case 2: friendlyWindowsVersion = "Windows 8"; break;
+                    case 3: friendlyWindowsVersion = "Windows 8.1"; break;
+                    default: friendlyWindowsVersion = "Older Windows NT"; break;
+                }
+            }
+            else
+            {
+                friendlyWindowsVersion = "Older Windows NT";
+            }
+        }
+        else
+        {
+            friendlyWindowsVersion = os.Platform.ToString();
+        }
+
         // Construct the full error message for the current event
-        var currentErrorMessage = $"Date: {DateTime.Now}\nVersion: {version}\n\n";
+        var currentErrorMessage = $"Date: {DateTime.Now:dd/MM/yyyy HH:mm:ss}\n";
+        currentErrorMessage += $"FindRomCover Version: {version}\n";
+        currentErrorMessage += $"OS Version: {osVersion}\n";
+        currentErrorMessage += $"Architecture: {osArchitecture}\n";
+        currentErrorMessage += $"Bitness: {bitness}\n";
+        currentErrorMessage += $"Windows Version: {friendlyWindowsVersion}\n\n";
         if (!string.IsNullOrEmpty(contextMessage))
         {
             currentErrorMessage += $"{contextMessage}\n\n";
