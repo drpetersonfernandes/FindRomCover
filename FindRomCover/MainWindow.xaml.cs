@@ -29,7 +29,6 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
     private List<MameManager>? _machines;
     private Dictionary<string, string>? _mameLookup;
 
-    private Task? _currentFindTask; // Task for the current image similarity search
     private CancellationTokenSource? _findSimilarCts; // CancellationTokenSource for the current image similarity search
     private readonly SemaphoreSlim _findSimilarSemaphore = new(1, 1); // Semaphore to ensure only one search runs at a time
 
@@ -189,22 +188,34 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
             MenuUseMameDescription.IsEnabled = true;
             MenuUseMameDescription.ToolTip = null;
         }
-        catch
+        catch (FileNotFoundException ex)
         {
-            // Notify developer
             const string contextMessage = "The file 'mame.dat' could not be found in the application folder.";
-            _ = LogErrors.LogErrorAsync(null, contextMessage);
+            _ = LogErrors.LogErrorAsync(ex, contextMessage);
 
-            // Disable MAME description option if data is not available
+            MenuUseMameDescription.IsEnabled = false;
+            MenuUseMameDescription.ToolTip = "MAME data (mame.dat) could not be found.";
+            DisableMameDescriptionSetting();
+            MessageBox.Show(contextMessage, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        catch (Exception ex)
+        {
+            var contextMessage = $"Failed to load MAME data from 'mame.dat': {ex.Message}";
+            _ = LogErrors.LogErrorAsync(ex, contextMessage);
+
             MenuUseMameDescription.IsEnabled = false;
             MenuUseMameDescription.ToolTip = "MAME data (mame.dat) could not be loaded or is corrupted.";
-            if (App.SettingsManager.UseMameDescription) // If it was previously enabled, turn it off
-            {
-                App.SettingsManager.UseMameDescription = false;
-                App.SettingsManager.SaveSettings();
-            }
-
+            DisableMameDescriptionSetting();
             MessageBox.Show(contextMessage, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void DisableMameDescriptionSetting()
+    {
+        if (App.SettingsManager.UseMameDescription)
+        {
+            App.SettingsManager.UseMameDescription = false;
+            App.SettingsManager.SaveSettings();
         }
     }
 
@@ -540,87 +551,56 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
     {
         try
         {
-            // Acquire semaphore before starting any async work
-            await _findSimilarSemaphore.WaitAsync();
+            // Cancel any existing operation first
+            _findSimilarCts?.Cancel();
+            _findSimilarCts?.Dispose();
+
+            // Clear results if no selection
+            if (LstMissingImages.SelectedItem == null)
+            {
+                SimilarImages.Clear();
+                LblSearchQuery.Content = null;
+                IsFindingSimilar = false;
+                _findSimilarCts = null;
+                return;
+            }
+
+            // Get validated image folder path
+            var imageFolderPath = GetValidatedImageFolderPath();
+            if (string.IsNullOrEmpty(imageFolderPath))
+            {
+                IsFindingSimilar = false;
+                _findSimilarCts = null;
+                return;
+            }
+
+            // Create new CancellationTokenSource for this operation
+            _findSimilarCts = new CancellationTokenSource();
+            var cancellationToken = _findSimilarCts.Token;
+
+            dynamic selectedItem = LstMissingImages.SelectedItem;
+            string romName = selectedItem.RomName;
+            string searchName = selectedItem.SearchName;
+            _selectedRomFileName = romName;
+
+            IsFindingSimilar = true;
 
             try
             {
-                // Cancel previous operation
-                if (_findSimilarCts != null)
-                {
-                    await _findSimilarCts.CancelAsync();
-                    try
-                    {
-                        // Wait for the previous task to complete
-                        if (_currentFindTask != null) await _currentFindTask;
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        // Expected — ignore
-                    }
-                    catch (Exception ex)
-                    {
-                        // Log unexpected errors from previous task
-                        _ = LogErrors.LogErrorAsync(ex, "Error in previous find operation");
-                    }
-                    finally
-                    {
-                        _findSimilarCts?.Dispose();
-                        _findSimilarCts = null;
-                        _currentFindTask = null; // Ensure task reference is cleared
-                    }
-                }
-
-                // Clear results if no selection
-                if (LstMissingImages.SelectedItem == null)
-                {
-                    SimilarImages.Clear();
-                    LblSearchQuery.Content = null;
-                    IsFindingSimilar = false;
-                    return;
-                }
-
-                // --- FIX: Get the image folder path correctly ---
-                // Use the validated path getter. If it's invalid, show a message and abort.
-                var imageFolderPath = GetValidatedImageFolderPath();
-                if (string.IsNullOrEmpty(imageFolderPath))
-                {
-                    // GetValidatedImageFolderPath already shows a MessageBox on failure if showWarning is true (default).
-                    // If we reach here, it means the path was invalid or the user was warned.
-                    IsFindingSimilar = false; // Ensure the loading indicator turns off
-                    return; // Abort the search
-                }
-                // --- END FIX ---
-
-                // Prepare for new operation
-                _findSimilarCts = new CancellationTokenSource();
-                var cancellationToken = _findSimilarCts.Token;
-
-                dynamic selectedItem = LstMissingImages.SelectedItem;
-                string romName = selectedItem.RomName;
-                string searchName = selectedItem.SearchName;
-
-                IsFindingSimilar = true;
-
-                // Create the task and store it
-                // --- FIX: Pass the correctly obtained imageFolderPath ---
-                var findTask = ButtonFactory.CreateSimilarImagesCollection(
-                    searchName,
-                    imageFolderPath, // Use the validated path obtained above
-                    App.SettingsManager.SimilarityThreshold,
-                    SelectedSimilarityAlgorithm,
-                    cancellationToken
-                );
-                // --- END FIX ---
-                _currentFindTask = findTask; // This is now Task<SimilarityCalculationResult>
+                // Acquire semaphore to ensure only one search runs at a time
+                await _findSimilarSemaphore.WaitAsync(cancellationToken);
 
                 try
                 {
-                    _selectedRomFileName = romName;
+                    var similarityResult = await ButtonFactory.CreateSimilarImagesCollection(
+                        searchName,
+                        imageFolderPath,
+                        App.SettingsManager.SimilarityThreshold,
+                        SelectedSimilarityAlgorithm,
+                        cancellationToken
+                    );
 
-                    // Await the task to get the result
-                    var similarityResult = await findTask; // Get the new result object
-
+                    // Only update UI if operation wasn't cancelled
                     if (!cancellationToken.IsCancellationRequested)
                     {
                         await Application.Current.Dispatcher.InvokeAsync(() =>
@@ -656,15 +636,11 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
                             // --- END NEW ---
                         });
 
-                        if (!cancellationToken.IsCancellationRequested)
-                        {
-                            ImageScrollViewer.ScrollToTop();
-                        }
+                        ImageScrollViewer.ScrollToTop();
                     }
                 }
                 catch (OperationCanceledException)
                 {
-                    // MessageBox.Show("Search cancelled.", "Cancelled", MessageBoxButton.OK, MessageBoxImage.Information);
                     // Ignore
                 }
                 catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
@@ -672,26 +648,25 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
                     MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     _ = LogErrors.LogErrorAsync(ex, "Error in LstMissingImages_SelectionChanged");
                 }
-                finally
-                {
-                    IsFindingSimilar = false; // Always reset UI state
-                    _currentFindTask = null; // Clear the task reference when done
-                }
             }
             catch (Exception ex)
             {
                 _ = LogErrors.LogErrorAsync(ex, "Error in LstMissingImages_SelectionChanged outer catch");
-                IsFindingSimilar = false;
-                _currentFindTask = null;
             }
             finally
             {
-                _findSimilarSemaphore.Release(); // Release semaphore
+                _findSimilarSemaphore.Release();
             }
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected when operation is cancelled
+            IsFindingSimilar = false;
         }
         catch (Exception ex)
         {
             _ = LogErrors.LogErrorAsync(ex, "Error in LstMissingImages_SelectionChanged outer catch");
+            IsFindingSimilar = false;
         }
     }
 
@@ -1111,41 +1086,18 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         }
     }
 
-    /// <summary>
-    /// Gets the currently displayed image folder path if it is valid and exists.
-    /// </summary>
-    /// <param name="showWarning">Whether to show a warning message if the path is invalid.</param>
-    /// <returns>The validated image folder path, or null/empty if invalid.</returns>
     private string? GetValidatedImageFolderPath(bool showWarning = true)
     {
-        var path = TxtImageFolder.Text.Trim();
-        if (string.IsNullOrEmpty(path))
-        {
-            return null;
-        }
-
-        if (Directory.Exists(path))
-        {
-            return path;
-        }
-
-        if (showWarning)
-        {
-            MessageBox.Show($"The image folder path '{path}' is invalid or does not exist. Please correct it.",
-                "Invalid Image Folder", MessageBoxButton.OK, MessageBoxImage.Warning);
-        }
-
-        return null;
+        return ValidateFolderPath(TxtImageFolder.Text.Trim(), "Image", showWarning);
     }
 
-    /// <summary>
-    /// Gets the currently displayed ROM folder path if it is valid and exists.
-    /// </summary>
-    /// <param name="showWarning">Whether to show a warning message if the path is invalid.</param>
-    /// <returns>The validated ROM folder path, or null/empty if invalid.</returns>
     private string? GetValidatedRomFolderPath(bool showWarning = true)
     {
-        var path = TxtRomFolder.Text.Trim();
+        return ValidateFolderPath(TxtRomFolder.Text.Trim(), "ROM", showWarning);
+    }
+
+    private static string? ValidateFolderPath(string path, string folderType, bool showWarning)
+    {
         if (string.IsNullOrEmpty(path))
         {
             return null;
@@ -1158,8 +1110,8 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
         if (showWarning)
         {
-            MessageBox.Show($"The ROM folder path '{path}' is invalid or does not exist. Please correct it.",
-                "Invalid ROM Folder", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show($"The {folderType.ToLowerInvariant()} folder path '{path}' is invalid or does not exist. Please correct it.",
+                $"Invalid {folderType} Folder", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
 
         return null;
@@ -1206,9 +1158,31 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
     public void Dispose()
     {
-        _findSimilarCts?.Dispose();
-        _loadMissingCts?.Dispose();
-        _findSimilarSemaphore?.Dispose();
+        // Cancel any pending operations first
+        _findSimilarCts?.Cancel();
+        _loadMissingCts?.Cancel();
+
+        // Give pending operations a moment to cancel
+        try
+        {
+            Task.Delay(100).Wait(); // Brief wait for cancellation to propagate
+        }
+        catch
+        {
+            // Ignore any errors during the delay
+        }
+
+        // Now dispose resources
+        try
+        {
+            _findSimilarCts?.Dispose();
+            _loadMissingCts?.Dispose();
+            _findSimilarSemaphore?.Dispose();
+        }
+        catch
+        {
+            // Ignore disposal errors
+        }
 
         GC.SuppressFinalize(this);
     }
