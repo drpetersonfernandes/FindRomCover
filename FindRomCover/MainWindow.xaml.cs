@@ -180,9 +180,15 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         try
         {
             _machines = MameManager.LoadFromDat();
-            _mameLookup = _machines
-                .GroupBy(static m => m.MachineName, StringComparer.OrdinalIgnoreCase)
-                .ToDictionary(static g => g.Key, static g => g.First().Description, StringComparer.OrdinalIgnoreCase);
+
+            // Only recreate the lookup dictionary if we have machines data
+            // and it's different from what we already have (prevents unnecessary recreation)
+            if (_machines != null && _machines.Count > 0)
+            {
+                _mameLookup = _machines
+                    .GroupBy(static m => m.MachineName, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(static g => g.Key, static g => g.First().Description, StringComparer.OrdinalIgnoreCase);
+            }
 
             // If MAME data loaded successfully, ensure menu item is enabled
             MenuUseMameDescription.IsEnabled = true;
@@ -403,7 +409,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         IsCheckingMissing = true;
         try
         {
-            var missingFiles = await Task.Run(() =>
+            var missingFiles = await Task.Run(async () =>
             {
                 try
                 {
@@ -411,34 +417,45 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
                     cancellationToken.ThrowIfCancellationRequested();
 
                     var searchPatterns = App.SettingsManager.SupportedExtensions.Select(static ext => "*." + ext).ToArray();
-                    var allRomNames = new List<string>();
+                    var allRomNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
                     // Process each pattern with cancellation checks
                     foreach (var pattern in searchPatterns)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
 
+                        await Task.Yield(); // Yield to prevent blocking
+
                         try
                         {
                             var files = Directory.EnumerateFiles(romFolderPath, pattern, SearchOption.AllDirectories);
-                            var names = files.Select(Path.GetFileNameWithoutExtension)
-                                .Where(static name => name != null)
-                                .Cast<string>();
-                            allRomNames.AddRange(names);
+                            foreach (var file in files)
+                            {
+                                cancellationToken.ThrowIfCancellationRequested();
+
+                                var fileName = Path.GetFileNameWithoutExtension(file);
+                                if (!string.IsNullOrEmpty(fileName))
+                                {
+                                    allRomNames.Add(fileName);
+                                }
+                            }
                         }
                         catch (DirectoryNotFoundException)
                         {
                             // Skip this pattern if directory issues occur
                             continue;
                         }
+                        catch (UnauthorizedAccessException)
+                        {
+                            // Skip directories we can't access
+                            continue;
+                        }
                     }
 
-                    // Remove duplicates
-                    allRomNames = allRomNames.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-
                     var missing = new List<(string RomName, string SearchName)>();
-                    var processedCount = 0;
 
+                    // Process ROMs with periodic cancellation checks
+                    var processedCount = 0;
                     foreach (var romName in allRomNames)
                     {
                         // Check for cancellation periodically (every 100 items)
@@ -446,6 +463,8 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
                         {
                             cancellationToken.ThrowIfCancellationRequested();
                         }
+
+                        await Task.Yield(); // Yield to prevent blocking
 
                         if (romName != null && FindCorrespondingImage(romName, imageFolderPath) == null)
                         {
@@ -680,16 +699,16 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
     public void UseImage(string? imagePath)
     {
-        var imageFolderPath = GetValidatedImageFolderPath(); // Get validated path
+        var imageFolderPath = GetValidatedImageFolderPath();
 
         if (string.IsNullOrEmpty(_selectedRomFileName) ||
             string.IsNullOrEmpty(imagePath) ||
-            string.IsNullOrEmpty(imageFolderPath)) // Use the validated path
+            string.IsNullOrEmpty(imageFolderPath))
         {
             return;
         }
 
-        var newFileName = Path.Combine(imageFolderPath, _selectedRomFileName + ".png"); // Use the validated path
+        var newFileName = Path.Combine(imageFolderPath, _selectedRomFileName + ".png");
 
         try
         {
