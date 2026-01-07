@@ -38,17 +38,16 @@ public class AudioService : IAudioService
                     /* Ignore cleanup errors */
                 }
 
-                // Provide specific guidance for known issues
-                var errorMessage = $"Audio service initialization failed for: {soundPath}. Audio feedback will be disabled.";
+                // If the error is due to a missing/incompatible Windows Media Player,
+                // silently disable the audio feedback without reporting an error.
                 if (ex.GetType().Name == "InvalidWmpVersionException")
                 {
-                    errorMessage += " Windows Media Player version 10 or later is required but not installed on this system.";
-                }
-                else
-                {
-                    errorMessage += $" Error: {ex.Message}";
+                    return; // Silently disable audio and exit.
                 }
 
+                // For any other initialization error, log it.
+                var errorMessage =
+                    $"Audio service initialization failed for: {soundPath}. Audio feedback will be disabled. Error: {ex.Message}";
                 _ = LogErrors.LogErrorAsync(ex, errorMessage);
             }
         }
