@@ -4,10 +4,8 @@
                       xmlns:controls="http://metro.mahapps.com/winfx/xaml/controls"
                       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-                      xmlns:local="clr-namespace:FindRomCover"
                       xmlns:services="clr-namespace:FindRomCover.Services"
                       mc:Ignorable="d"
-                      d:DataContext="{d:DesignInstance Type=local:MainWindow, IsDesignTimeCreatable=True}"
                       Title="Find ROM Cover"
                       MinWidth="900"
                       MinHeight="600"
@@ -90,15 +88,13 @@
                     <Image
                         Width="{Binding Path=ImageWidth, RelativeSource={RelativeSource AncestorType=Window}}"
                         Height="{Binding Path=ImageHeight, RelativeSource={RelativeSource AncestorType=Window}}"
-                        Source="{Binding DisplayImage}" d:DataContext="{d:DesignInstance }">
+                        Source="{Binding DisplayImage}">
                         <!-- Removed the DataTrigger that was causing UI freezing -->
                     </Image>
                     <TextBlock HorizontalAlignment="Center" Text="{Binding ImageName}" FontWeight="Bold"
-                               Margin="0,5,0,0" TextTrimming="CharacterEllipsis" ToolTip="{Binding ImageName}"
-                               d:DataContext="{d:DesignInstance }" />
+                               Margin="0,5,0,0" TextTrimming="CharacterEllipsis" ToolTip="{Binding ImageName}"/>
                     <TextBlock HorizontalAlignment="Center"
-                               Text="{Binding SimilarityScore, StringFormat={}{0:F2}%}" FontWeight="Bold"
-                               d:DataContext="{d:DesignInstance }" />
+                               Text="{Binding SimilarityScore, StringFormat={}{0:F2}%}" FontWeight="Bold" />
                 </StackPanel>
             </Button>
         </DataTemplate>

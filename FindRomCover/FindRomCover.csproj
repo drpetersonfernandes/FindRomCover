@@ -60,21 +60,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="images\theme.png" />
     <Resource Include="images\theme.png" />
-    <None Remove="images\about.png" />
     <Resource Include="images\about.png" />
-    <None Remove="images\donate.png" />
     <Resource Include="images\donate.png" />
-    <None Remove="images\exit.png" />
     <Resource Include="images\exit.png" />
-    <None Remove="images\logo.png" />
     <Resource Include="images\logo.png" />
-    <None Remove="images\copy.png" />
     <Resource Include="images\copy.png" />
-    <None Remove="images\usethis.png" />
     <Resource Include="images\usethis.png" />
-    <None Remove="images\folder.png" />
     <Resource Include="images\folder.png" />
   </ItemGroup>
 
