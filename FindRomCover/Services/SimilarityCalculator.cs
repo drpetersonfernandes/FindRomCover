@@ -7,7 +7,7 @@ namespace FindRomCover.Services;
 public static class SimilarityCalculator
 {
     // Add a configurable limit for maximum concurrent image loading
-    private const int MaxConcurrentImages = 30;
+    private const int MaxImagesToLoad = 30;
 
     public static async Task<SimilarityCalculationResult> CalculateSimilarityAsync( // Changed return type
         string selectedFileName,
@@ -89,7 +89,7 @@ public static class SimilarityCalculator
         // Sort candidates by similarity score and limit to prevent memory issues
         var topCandidates = candidateFiles
             .OrderByDescending(x => x.SimilarityScore)
-            .Take(MaxConcurrentImages)
+            .Take(MaxImagesToLoad)
             .ToList();
 
         // Second pass: Load images only for top candidates

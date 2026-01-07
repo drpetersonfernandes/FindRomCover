@@ -2,6 +2,7 @@ using System.Windows;
 using ControlzEx.Theming;
 using FindRomCover.Managers;
 using FindRomCover.Services;
+using ImageMagick;
 
 namespace FindRomCover;
 
@@ -12,6 +13,10 @@ public partial class App
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        // Configure Magick.NET resource limits
+        ResourceLimits.Memory = 512 * 1024 * 1024; // 512MB
+        ResourceLimits.Thread = 4; // Limit threads
+
         base.OnStartup(e);
         AudioService = new AudioService();
         ApplyTheme(SettingsManager.BaseTheme, SettingsManager.AccentColor);

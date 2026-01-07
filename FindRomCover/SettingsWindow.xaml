@@ -9,7 +9,7 @@
                       mc:Ignorable="d"
                       Title="Edit Supported Extensions" Height="450" Width="400"
                       WindowStartupLocation="CenterScreen"
-                      ResizeMode="NoResize" d:DataContext="{d:DesignInstance }">
+                      d:DataContext="{d:DesignInstance }">
     <controls:MetroWindow.Resources>
         <services:ObjectToBoolConverter x:Key="IsNotNullConverter" />
         <CollectionViewSource x:Key="SortedExtensions" Source="{Binding SupportedExtensions}" >

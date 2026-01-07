@@ -1200,20 +1200,15 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
     protected override void OnClosed(EventArgs e)
     {
         App.SettingsManager.PropertyChanged -= AppSettingsManagerPropertyChanged;
-
-        // Clean up cancellation tokens and semaphore
-        _findSimilarCts?.Dispose();
-        _loadMissingCts?.Dispose();
-        _findSimilarSemaphore.Dispose();
-
+        Dispose();
         base.OnClosed(e);
     }
 
     public void Dispose()
     {
         _findSimilarCts?.Dispose();
-        _findSimilarSemaphore?.Dispose();
         _loadMissingCts?.Dispose();
+        _findSimilarSemaphore?.Dispose();
 
         GC.SuppressFinalize(this);
     }

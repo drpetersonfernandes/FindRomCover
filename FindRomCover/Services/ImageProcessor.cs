@@ -1,8 +1,7 @@
-using System.Drawing.Imaging;
 using System.IO;
 using System.Windows;
-using Image = System.Drawing.Image;
 using MessageBox = System.Windows.MessageBox;
+using ImageMagick;
 
 namespace FindRomCover.Services;
 
@@ -82,167 +81,39 @@ public static class ImageProcessor
 
     private static bool ProcessImage(string sourcePath, string targetPath)
     {
-        // First, validate the source file
-        if (!ValidateSourceFile(sourcePath))
+        if (string.IsNullOrEmpty(sourcePath) || !File.Exists(sourcePath))
+            return false;
+
+        try
         {
-            MessageBox.Show("The source image file appears to be corrupted or invalid.\n" +
-                            "Please select a different image.", "Invalid Image",
+            // Use Magick.NET for robust image processing
+            using var magickImage = new MagickImage(sourcePath);
+
+            // Validate dimensions
+            if (magickImage.Width == 0 || magickImage.Height == 0)
+                throw new InvalidOperationException("Image has zero dimensions");
+
+            // Auto-orient based on EXIF data
+            magickImage.AutoOrient();
+
+            // Set PNG compression and quality
+            magickImage.Quality = 90;
+            magickImage.Format = MagickFormat.Png;
+
+            // Write to target path
+            magickImage.Write(targetPath);
+
+            return File.Exists(targetPath);
+        }
+        catch (MagickException ex)
+        {
+            MessageBox.Show($"Error processing image with Magick.NET: {ex.Message}", "Image Processing Error",
                 MessageBoxButton.OK, MessageBoxImage.Error);
-            return false;
-        }
-
-        try
-        {
-            using var sourceImage = Image.FromFile(sourcePath);
-            // Additional validation after loading
-            if (sourceImage.Width == 0 || sourceImage.Height == 0)
-            {
-                MessageBox.Show("The image has invalid dimensions (0x0).\n" +
-                                "The file may be corrupted.", "Invalid Image",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
-                return false;
-            }
-
-            using var bitmap = new Bitmap(sourceImage);
-            // Try normal save method
-            if (TrySaveImage(bitmap, targetPath))
-            {
-                return File.Exists(targetPath);
-            }
-        }
-        catch (OutOfMemoryException ex)
-        {
-            MessageBox.Show("The image is too large to process.\n" +
-                            "Try using a smaller image.", "Memory Error",
-                MessageBoxButton.OK, MessageBoxImage.Error);
-            _ = LogErrors.LogErrorAsync(ex, $"Out of memory: {sourcePath}");
-            return false;
-        }
-        catch (System.Runtime.InteropServices.ExternalException ex)
-        {
-            // GDI+ errors - try fallback methods
-            return HandleGdiPlusError(sourcePath, targetPath, ex);
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"Error processing image: {ex.Message}", "Error",
-                MessageBoxButton.OK, MessageBoxImage.Error);
-            _ = LogErrors.LogErrorAsync(ex, $"Error processing image: {sourcePath}");
-            return false;
-        }
-
-        return false;
-    }
-
-    private static bool TrySaveImage(Bitmap bitmap, string targetPath)
-    {
-        try
-        {
-            using var memoryStream = new MemoryStream();
-            bitmap.Save(memoryStream, ImageFormat.Png);
-            memoryStream.Position = 0;
-
-            using var fileStream = new FileStream(targetPath, FileMode.Create, FileAccess.Write);
-            memoryStream.CopyTo(fileStream);
-
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _ = LogErrors.LogErrorAsync(ex, $"Error saving image to stream: {targetPath}");
+            _ = LogErrors.LogErrorAsync(ex, $"Magick.NET error: {sourcePath}");
             return false;
         }
     }
 
-    private static bool ValidateSourceFile(string sourcePath)
-    {
-        try
-        {
-            // Check file size
-            var fileInfo = new FileInfo(sourcePath);
-            if (fileInfo.Length == 0)
-            {
-                return false;
-            }
-
-            // For very small files, they're likely corrupted
-            if (fileInfo.Length < 100) // 100 bytes minimum
-            {
-                return false;
-            }
-
-            // Try to read first few bytes to check if file is accessible
-            using var stream = new FileStream(sourcePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-            if (stream.Length < 100)
-            {
-                return false;
-            }
-
-            var buffer = new byte[100];
-            var bytesRead = stream.Read(buffer, 0, 100);
-            if (bytesRead < 100)
-            {
-                return false;
-            }
-
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private static bool HandleGdiPlusError(string sourcePath, string targetPath, System.Runtime.InteropServices.ExternalException ex)
-    {
-        MessageBox.Show($"GDI+ Error: {ex.Message}\n\n" +
-                        "Trying alternative methods...", "Image Processing",
-            MessageBoxButton.OK, MessageBoxImage.Information);
-
-        _ = LogErrors.LogErrorAsync(ex, $"GDI+ Error: {sourcePath}");
-
-        // Fallback 1: Try to create a new image from pixel data
-        try
-        {
-            if (TryPixelCopy(sourcePath, targetPath))
-            {
-                MessageBox.Show("Image saved successfully using pixel copy method.", "Success",
-                    MessageBoxButton.OK, MessageBoxImage.Information);
-                return true;
-            }
-        }
-        catch (Exception fallbackEx)
-        {
-            _ = LogErrors.LogErrorAsync(fallbackEx, "Pixel copy fallback failed");
-        }
-
-        // All fallbacks failed
-        MessageBox.Show("All save methods failed.\n" +
-                        "The image file may be severely corrupted.", "Save Failed",
-            MessageBoxButton.OK, MessageBoxImage.Error);
-
-        return false;
-    }
-
-    private static bool TryPixelCopy(string sourcePath, string targetPath)
-    {
-        try
-        {
-            using var sourceImage = Image.FromFile(sourcePath);
-            var bitmap = new Bitmap(sourceImage.Width, sourceImage.Height, PixelFormat.Format32bppArgb);
-
-            using (var graphics = Graphics.FromImage(bitmap))
-            {
-                graphics.DrawImage(sourceImage, 0, 0);
-            }
-
-            bitmap.Save(targetPath, ImageFormat.Png);
-            bitmap.Dispose();
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
-    }
+    // Magick.NET handles all validation, orientation, and format conversion internally
+    // No need for separate validation or fallback methods
 }

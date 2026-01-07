@@ -84,27 +84,6 @@ public partial class SettingsWindow
         return extension.All(static c => char.IsLetterOrDigit(c) || c == '-');
     }
 
-    private int FindInsertIndex(string newExtension)
-    {
-        var left = 0;
-        var right = _supportedExtensions.Count;
-
-        while (left < right)
-        {
-            var mid = left + (right - left) / 2;
-            if (string.Compare(_supportedExtensions[mid], newExtension, StringComparison.OrdinalIgnoreCase) < 0)
-            {
-                left = mid + 1;
-            }
-            else
-            {
-                right = mid;
-            }
-        }
-
-        return left;
-    }
-
     private void BtnRemove_Click(object sender, RoutedEventArgs e)
     {
         if (LstSupportedExtensions.SelectedItem is string selectedExtension)
