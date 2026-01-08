@@ -570,11 +570,10 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
     {
         try
         {
-            // Cancel any existing operation first
+            // --- Start of method: setup and early exit conditions ---
             _findSimilarCts?.Cancel();
             _findSimilarCts?.Dispose();
 
-            // Clear results if no selection
             if (LstMissingImages.SelectedItem == null)
             {
                 SimilarImages.Clear();
@@ -584,7 +583,6 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
                 return;
             }
 
-            // Get validated image folder path
             var imageFolderPath = GetValidatedImageFolderPath();
             if (string.IsNullOrEmpty(imageFolderPath))
             {
@@ -593,7 +591,6 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
                 return;
             }
 
-            // Create new CancellationTokenSource for this operation
             _findSimilarCts = new CancellationTokenSource();
             var cancellationToken = _findSimilarCts.Token;
 
@@ -602,13 +599,11 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
             string searchName = selectedItem.SearchName;
             _selectedRomFileName = romName;
 
+            // --- Core logic with robust progress indicator handling ---
             IsFindingSimilar = true;
-
             try
             {
-                // Acquire semaphore to ensure only one search runs at a time
                 await _findSimilarSemaphore.WaitAsync(cancellationToken);
-
                 try
                 {
                     var similarityResult = await ButtonFactory.CreateSimilarImagesCollection(
@@ -658,34 +653,37 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
                         ImageScrollViewer.ScrollToTop();
                     }
                 }
-                catch (OperationCanceledException)
+                finally
                 {
-                    // Ignore
+                    _findSimilarSemaphore.Release();
                 }
-                catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
-                {
-                    MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    _ = ErrorLogger.LogAsync(ex, "Error in LstMissingImages_SelectionChanged");
-                }
+            }
+            catch (OperationCanceledException)
+            {
+                // This is an expected outcome when the selection changes quickly.
+                // No action or logging needed. The 'finally' block ensures cleanup.
             }
             catch (Exception ex)
             {
-                _ = ErrorLogger.LogAsync(ex, "Error in LstMissingImages_SelectionChanged outer catch");
+                // For any other unexpected error, log it and notify the user.
+                // The check for cancellationToken prevents showing an error for a cancelled operation
+                // that might throw a different exception type during unwinding.
+                if (!cancellationToken.IsCancellationRequested)
+                {
+                    MessageBox.Show($"An error occurred while searching for similar images: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _ = ErrorLogger.LogAsync(ex, "Error in LstMissingImages_SelectionChanged");
+                }
             }
             finally
             {
-                _findSimilarSemaphore.Release();
+                // This block ensures the progress ring is always turned off,
+                // whether the operation succeeded, was cancelled, or failed.
+                IsFindingSimilar = false;
             }
-        }
-        catch (OperationCanceledException)
-        {
-            // Expected when operation is cancelled
-            IsFindingSimilar = false;
         }
         catch (Exception ex)
         {
-            _ = ErrorLogger.LogAsync(ex, "Error in LstMissingImages_SelectionChanged outer catch");
-            IsFindingSimilar = false;
+            _ = ErrorLogger.LogAsync(ex, "Error in LstMissingImages_SelectionChanged");
         }
     }
 
