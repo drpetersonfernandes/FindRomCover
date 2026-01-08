@@ -21,9 +21,6 @@ namespace FindRomCover;
 
 public partial class MainWindow : INotifyPropertyChanged, IDisposable
 {
-    private string? _lastValidRomFolderPath;
-    private string? _lastValidImageFolderPath;
-
     private CancellationTokenSource? _loadMissingCts;
 
     private List<MameManager>? _machines;
@@ -33,39 +30,10 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
     private readonly SemaphoreSlim _findSimilarSemaphore = new(1, 1); // Semaphore to ensure only one search runs at a time
 
     public event PropertyChangedEventHandler? PropertyChanged;
+    public SettingsManager Settings => App.SettingsManager;
     private string _selectedRomFileName = string.Empty;
 
     public ObservableCollection<ImageData> SimilarImages { get; set; } = [];
-    private const string DefaultSimilarityAlgorithm = "Jaro-Winkler Distance";
-
-    private int _imageWidth;
-
-    public int ImageWidth
-    {
-        get => _imageWidth;
-        set
-        {
-            if (_imageWidth == value) return;
-
-            _imageWidth = value;
-            OnPropertyChanged(nameof(ImageWidth));
-            // Removed direct App.Settings update here. Handled by SetThumbnailSize_Click.
-        }
-    }
-
-    private int _imageHeight;
-
-    public int ImageHeight
-    {
-        get => _imageHeight;
-        set
-        {
-            if (_imageHeight == value) return;
-
-            _imageHeight = value;
-            OnPropertyChanged(nameof(ImageHeight));
-        }
-    }
 
     public bool IsCheckingMissing
     {
@@ -91,21 +59,6 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         }
     }
 
-    private string _selectedSimilarityAlgorithm; // Backing field for property
-
-    public string SelectedSimilarityAlgorithm
-    {
-        get => _selectedSimilarityAlgorithm;
-        set
-        {
-            if (_selectedSimilarityAlgorithm == value) return;
-
-            _selectedSimilarityAlgorithm = value;
-            OnPropertyChanged(nameof(SelectedSimilarityAlgorithm));
-            // Removed direct App.Settings update here. Handled by SetSimilarityAlgorithm_Click.
-        }
-    }
-
     public object DisplayImage { get; } = new();
     public object ImageName { get; } = new();
     public object SimilarityScore { get; } = new();
@@ -115,17 +68,10 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         InitializeComponent();
         DataContext = this;
 
-        // Initialize local properties from App.Settings (direct backing field assignment to avoid PropertyChanged during init)
-        _imageWidth = App.SettingsManager.ImageWidth;
-        _imageHeight = App.SettingsManager.ImageHeight;
-        _selectedSimilarityAlgorithm = App.SettingsManager.SelectedSimilarityAlgorithm;
-
         // Initialize stored folder paths
-        _lastValidRomFolderPath = null;
-        _lastValidImageFolderPath = null;
 
         // Check for command-line arguments
-        var args = Environment.GetCommandLineArgs();
+        var args = Environment.CommandLine.Split(' '); // Use Environment.CommandLine to get the full command line
         if (args.Length == 3)
         {
             var imageFolderPath = args[1];
@@ -165,8 +111,8 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         UpdateBaseThemeMenuChecks();
         UpdateMameDescriptionCheck();
 
-        // Subscribe to App.Settings PropertyChanged to update UI if settings change elsewhere (e.g. SettingsWindow)
-        App.SettingsManager.PropertyChanged += AppSettingsManagerPropertyChanged;
+        // Subscribe to SettingsManager PropertyChanged to update UI for non-binding properties (like menu checks)
+        Settings.PropertyChanged += AppSettingsManagerPropertyChanged;
 
         // Load _machines and _mameLookup
         LoadMameData();
@@ -235,31 +181,23 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
     {
         try
         {
+            // This handler is now only needed for settings that don't update the UI via direct binding,
+            // such as menu item checks or triggering a list refresh.
             switch (e.PropertyName)
             {
                 case nameof(SettingsManager.BaseTheme):
-                    // Base theme is handled by App.ChangeTheme, which applies globally.
-                    // Ensure menu checks are updated.
                     LightTheme.IsChecked = App.SettingsManager.BaseTheme == "Light";
                     DarkTheme.IsChecked = App.SettingsManager.BaseTheme == "Dark";
                     break;
                 case nameof(SettingsManager.AccentColor):
-                    // Accent color is handled by App.ChangeTheme, which applies globally.
-                    // Ensure menu checks are updated.
                     UpdateAccentColorChecks();
                     break;
                 case nameof(SettingsManager.ImageWidth):
                 case nameof(SettingsManager.ImageHeight):
-                    // Update local properties and trigger UI update
-                    _imageWidth = App.SettingsManager.ImageWidth;
-                    _imageHeight = App.SettingsManager.ImageHeight;
-                    OnPropertyChanged(nameof(ImageWidth));
-                    OnPropertyChanged(nameof(ImageHeight));
+                    // The UI is updated via data binding. We just need to update the menu checks.
                     UpdateThumbnailSizeMenuChecks();
                     break;
                 case nameof(SettingsManager.SelectedSimilarityAlgorithm):
-                    _selectedSimilarityAlgorithm = App.SettingsManager.SelectedSimilarityAlgorithm;
-                    OnPropertyChanged(nameof(SelectedSimilarityAlgorithm));
                     UpdateSimilarityAlgorithmChecks();
                     break;
                 case nameof(SettingsManager.SimilarityThreshold):
@@ -267,8 +205,6 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
                     break;
                 case nameof(SettingsManager.UseMameDescription):
                     UpdateMameDescriptionCheck();
-                    // Refresh the list immediately after the setting changes
-                    // Only refresh if MAME data is actually available, otherwise it's pointless
                     if (_mameLookup != null && _mameLookup.Count > 0)
                         await RefreshMissingImagesList();
                     break;
@@ -416,39 +352,31 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
                     // Check for cancellation at the start
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    var searchPatterns = App.SettingsManager.SupportedExtensions.Select(static ext => "*." + ext).ToArray();
                     var allRomNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    var supportedExtensionsSet = new HashSet<string>(
+                        App.SettingsManager.SupportedExtensions.Select(ext => "." + ext),
+                        StringComparer.OrdinalIgnoreCase);
 
-                    // Process each pattern with cancellation checks
-                    foreach (var pattern in searchPatterns)
+                    var enumerationOptions = new EnumerationOptions
+                    {
+                        IgnoreInaccessible = true, // Skip directories that can't be accessed.
+                        RecurseSubdirectories = true
+                    };
+
+                    // Scan the directory tree once for all files, ignoring inaccessible subdirectories.
+                    var files = Directory.EnumerateFiles(romFolderPath, "*.*", enumerationOptions);
+
+                    foreach (var file in files)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
 
-                        await Task.Yield(); // Yield to prevent blocking
-
-                        try
+                        // Filter by extension in memory.
+                        var extension = Path.GetExtension(file);
+                        if (supportedExtensionsSet.Contains(extension))
                         {
-                            var files = Directory.EnumerateFiles(romFolderPath, pattern, SearchOption.AllDirectories);
-                            foreach (var file in files)
-                            {
-                                cancellationToken.ThrowIfCancellationRequested();
-
-                                var fileName = Path.GetFileNameWithoutExtension(file);
-                                if (!string.IsNullOrEmpty(fileName))
-                                {
-                                    allRomNames.Add(fileName);
-                                }
-                            }
-                        }
-                        catch (DirectoryNotFoundException)
-                        {
-                            // Skip this pattern if directory issues occur
-                            continue;
-                        }
-                        catch (UnauthorizedAccessException)
-                        {
-                            // Skip directories we can't access
-                            continue;
+                            var fileName = Path.GetFileNameWithoutExtension(file);
+                            if (!string.IsNullOrEmpty(fileName))
+                                allRomNames.Add(fileName);
                         }
                     }
 
@@ -609,8 +537,8 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
                     var similarityResult = await ButtonFactory.CreateSimilarImagesCollection(
                         searchName,
                         imageFolderPath,
-                        App.SettingsManager.SimilarityThreshold,
-                        SelectedSimilarityAlgorithm,
+                        Settings.SimilarityThreshold,
+                        Settings.SelectedSimilarityAlgorithm,
                         cancellationToken
                     );
 
@@ -625,7 +553,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
                             textBlock.Inlines.Add(new Run("for ROM: "));
                             textBlock.Inlines.Add(new Run($"{romName} ") { FontWeight = FontWeights.Bold });
                             textBlock.Inlines.Add(new Run("with "));
-                            textBlock.Inlines.Add(new Run($"{SelectedSimilarityAlgorithm} ") { FontWeight = FontWeights.Bold });
+                            textBlock.Inlines.Add(new Run($"{Settings.SelectedSimilarityAlgorithm} ") { FontWeight = FontWeights.Bold });
                             textBlock.Inlines.Add(new Run("algorithm"));
                             LblSearchQuery.Content = textBlock;
 
@@ -779,7 +707,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
     {
         if (sender is not MenuItem menuItem) return;
 
-        var algorithm = menuItem.Header.ToString() ?? DefaultSimilarityAlgorithm;
+        var algorithm = menuItem.Header.ToString() ?? "Jaro-Winkler Distance";
         App.SettingsManager.SelectedSimilarityAlgorithm = algorithm; // Update App.Settings
         App.SettingsManager.SaveSettings(); // Save the settings
     }
@@ -1008,21 +936,10 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         {
             var newPath = textBox.Text.Trim();
 
+            // Only update the 'last valid path' if the new path is actually valid.
+            // Do not revert the text if it's invalid, allowing the user to correct it.
             if (!string.IsNullOrEmpty(newPath) && Directory.Exists(newPath))
             {
-                // Commit the valid path and update stored last valid path
-                textBox.Text = newPath;
-                _lastValidImageFolderPath = newPath; // Store the valid path
-                textBox.CaretIndex = textBox.Text.Length;
-            }
-            else
-            {
-                // Revert to last known good path instead of current invalid text
-                textBox.Text = _lastValidImageFolderPath ?? string.Empty;
-                if (!string.IsNullOrEmpty(textBox.Text))
-                {
-                    textBox.CaretIndex = textBox.Text.Length;
-                }
             }
 
             UpdateUiStateForFolderPaths();
@@ -1058,21 +975,10 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         {
             var newPath = textBox.Text.Trim();
 
+            // Only update the 'last valid path' if the new path is actually valid.
+            // Do not revert the text if it's invalid, allowing the user to correct it.
             if (!string.IsNullOrEmpty(newPath) && Directory.Exists(newPath))
             {
-                // Commit the valid path and update stored last valid path
-                textBox.Text = newPath;
-                _lastValidRomFolderPath = newPath; // Store the valid path
-                textBox.CaretIndex = textBox.Text.Length;
-            }
-            else
-            {
-                // Revert to last known good path instead of current invalid text
-                textBox.Text = _lastValidRomFolderPath ?? string.Empty;
-                if (!string.IsNullOrEmpty(textBox.Text))
-                {
-                    textBox.CaretIndex = textBox.Text.Length;
-                }
             }
 
             UpdateUiStateForFolderPaths();
@@ -1145,12 +1051,10 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         // Store valid paths when detected
         if (romPathValid)
         {
-            _lastValidRomFolderPath = romPath;
         }
 
         if (imagePathValid)
         {
-            _lastValidImageFolderPath = imagePath;
         }
 
         BtnCheckForMissingImages.IsEnabled = romPathValid && imagePathValid;
@@ -1168,7 +1072,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
     protected override void OnClosed(EventArgs e)
     {
-        App.SettingsManager.PropertyChanged -= AppSettingsManagerPropertyChanged;
+        Settings.PropertyChanged -= AppSettingsManagerPropertyChanged;
         Dispose();
         base.OnClosed(e);
     }

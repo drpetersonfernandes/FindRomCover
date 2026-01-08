@@ -1,4 +1,4 @@
-﻿<controls:MetroWindow x:Class="FindRomCover.MainWindow"
+<controls:MetroWindow x:Class="FindRomCover.MainWindow"
                       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                       xmlns:controls="http://metro.mahapps.com/winfx/xaml/controls"
@@ -86,8 +86,8 @@
                     ContextMenuOpening="Image_ContextMenuOpening">
                 <StackPanel>
                     <Image
-                        Width="{Binding Path=ImageWidth, RelativeSource={RelativeSource AncestorType=Window}}"
-                        Height="{Binding Path=ImageHeight, RelativeSource={RelativeSource AncestorType=Window}}"
+                        Width="{Binding Path=Settings.ImageWidth, RelativeSource={RelativeSource AncestorType=Window}}"
+                        Height="{Binding Path=Settings.ImageHeight, RelativeSource={RelativeSource AncestorType=Window}}"
                         Source="{Binding DisplayImage}">
                         <!-- Removed the DataTrigger that was causing UI freezing -->
                     </Image>

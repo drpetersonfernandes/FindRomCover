@@ -105,15 +105,25 @@ public static class ButtonFactory
     private static ICommand CopyImageFilenameCommand { get; } = new DelegateCommand(param =>
     {
         if (param is not string imagePath) return;
-        // Get filename without extension
+
         var filenameWithoutExtension = Path.GetFileNameWithoutExtension(imagePath);
 
-        // Copy to clipboard
-        Clipboard.SetText(filenameWithoutExtension);
+        try
+        {
+            // Copy to clipboard
+            Clipboard.SetText(filenameWithoutExtension);
 
-        // Notify user
-        MessageBox.Show($"Filename '{filenameWithoutExtension}' copied to clipboard!",
-            "Copied", MessageBoxButton.OK, MessageBoxImage.Information);
+            // Notify user
+            MessageBox.Show($"Filename '{filenameWithoutExtension}' copied to clipboard!",
+                "Copied", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (System.Runtime.InteropServices.COMException ex)
+        {
+            // The clipboard can be locked by other processes (e.g., remote desktop).
+            MessageBox.Show("Could not copy to clipboard. It might be in use by another application.",
+                "Clipboard Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+            _ = ErrorLogger.LogAsync(ex, "Failed to set clipboard text due to COMException.");
+        }
     });
 
     private static ICommand OpenFileLocationCommand { get; } = new DelegateCommand(static param =>

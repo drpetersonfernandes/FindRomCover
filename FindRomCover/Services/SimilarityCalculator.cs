@@ -194,9 +194,11 @@ public static class SimilarityCalculator
 
     private static double CalculateJaccardIndex(string a, string b)
     {
-        // Use 2-grams (bigrams) instead of individual characters to preserve some order information
-        var setA = GetNgrams(a, 2);
-        var setB = GetNgrams(b, 2);
+        // Use 1-grams for very short strings to avoid issues and provide better results.
+        // Otherwise, use 2-grams (bigrams) to preserve some order information.
+        var ngramSize = Math.Min(a.Length, b.Length) < 2 ? 1 : 2;
+        var setA = GetNgrams(a, ngramSize);
+        var setB = GetNgrams(b, ngramSize);
 
         var intersection = new HashSet<string>(setA);
         intersection.IntersectWith(setB);
@@ -228,7 +230,7 @@ public static class SimilarityCalculator
 
     private static double CalculateJaroWinklerDistance(string s1, string s2)
     {
-        const double scalingFactor = 0.2;
+        const double scalingFactor = 0.1; // Standard Jaro-Winkler scaling factor
 
         var s1Len = s1.Length;
         var s2Len = s2.Length;
