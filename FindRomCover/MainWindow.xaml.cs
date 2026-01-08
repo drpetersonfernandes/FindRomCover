@@ -22,11 +22,9 @@ namespace FindRomCover;
 public partial class MainWindow : INotifyPropertyChanged, IDisposable
 {
     private CancellationTokenSource? _loadMissingCts;
-
     private List<MameManager>? _machines;
     private Dictionary<string, string>? _mameLookup;
-
-    private CancellationTokenSource? _findSimilarCts; // CancellationTokenSource for the current image similarity search
+    private CancellationTokenSource? _findSimilarCts;
     private readonly SemaphoreSlim _findSimilarSemaphore = new(1, 1); // Semaphore to ensure only one search runs at a time
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -68,35 +66,11 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         InitializeComponent();
         DataContext = this;
 
-        // Initialize stored folder paths
-
-        // Check for command-line arguments
-        var args = Environment.CommandLine.Split(' '); // Use Environment.CommandLine to get the full command line
-        if (args.Length == 3)
+        // Set folder paths from command-line arguments if provided by App.xaml.cs
+        if (!string.IsNullOrEmpty(App.StartupImageFolderPath) && !string.IsNullOrEmpty(App.StartupRomFolderPath))
         {
-            var imageFolderPath = args[1];
-            var romFolderPath = args[2];
-
-            if (Directory.Exists(imageFolderPath) && Directory.Exists(romFolderPath))
-            {
-                TxtImageFolder.Text = imageFolderPath;
-                TxtRomFolder.Text = romFolderPath;
-            }
-            else
-            {
-                var invalidPaths = new List<string>();
-                if (!Directory.Exists(imageFolderPath))
-                    invalidPaths.Add($"Image folder: '{imageFolderPath}'");
-                if (!Directory.Exists(romFolderPath))
-                    invalidPaths.Add($"ROM folder: '{romFolderPath}'");
-
-                MessageBox.Show(
-                    $"The following command-line paths are invalid or do not exist:\n\n{string.Join("\n", invalidPaths)}\n\nThe application will start with empty folder paths.",
-                    "Invalid Command-Line Arguments", MessageBoxButton.OK, MessageBoxImage.Warning);
-
-                TxtImageFolder.Text = "";
-                TxtRomFolder.Text = "";
-            }
+            TxtImageFolder.Text = App.StartupImageFolderPath;
+            TxtRomFolder.Text = App.StartupRomFolderPath;
         }
         else
         {

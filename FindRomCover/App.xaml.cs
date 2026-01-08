@@ -1,14 +1,19 @@
+using System.IO;
 using System.Windows;
 using ControlzEx.Theming;
 using FindRomCover.Managers;
 using FindRomCover.Services;
 using ImageMagick;
+using MessageBox = System.Windows.MessageBox;
 
 namespace FindRomCover;
 
 public partial class App
 {
-    public static readonly SettingsManager SettingsManager = new(); // Made public for global access
+    public static readonly SettingsManager SettingsManager = new();
+
+    public static string? StartupImageFolderPath { get; private set; }
+    public static string? StartupRomFolderPath { get; private set; }
 
     private static readonly Lazy<IAudioService> AudioServiceLazy = new(static () =>
     {
@@ -26,9 +31,38 @@ public partial class App
 
     protected override void OnStartup(StartupEventArgs e)
     {
-        // Configure Magick.NET resource limits
+        // Magick.NET resource limits
         ResourceLimits.Memory = 512 * 1024 * 1024; // 512MB
         ResourceLimits.Thread = 4; // Limit threads
+
+        // Check for command-line arguments. e.Args is more robust than Environment.CommandLine.
+        // Assumes the order is: <image_folder_path> <rom_folder_path>
+        if (e.Args.Length == 2)
+        {
+            var imageFolderPath = e.Args[0];
+            var romFolderPath = e.Args[1];
+
+            var imagePathValid = Directory.Exists(imageFolderPath);
+            var romPathValid = Directory.Exists(romFolderPath);
+
+            if (imagePathValid && romPathValid)
+            {
+                StartupImageFolderPath = imageFolderPath;
+                StartupRomFolderPath = romFolderPath;
+            }
+            else
+            {
+                var invalidPaths = new List<string>();
+                if (!imagePathValid)
+                    invalidPaths.Add($"Image folder: '{imageFolderPath}'");
+                if (!romPathValid)
+                    invalidPaths.Add($"ROM folder: '{romFolderPath}'");
+
+                MessageBox.Show(
+                    $"The following command-line paths are invalid or do not exist:\n\n{string.Join("\n", invalidPaths)}\n\nThe application will start with empty folder paths.",
+                    "Invalid Command-Line Arguments", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
 
         base.OnStartup(e);
         ApplyTheme(SettingsManager.BaseTheme, SettingsManager.AccentColor);
@@ -46,10 +80,10 @@ public partial class App
 
     public static void ChangeTheme(string baseTheme, string accentColor)
     {
-        ApplyTheme(baseTheme, accentColor); // This call is now valid
-        SettingsManager.BaseTheme = baseTheme; // Updates the public static Settings instance
-        SettingsManager.AccentColor = accentColor; // Updates the public static Settings instance
-        SettingsManager.SaveSettings(); // Saves the public static Settings instance
+        ApplyTheme(baseTheme, accentColor);
+        SettingsManager.BaseTheme = baseTheme;
+        SettingsManager.AccentColor = accentColor;
+        SettingsManager.SaveSettings();
     }
 
     private static void ApplyTheme(string baseTheme, string accentColor)
@@ -71,7 +105,6 @@ public partial class App
         ThemeManager.Current.ChangeTheme(window, $"{baseTheme}.{accentColor}");
     }
 
-    // Null object pattern implementation for IAudioService
     private sealed class NullAudioService : IAudioService
     {
         public void PlayClickSound()
