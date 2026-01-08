@@ -7,7 +7,7 @@ using FindRomCover.models;
 
 namespace FindRomCover.Services;
 
-public static class LogErrors
+public static class ErrorLogger
 {
     private static readonly HttpClient HttpClient = new();
     private const string ApiKey = "hjh7yu6t56tyr540o9u8767676r5674534453235264c75b6t7ggghgg76trf564e";
@@ -25,7 +25,7 @@ public static class LogErrors
     // Semaphore to ensure only one thread writes to/reads from the log files at a time
     private static readonly SemaphoreSlim LogFileLock = new(1, 1);
 
-    public static async Task LogErrorAsync(Exception? ex, string? contextMessage = null)
+    public static async Task LogAsync(Exception? ex, string? contextMessage = null)
     {
         var version = Assembly.GetEntryAssembly()?.GetName().Version?.ToString();
         version ??= "Unknown";
@@ -137,7 +137,7 @@ public static class LogErrors
             request.Content = content;
             request.Headers.Add("X-API-KEY", ApiKey);
 
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(App.SettingsManager.ApiTimeoutSeconds));
             using var response = await HttpClient.SendAsync(request, cts.Token);
 
             if (response.IsSuccessStatusCode)

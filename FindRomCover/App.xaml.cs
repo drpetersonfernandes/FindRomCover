@@ -9,7 +9,20 @@ namespace FindRomCover;
 public partial class App
 {
     public static readonly SettingsManager SettingsManager = new(); // Made public for global access
-    public static IAudioService AudioService { get; private set; } = null!;
+
+    private static readonly Lazy<IAudioService> AudioServiceLazy = new(static () =>
+    {
+        try
+        {
+            return new AudioService();
+        }
+        catch
+        {
+            return new NullAudioService();
+        }
+    });
+
+    public static IAudioService AudioService => AudioServiceLazy.Value;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -18,7 +31,6 @@ public partial class App
         ResourceLimits.Thread = 4; // Limit threads
 
         base.OnStartup(e);
-        AudioService = new AudioService();
         ApplyTheme(SettingsManager.BaseTheme, SettingsManager.AccentColor);
     }
 
@@ -48,7 +60,7 @@ public partial class App
         }
         catch (Exception ex)
         {
-            _ = LogErrors.LogErrorAsync(ex, $"Error applying theme: {baseTheme}.{accentColor}");
+            _ = ErrorLogger.LogAsync(ex, $"Error applying theme: {baseTheme}.{accentColor}");
         }
     }
 
@@ -57,5 +69,18 @@ public partial class App
         var baseTheme = SettingsManager.BaseTheme;
         var accentColor = SettingsManager.AccentColor;
         ThemeManager.Current.ChangeTheme(window, $"{baseTheme}.{accentColor}");
+    }
+
+    // Null object pattern implementation for IAudioService
+    private sealed class NullAudioService : IAudioService
+    {
+        public void PlayClickSound()
+        {
+            // No-op implementation
+        }
+
+        public void Dispose()
+        {
+        }
     }
 }

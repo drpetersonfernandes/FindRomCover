@@ -37,7 +37,7 @@ public static class ImageProcessor
                             $"Try running as administrator.",
                 "Permission Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
-            _ = LogErrors.LogErrorAsync(ex, $"Cannot write to directory: {directory}");
+            _ = ErrorLogger.LogAsync(ex, $"Cannot write to directory: {directory}");
 
             return false;
         }
@@ -54,7 +54,7 @@ public static class ImageProcessor
                     "File in Use",
                     MessageBoxButton.OK, MessageBoxImage.Error);
 
-                _ = LogErrors.LogErrorAsync(ex, $"User cancelled retry for file in use: {targetPath}");
+                _ = ErrorLogger.LogAsync(ex, $"User cancelled retry for file in use: {targetPath}");
 
                 return false;
             }
@@ -62,7 +62,7 @@ public static class ImageProcessor
             {
                 MessageBox.Show($"Access denied to file: {targetPath}\n\nTry running as administrator.",
                     "Permission Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                _ = LogErrors.LogErrorAsync(ex, $"Access denied: {targetPath}");
+                _ = ErrorLogger.LogAsync(ex, $"Access denied: {targetPath}");
 
                 return false;
             }
@@ -70,7 +70,7 @@ public static class ImageProcessor
             {
                 MessageBox.Show($"Error deleting file: {ex.Message}", "Error",
                     MessageBoxButton.OK, MessageBoxImage.Error);
-                _ = LogErrors.LogErrorAsync(ex, $"Error deleting file: {targetPath}");
+                _ = ErrorLogger.LogAsync(ex, $"Error deleting file: {targetPath}");
 
                 return false;
             }
@@ -109,7 +109,7 @@ public static class ImageProcessor
         {
             MessageBox.Show($"Error processing image with Magick.NET: {ex.Message}", "Image Processing Error",
                 MessageBoxButton.OK, MessageBoxImage.Error);
-            _ = LogErrors.LogErrorAsync(ex, $"Magick.NET error: {sourcePath}");
+            _ = ErrorLogger.LogAsync(ex, $"Magick.NET error: {sourcePath}");
             return false;
         }
     }

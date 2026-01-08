@@ -6,9 +6,6 @@ namespace FindRomCover.Services;
 
 public static class SimilarityCalculator
 {
-    // Add a configurable limit for maximum concurrent image loading
-    private const int MaxImagesToLoad = 30;
-
     public static async Task<SimilarityCalculationResult> CalculateSimilarityAsync( // Changed return type
         string selectedFileName,
         string imageFolderPath,
@@ -32,7 +29,7 @@ public static class SimilarityCalculator
 
         var parallelOptions = new ParallelOptions
         {
-            MaxDegreeOfParallelism = Environment.ProcessorCount,
+            MaxDegreeOfParallelism = Math.Min(Environment.ProcessorCount, 8), // Cap parallelism to avoid overwhelming system resources
             CancellationToken = cancellationToken
         };
 
@@ -67,7 +64,7 @@ public static class SimilarityCalculator
                     catch (Exception ex)
                     {
                         // Log the error and add to the collection for user notification
-                        _ = LogErrors.LogErrorAsync(ex, $"Error processing file {imageFile} for similarity: {ex.Message}");
+                        _ = ErrorLogger.LogAsync(ex, $"Error processing file {imageFile} for similarity: {ex.Message}");
                         processingErrors.Add($"Could not process image '{Path.GetFileName(imageFile)}' for similarity: {ex.Message}");
                     }
                 });
@@ -78,7 +75,7 @@ public static class SimilarityCalculator
             }
             catch (Exception ex)
             {
-                _ = LogErrors.LogErrorAsync(ex, $"Error in parallel processing of image files: {ex.Message}");
+                _ = ErrorLogger.LogAsync(ex, $"Error in parallel processing of image files: {ex.Message}");
                 processingErrors.Add($"An unexpected error occurred during image file scanning: {ex.Message}");
                 // Do not re-throw here, let the process continue to load other images if possible.
             }
@@ -89,7 +86,7 @@ public static class SimilarityCalculator
         // Sort candidates by similarity score and limit to prevent memory issues
         var topCandidates = candidateFiles
             .OrderByDescending(x => x.SimilarityScore)
-            .Take(MaxImagesToLoad)
+            .Take(App.SettingsManager.MaxImagesToLoad)
             .ToList();
 
         // Second pass: Load images only for top candidates
@@ -130,7 +127,7 @@ public static class SimilarityCalculator
                     catch (Exception ex)
                     {
                         // Log the error and add to the collection for user notification
-                        _ = LogErrors.LogErrorAsync(ex, $"Error loading image {candidate.FilePath} for display: {ex.Message}");
+                        _ = ErrorLogger.LogAsync(ex, $"Error loading image {candidate.FilePath} for display: {ex.Message}");
                         processingErrors.Add($"Could not load image '{Path.GetFileName(candidate.FilePath)}' for display: {ex.Message}");
                     }
                     finally
@@ -145,7 +142,7 @@ public static class SimilarityCalculator
             }
             catch (Exception ex)
             {
-                _ = LogErrors.LogErrorAsync(ex, $"Error in parallel image loading for display: {ex.Message}");
+                _ = ErrorLogger.LogAsync(ex, $"Error in parallel image loading for display: {ex.Message}");
                 processingErrors.Add($"An unexpected error occurred during image loading for display: {ex.Message}");
                 // Do not re-throw here, let the process continue to load other images if possible.
             }

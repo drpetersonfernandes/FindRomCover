@@ -45,11 +45,11 @@ public partial class SettingsWindow
                 return;
             }
 
-            // Check for valid characters in file extension
+            // Check for valid characters and length in file extension
             if (!IsValidExtension(newExtension))
             {
                 await this.ShowMessageAsync("Invalid Input",
-                    "Extension contains invalid characters. Only letters, numbers, and hyphens are allowed.");
+                    "Extension is invalid. It must be 1-10 characters and contain only letters, numbers, or hyphens.");
                 return;
             }
 
@@ -70,15 +70,16 @@ public partial class SettingsWindow
         }
         catch (Exception ex)
         {
-            _ = LogErrors.LogErrorAsync(ex, "Error in method BtnAdd_Click");
+            _ = ErrorLogger.LogAsync(ex, "Error in method BtnAdd_Click");
         }
     }
 
     private static bool IsValidExtension(string extension)
     {
+        const int maxExtensionLength = 10;
         // Check if extension contains only valid characters (letters, numbers, hyphens)
-        // and is not empty
-        if (string.IsNullOrEmpty(extension))
+        // and is not empty or too long
+        if (string.IsNullOrEmpty(extension) || extension.Length > maxExtensionLength)
             return false;
 
         return extension.All(static c => char.IsLetterOrDigit(c) || c == '-');
@@ -105,8 +106,8 @@ public partial class SettingsWindow
             {
                 var invalidList = string.Join(", ", invalidExtensions);
                 var result = MessageBox.Show(
-                    $"The following extensions contain invalid characters: {invalidList}\n\n" +
-                    "Only letters, numbers, and hyphens are allowed in file extensions.\n\n" +
+                    $"The following extensions are invalid: {invalidList}\n\n" +
+                    "Extensions must be 1-10 characters long and contain only letters, numbers, and hyphens.\n\n" +
                     "Would you like to remove these invalid extensions and save the rest?",
                     "Invalid Extensions", MessageBoxButton.YesNo, MessageBoxImage.Warning);
 
@@ -148,7 +149,7 @@ public partial class SettingsWindow
         }
         catch (Exception ex)
         {
-            _ = LogErrors.LogErrorAsync(ex, "Error in BtnSave_Click");
+            _ = ErrorLogger.LogAsync(ex, "Error in BtnSave_Click");
             MessageBox.Show("An error occurred while saving settings. Your changes were not saved.",
                 "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }

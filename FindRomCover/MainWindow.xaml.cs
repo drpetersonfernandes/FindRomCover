@@ -121,8 +121,8 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         _selectedSimilarityAlgorithm = App.SettingsManager.SelectedSimilarityAlgorithm;
 
         // Initialize stored folder paths
-        _lastValidRomFolderPath = "";
-        _lastValidImageFolderPath = "";
+        _lastValidRomFolderPath = null;
+        _lastValidImageFolderPath = null;
 
         // Check for command-line arguments
         var args = Environment.GetCommandLineArgs();
@@ -197,7 +197,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         catch (FileNotFoundException ex)
         {
             const string contextMessage = "The file 'mame.dat' could not be found in the application folder.";
-            _ = LogErrors.LogErrorAsync(ex, contextMessage);
+            _ = ErrorLogger.LogAsync(ex, contextMessage);
 
             MenuUseMameDescription.IsEnabled = false;
             MenuUseMameDescription.ToolTip = "MAME data (mame.dat) could not be found.";
@@ -207,7 +207,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         catch (Exception ex)
         {
             var contextMessage = $"Failed to load MAME data from 'mame.dat': {ex.Message}";
-            _ = LogErrors.LogErrorAsync(ex, contextMessage);
+            _ = ErrorLogger.LogAsync(ex, contextMessage);
 
             MenuUseMameDescription.IsEnabled = false;
             MenuUseMameDescription.ToolTip = "MAME data (mame.dat) could not be loaded or is corrupted.";
@@ -276,7 +276,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         }
         catch (Exception ex)
         {
-            _ = LogErrors.LogErrorAsync(ex, "Error in AppSettings_PropertyChanged");
+            _ = ErrorLogger.LogAsync(ex, "Error in AppSettings_PropertyChanged");
         }
     }
 
@@ -331,7 +331,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
             var formattedException = $"Unable to open the donation link.\n\n" +
                                      $"Exception type: {ex.GetType().Name}\n" +
                                      $"Exception details: {ex.Message}";
-            _ = LogErrors.LogErrorAsync(ex, formattedException);
+            _ = ErrorLogger.LogAsync(ex, formattedException);
         }
     }
 
@@ -381,7 +381,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         }
         catch (Exception ex)
         {
-            _ = LogErrors.LogErrorAsync(ex, "Error in BtnCheckForMissingImages_Click");
+            _ = ErrorLogger.LogAsync(ex, "Error in BtnCheckForMissingImages_Click");
         }
     }
 
@@ -543,7 +543,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
             // Log detailed error
             var formattedException = $"Error checking for missing images: {ex.Message}";
-            _ = LogErrors.LogErrorAsync(ex, formattedException);
+            _ = ErrorLogger.LogAsync(ex, formattedException);
         }
         finally
         {
@@ -665,12 +665,12 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
                 catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
                 {
                     MessageBox.Show($"Error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    _ = LogErrors.LogErrorAsync(ex, "Error in LstMissingImages_SelectionChanged");
+                    _ = ErrorLogger.LogAsync(ex, "Error in LstMissingImages_SelectionChanged");
                 }
             }
             catch (Exception ex)
             {
-                _ = LogErrors.LogErrorAsync(ex, "Error in LstMissingImages_SelectionChanged outer catch");
+                _ = ErrorLogger.LogAsync(ex, "Error in LstMissingImages_SelectionChanged outer catch");
             }
             finally
             {
@@ -684,7 +684,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         }
         catch (Exception ex)
         {
-            _ = LogErrors.LogErrorAsync(ex, "Error in LstMissingImages_SelectionChanged outer catch");
+            _ = ErrorLogger.LogAsync(ex, "Error in LstMissingImages_SelectionChanged outer catch");
             IsFindingSimilar = false;
         }
     }
@@ -729,7 +729,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         {
             MessageBox.Show($"Unexpected error saving image: {ex.Message}", "Error",
                 MessageBoxButton.OK, MessageBoxImage.Error);
-            _ = LogErrors.LogErrorAsync(ex, $"Unexpected error in UseImage: {imagePath}");
+            _ = ErrorLogger.LogAsync(ex, $"Unexpected error in UseImage: {imagePath}");
         }
     }
 
@@ -766,7 +766,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         }
         catch (Exception ex)
         {
-            _ = LogErrors.LogErrorAsync(ex, "Error in RemoveSelectedItem");
+            _ = ErrorLogger.LogAsync(ex, "Error in RemoveSelectedItem");
         }
 
         UpdateMissingCount();
@@ -821,12 +821,12 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
                 const string formattedException = "Invalid similarity threshold selected.";
                 var ex = new Exception(formattedException);
-                _ = LogErrors.LogErrorAsync(ex, formattedException);
+                _ = ErrorLogger.LogAsync(ex, formattedException);
             }
         }
         catch (Exception ex)
         {
-            _ = LogErrors.LogErrorAsync(ex, "Error in SetSimilarityThreshold_Click");
+            _ = ErrorLogger.LogAsync(ex, "Error in SetSimilarityThreshold_Click");
         }
     }
 
@@ -880,7 +880,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         }
         catch (Exception ex)
         {
-            _ = LogErrors.LogErrorAsync(ex, "Error in SetThumbnailSize_Click");
+            _ = ErrorLogger.LogAsync(ex, "Error in SetThumbnailSize_Click");
         }
     }
 
@@ -968,7 +968,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         }
         catch (Exception ex)
         {
-            _ = LogErrors.LogErrorAsync(ex, "Error in MenuUseMameDescription_Click");
+            _ = ErrorLogger.LogAsync(ex, "Error in MenuUseMameDescription_Click");
         }
     }
 
@@ -994,7 +994,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         }
         catch (Exception ex)
         {
-            _ = LogErrors.LogErrorAsync(ex, "Error refreshing missing images list.");
+            _ = ErrorLogger.LogAsync(ex, "Error refreshing missing images list.");
         }
         finally
         {

@@ -17,13 +17,25 @@ public class MameManager
 
     private static readonly string DefaultDatPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "mame.dat");
 
+    // Use Lazy<T> for thread-safe, one-time initialization of the MAME data cache.
+    private static readonly Lazy<List<MameManager>> MameDataCache = new(LoadMameDataFromFile, isThreadSafe: true);
+
     public static List<MameManager> LoadFromDat()
+    {
+        // Accessing .Value will trigger the LoadMameDataFromFile factory method once,
+        // and subsequent calls will return the cached result.
+        // If the factory method threw an exception, it will be re-thrown here.
+        return MameDataCache.Value;
+    }
+
+    private static List<MameManager> LoadMameDataFromFile()
     {
         var datPath = DefaultDatPath;
 
         if (!File.Exists(datPath))
         {
-            return []; // return an empty list
+            // Throw exception to be handled by the caller (MainWindow), correcting the original behavior's intent.
+            throw new FileNotFoundException("The file 'mame.dat' could not be found.", datPath);
         }
 
         try
@@ -38,7 +50,7 @@ public class MameManager
         {
             // Specific handling for MessagePack deserialization errors
             const string contextMessage = "The file mame.dat is corrupted or not in the correct MessagePack format.";
-            _ = LogErrors.LogErrorAsync(ex, contextMessage);
+            _ = ErrorLogger.LogAsync(ex, contextMessage);
 
             MessageBox.Show(contextMessage, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
@@ -48,7 +60,7 @@ public class MameManager
         {
             // Handle file access issues
             const string contextMessage = "Error reading the file mame.dat (possibly locked by another process).";
-            _ = LogErrors.LogErrorAsync(ex, contextMessage);
+            _ = ErrorLogger.LogAsync(ex, contextMessage);
 
             MessageBox.Show(contextMessage, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
@@ -58,7 +70,7 @@ public class MameManager
         {
             // Handle permission issues
             const string contextMessage = "Access denied to the file mame.dat.";
-            _ = LogErrors.LogErrorAsync(ex, contextMessage);
+            _ = ErrorLogger.LogAsync(ex, contextMessage);
 
             MessageBox.Show(contextMessage, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
@@ -67,7 +79,7 @@ public class MameManager
         catch (Exception ex)
         {
             const string contextMessage = "An unexpected error occurred while loading mame.dat.";
-            _ = LogErrors.LogErrorAsync(ex, contextMessage);
+            _ = ErrorLogger.LogAsync(ex, contextMessage);
 
             MessageBox.Show(contextMessage, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
 

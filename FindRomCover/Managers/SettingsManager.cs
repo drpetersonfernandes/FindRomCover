@@ -20,6 +20,8 @@ public class SettingsManager : INotifyPropertyChanged
     private static readonly string SettingsFilePath =
         Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.xml");
 
+    private readonly object _saveLock = new();
+
     private double _similarityThreshold;
 
     public double SimilarityThreshold
@@ -27,6 +29,8 @@ public class SettingsManager : INotifyPropertyChanged
         get => _similarityThreshold;
         set
         {
+            // Clamp value between 0 and 100
+            value = Math.Clamp(value, 0, 100);
             if (Math.Abs(_similarityThreshold - value) < 0.01) return;
 
             _similarityThreshold = value;
@@ -69,6 +73,8 @@ public class SettingsManager : INotifyPropertyChanged
         get => _imageWidth;
         set
         {
+            // Ensure positive value, clamp between 50 and 2000
+            value = Math.Clamp(value, 50, 2000);
             if (_imageWidth == value) return;
 
             _imageWidth = value;
@@ -83,6 +89,8 @@ public class SettingsManager : INotifyPropertyChanged
         get => _imageHeight;
         set
         {
+            // Ensure positive value, clamp between 50 and 2000
+            value = Math.Clamp(value, 50, 2000);
             if (_imageHeight == value) return;
 
             _imageHeight = value;
@@ -132,6 +140,62 @@ public class SettingsManager : INotifyPropertyChanged
         }
     }
 
+    private int _maxImagesToLoad = 30;
+
+    public int MaxImagesToLoad
+    {
+        get => _maxImagesToLoad;
+        set
+        {
+            if (_maxImagesToLoad == value) return;
+
+            _maxImagesToLoad = value;
+            OnPropertyChanged(nameof(MaxImagesToLoad));
+        }
+    }
+
+    private int _imageLoaderMaxRetries = 3;
+
+    public int ImageLoaderMaxRetries
+    {
+        get => _imageLoaderMaxRetries;
+        set
+        {
+            if (_imageLoaderMaxRetries == value) return;
+
+            _imageLoaderMaxRetries = value;
+            OnPropertyChanged(nameof(ImageLoaderMaxRetries));
+        }
+    }
+
+    private int _imageLoaderRetryDelayMilliseconds = 200;
+
+    public int ImageLoaderRetryDelayMilliseconds
+    {
+        get => _imageLoaderRetryDelayMilliseconds;
+        set
+        {
+            if (_imageLoaderRetryDelayMilliseconds == value) return;
+
+            _imageLoaderRetryDelayMilliseconds = value;
+            OnPropertyChanged(nameof(ImageLoaderRetryDelayMilliseconds));
+        }
+    }
+
+    private int _apiTimeoutSeconds = 30;
+
+    public int ApiTimeoutSeconds
+    {
+        get => _apiTimeoutSeconds;
+        set
+        {
+            if (_apiTimeoutSeconds == value) return;
+
+            _apiTimeoutSeconds = value;
+            OnPropertyChanged(nameof(ApiTimeoutSeconds));
+        }
+    }
+
     public SettingsManager()
     {
         LoadSettings();
@@ -151,7 +215,7 @@ public class SettingsManager : INotifyPropertyChanged
                 catch (Exception saveEx)
                 {
                     // Log the error but continue with defaults
-                    _ = LogErrors.LogErrorAsync(saveEx, "Failed to save default settings to settings.xml");
+                    _ = ErrorLogger.LogAsync(saveEx, "Failed to save default settings to settings.xml");
                 }
 
                 return;
@@ -187,6 +251,11 @@ public class SettingsManager : INotifyPropertyChanged
                 _imageWidth = 300;
                 _imageHeight = 300;
             }
+
+            _maxImagesToLoad = int.Parse(GetValue("MaxImagesToLoad", "30"), CultureInfo.InvariantCulture);
+            _imageLoaderMaxRetries = int.Parse(GetValue("ImageLoaderMaxRetries", "3"), CultureInfo.InvariantCulture);
+            _imageLoaderRetryDelayMilliseconds = int.Parse(GetValue("ImageLoaderRetryDelayMilliseconds", "200"), CultureInfo.InvariantCulture);
+            _apiTimeoutSeconds = int.Parse(GetValue("ApiTimeoutSeconds", "30"), CultureInfo.InvariantCulture);
 
             var extensionsElement = settingsElement.Element("SupportedExtensions");
             if (extensionsElement != null)
@@ -226,57 +295,64 @@ public class SettingsManager : INotifyPropertyChanged
             catch (Exception saveEx)
             {
                 // Log the error but continue with defaults
-                _ = LogErrors.LogErrorAsync(saveEx, "Failed to save default settings after load error");
+                _ = ErrorLogger.LogAsync(saveEx, "Failed to save default settings after load error");
             }
         }
     }
 
     public void SaveSettings()
     {
-        try
+        lock (_saveLock)
         {
-            var doc = new XDocument(
-                new XElement("Settings",
-                    new XElement("SimilarityThreshold", SimilarityThreshold.ToString(CultureInfo.InvariantCulture)),
-                    new XElement("SupportedExtensions",
-                        SupportedExtensions.Select(static ext => new XElement("Extension", ext))
-                    ),
-                    new XElement("ImageSize",
-                        new XElement("Width", ImageWidth),
-                        new XElement("Height", ImageHeight)
-                    ),
-                    new XElement("SimilarityAlgorithm", SelectedSimilarityAlgorithm),
-                    new XElement("BaseTheme", BaseTheme),
-                    new XElement("AccentColor", AccentColor),
-                    new XElement("UseMameDescription", UseMameDescription.ToString().ToLowerInvariant())
-                )
-            );
-            doc.Save(SettingsFilePath);
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            MessageBox.Show($"Access denied to settings.xml: {ex.Message}\n\n" +
-                            "Try running as administrator or checking file permissions.\n\n" +
-                            "Your settings will not be saved!",
-                "Settings Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            try
+            {
+                var doc = new XDocument(
+                    new XElement("Settings",
+                        new XElement("SimilarityThreshold", SimilarityThreshold.ToString(CultureInfo.InvariantCulture)),
+                        new XElement("SupportedExtensions",
+                            SupportedExtensions.Select(static ext => new XElement("Extension", ext))
+                        ),
+                        new XElement("ImageSize",
+                            new XElement("Width", ImageWidth),
+                            new XElement("Height", ImageHeight)
+                        ),
+                        new XElement("SimilarityAlgorithm", SelectedSimilarityAlgorithm),
+                        new XElement("MaxImagesToLoad", MaxImagesToLoad),
+                        new XElement("ImageLoaderMaxRetries", ImageLoaderMaxRetries),
+                        new XElement("ImageLoaderRetryDelayMilliseconds", ImageLoaderRetryDelayMilliseconds),
+                        new XElement("ApiTimeoutSeconds", ApiTimeoutSeconds),
+                        new XElement("BaseTheme", BaseTheme),
+                        new XElement("AccentColor", AccentColor),
+                        new XElement("UseMameDescription", UseMameDescription.ToString().ToLowerInvariant())
+                    )
+                );
+                doc.Save(SettingsFilePath);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                MessageBox.Show($"Access denied to settings.xml: {ex.Message}\n\n" +
+                                "Try running as administrator or checking file permissions.\n\n" +
+                                "Your settings will not be saved!",
+                    "Settings Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
-            _ = LogErrors.LogErrorAsync(ex, "Failed to save settings");
-        }
-        catch (IOException ex)
-        {
-            MessageBox.Show($"Error saving settings to settings.xml: {ex.Message}\n\n" +
-                            "Your settings will not be saved!",
-                "Settings Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _ = ErrorLogger.LogAsync(ex, "Failed to save settings");
+            }
+            catch (IOException ex)
+            {
+                MessageBox.Show($"Error saving settings to settings.xml: {ex.Message}\n\n" +
+                                "Your settings will not be saved!",
+                    "Settings Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
-            _ = LogErrors.LogErrorAsync(ex, "Failed to save settings");
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"Error saving settings to settings.xml: {ex.Message}\n\n" +
-                            "Your settings will not be saved!",
-                "Settings Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                _ = ErrorLogger.LogAsync(ex, "Failed to save settings");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error saving settings to settings.xml: {ex.Message}\n\n" +
+                                "Your settings will not be saved!",
+                    "Settings Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
-            _ = LogErrors.LogErrorAsync(ex, "Failed to save settings");
+                _ = ErrorLogger.LogAsync(ex, "Failed to save settings");
+            }
         }
     }
 

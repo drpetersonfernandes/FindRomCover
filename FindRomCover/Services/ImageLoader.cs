@@ -10,13 +10,13 @@ public static class ImageLoader
     {
         if (string.IsNullOrEmpty(imagePath))
         {
-            _ = LogErrors.LogErrorAsync(new ArgumentNullException(nameof(imagePath)),
+            _ = ErrorLogger.LogAsync(new ArgumentNullException(nameof(imagePath)),
                 "Image path is null or empty");
             return null;
         }
 
-        const int maxRetries = 3; // Reduced retries - Magick.NET is more reliable
-        const int delayMilliseconds = 200; // Delay between retries
+        var maxRetries = App.SettingsManager.ImageLoaderMaxRetries;
+        var delayMilliseconds = App.SettingsManager.ImageLoaderRetryDelayMilliseconds;
 
         for (var i = 0; i < maxRetries; i++)
         {
@@ -28,7 +28,7 @@ public static class ImageLoader
             catch (MagickException ex)
             {
                 // Magick.NET handles corrupted metadata automatically
-                _ = LogErrors.LogErrorAsync(ex, $"Magick.NET error loading '{Path.GetFileName(imagePath)}': {ex.Message}");
+                _ = ErrorLogger.LogAsync(ex, $"Magick.NET error loading '{Path.GetFileName(imagePath)}': {ex.Message}");
 
                 // On final retry, attempt to load with error correction
                 if (i == maxRetries - 1)
@@ -51,13 +51,13 @@ public static class ImageLoader
                 }
                 else
                 {
-                    _ = LogErrors.LogErrorAsync(ex, $"Image file is locked after {maxRetries} retries: {imagePath}");
+                    _ = ErrorLogger.LogAsync(ex, $"Image file is locked after {maxRetries} retries: {imagePath}");
                     return null;
                 }
             }
             catch (Exception ex)
             {
-                _ = LogErrors.LogErrorAsync(ex, $"Failed to load image: {imagePath}\n{ex.GetType().Name}: {ex.Message}");
+                _ = ErrorLogger.LogAsync(ex, $"Failed to load image: {imagePath}\n{ex.GetType().Name}: {ex.Message}");
                 return null;
             }
         }
@@ -91,15 +91,18 @@ public static class ImageLoader
 
     private static BitmapImage ConvertMagickImageToBitmapImage(MagickImage magickImage)
     {
-        // Write to memory stream in PNG format for WPF compatibility
-        using var memoryStream = new MemoryStream();
-        magickImage.Write(memoryStream, MagickFormat.Png);
-        memoryStream.Position = 0;
+        // Write to memory stream and convert to byte array to ensure proper disposal
+        byte[] imageBytes;
+        using (var memoryStream = new MemoryStream())
+        {
+            magickImage.Write(memoryStream, MagickFormat.Png);
+            imageBytes = memoryStream.ToArray();
+        }
 
         var bitmapImage = new BitmapImage();
         bitmapImage.BeginInit();
         bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
-        bitmapImage.StreamSource = memoryStream;
+        bitmapImage.StreamSource = new MemoryStream(imageBytes);
         bitmapImage.EndInit();
 
         if (bitmapImage.CanFreeze)
