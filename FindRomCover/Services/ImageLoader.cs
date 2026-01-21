@@ -25,7 +25,7 @@ public static class ImageLoader
             {
                 return LoadWithMagickNetInternal(imagePath);
             }
-            catch (MagickException ex)
+            catch (MagickException)
             {
                 try
                 {
