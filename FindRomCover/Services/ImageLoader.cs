@@ -8,10 +8,11 @@ public static class ImageLoader
 {
     public static BitmapImage? LoadImageToMemory(string? imagePath)
     {
-        if (string.IsNullOrEmpty(imagePath))
+        if (string.IsNullOrEmpty(imagePath)) return null;
+
+        var fileInfo = new FileInfo(imagePath);
+        if (!fileInfo.Exists || fileInfo.Length == 0)
         {
-            _ = ErrorLogger.LogAsync(new ArgumentNullException(nameof(imagePath)),
-                "Image path is null or empty");
             return null;
         }
 
@@ -22,28 +23,21 @@ public static class ImageLoader
         {
             try
             {
-                // Use Magick.NET for robust image loading
-                return LoadWithMagickNet(imagePath);
+                return LoadWithMagickNetInternal(imagePath);
             }
             catch (MagickException ex)
             {
-                // Magick.NET handles corrupted metadata automatically
-                _ = ErrorLogger.LogAsync(ex, $"Magick.NET error loading '{Path.GetFileName(imagePath)}': {ex.Message}");
-
-                // On final retry, attempt to load with error correction
-                if (i == maxRetries - 1)
+                try
                 {
-                    try
-                    {
-                        return LoadWithMagickNet(imagePath, true);
-                    }
-                    catch
-                    {
-                        return null;
-                    }
+                    return LoadWithMagickNetInternal(imagePath, true);
+                }
+                catch (Exception finalEx)
+                {
+                    _ = ErrorLogger.LogAsync(finalEx, $"Permanent corruption in image: {Path.GetFileName(imagePath)}");
+                    return null;
                 }
             }
-            catch (IOException ex) when (ex.Message.Contains("being used by another process"))
+            catch (IOException ex) when (ex.Message.Contains("being used by another process") || (uint)ex.HResult == 0x80070020)
             {
                 if (i < maxRetries - 1)
                 {
@@ -65,9 +59,9 @@ public static class ImageLoader
         return null;
     }
 
-    private static BitmapImage LoadWithMagickNet(string imagePath, bool ignoreErrors = false)
+    private static BitmapImage LoadWithMagickNetInternal(string imagePath, bool ignoreErrors = false)
     {
-        var settings = new MagickReadSettings();
+        var settings = new MagickReadSettings { FrameIndex = 0, FrameCount = 1 };
 
         if (ignoreErrors)
         {
@@ -76,33 +70,19 @@ public static class ImageLoader
 
         using var magickImage = new MagickImage(imagePath, settings);
 
-        // Validate image dimensions
         if (magickImage.Width == 0 || magickImage.Height == 0)
-        {
             throw new InvalidOperationException($"Image has zero dimensions: {imagePath}");
-        }
 
-        // Auto-orient based on EXIF data
         magickImage.AutoOrient();
 
-        // Convert to BitmapImage for WPF binding
-        return ConvertMagickImageToBitmapImage(magickImage);
-    }
-
-    private static BitmapImage ConvertMagickImageToBitmapImage(MagickImage magickImage)
-    {
-        // Write to memory stream and convert to byte array to ensure proper disposal
-        byte[] imageBytes;
-        using (var memoryStream = new MemoryStream())
-        {
-            magickImage.Write(memoryStream, MagickFormat.Png);
-            imageBytes = memoryStream.ToArray();
-        }
+        using var memoryStream = new MemoryStream();
+        magickImage.Write(memoryStream, MagickFormat.Png);
+        memoryStream.Position = 0;
 
         var bitmapImage = new BitmapImage();
         bitmapImage.BeginInit();
         bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
-        bitmapImage.StreamSource = new MemoryStream(imageBytes);
+        bitmapImage.StreamSource = memoryStream;
         bitmapImage.EndInit();
 
         if (bitmapImage.CanFreeze)

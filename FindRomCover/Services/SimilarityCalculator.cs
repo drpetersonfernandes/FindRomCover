@@ -106,19 +106,16 @@ public static class SimilarityCalculator
 
                         var imageSource = ImageLoader.LoadImageToMemory(candidate.FilePath);
 
-                        if (imageSource == null)
-                        {
-                            // ImageLoader already logs specific errors, but we can add a generic one here too
-                            processingErrors.Add($"Could not load image '{Path.GetFileName(candidate.FilePath)}' for display.");
-                            return;
-                        }
-
                         var imageData = new ImageData(candidate.FilePath, candidate.ImageName, candidate.SimilarityScore)
                         {
                             ImageSource = imageSource
                         };
-
                         imageList.Add(imageData);
+
+                        if (imageSource == null)
+                        {
+                            processingErrors.Add($"Image '{Path.GetFileName(candidate.FilePath)}' could not be loaded (corrupted or empty).");
+                        }
                     }
                     catch (OperationCanceledException)
                     {
