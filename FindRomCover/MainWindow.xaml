@@ -233,7 +233,10 @@
                                 <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <TextBox x:Name="TxtRomFolder" Grid.Column="0"
-                                     controls:TextBoxHelper.Watermark="Path to your ROM folder..." />
+                                     controls:TextBoxHelper.Watermark="Path to your ROM folder..."
+                                     TextChanged="TxtRomFolder_TextChanged"
+                                     LostFocus="TxtRomFolder_LostFocus"
+                                     PreviewKeyDown="TxtRomFolder_PreviewKeyDown" />
                             <Button Grid.Column="1" Content="Browse..." Margin="5,0,0,0"
                                     Click="BtnBrowseRomFolder_Click" />
                         </Grid>

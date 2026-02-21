@@ -18,7 +18,7 @@ public class MameManager
     private static readonly string DefaultDatPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "mame.dat");
 
     // Use Lazy<T> for thread-safe, one-time initialization of the MAME data cache.
-    private static readonly Lazy<List<MameManager>> MameDataCache = new(LoadMameDataFromFile, isThreadSafe: true);
+    private static readonly Lazy<List<MameManager>> MameDataCache = new(LoadMameDataFromFile, true);
 
     public static List<MameManager> LoadFromDat()
     {

@@ -45,7 +45,6 @@ public static class ButtonFactory
         var contextMenu = new ContextMenu();
 
         // Only add "Use This Image" menu item if the action is provided
-        if (useImageAction != null)
         {
             var useThisImageIcon = new Image
             {

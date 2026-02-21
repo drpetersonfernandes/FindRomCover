@@ -103,7 +103,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
             // Only recreate the lookup dictionary if we have machines data
             // and it's different from what we already have (prevents unnecessary recreation)
-            if (_machines != null && _machines.Count > 0)
+            if (_machines is { Count: > 0 })
             {
                 _mameLookup = _machines
                     .GroupBy(static m => m.MachineName, StringComparer.OrdinalIgnoreCase)
@@ -136,7 +136,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         }
     }
 
-    private void DisableMameDescriptionSetting()
+    private static void DisableMameDescriptionSetting()
     {
         if (App.SettingsManager.UseMameDescription)
         {
@@ -179,7 +179,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
                     break;
                 case nameof(SettingsManager.UseMameDescription):
                     UpdateMameDescriptionCheck();
-                    if (_mameLookup != null && _mameLookup.Count > 0)
+                    if (_mameLookup is { Count: > 0 })
                         await RefreshMissingImagesList();
                     break;
             }
@@ -328,7 +328,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
                     var allRomNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                     var supportedExtensionsSet = new HashSet<string>(
-                        App.SettingsManager.SupportedExtensions.Select(ext => "." + ext),
+                        App.SettingsManager.SupportedExtensions.Select(static ext => "." + ext),
                         StringComparer.OrdinalIgnoreCase);
 
                     var enumerationOptions = new EnumerationOptions
@@ -368,7 +368,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
                         await Task.Yield(); // Yield to prevent blocking
 
-                        if (romName != null && FindCorrespondingImage(romName, imageFolderPath) == null)
+                        if (FindCorrespondingImage(romName, imageFolderPath) == null)
                         {
                             if (App.SettingsManager.UseMameDescription &&
                                 _mameLookup != null &&
@@ -387,7 +387,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
                     // Final cancellation check before returning
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    return missing.OrderBy(x => x.RomName).ToList();
+                    return missing.OrderBy(static x => x.RomName).ToList();
                 }
                 catch (OperationCanceledException)
                 {
@@ -425,7 +425,6 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         catch (OperationCanceledException)
         {
             // Operation was cancelled - clean up UI state but don't show error
-            return;
         }
         catch (Exception ex)
         {
@@ -720,7 +719,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
                     "Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
                 const string formattedException = "Invalid similarity threshold selected.";
-                var ex = new Exception(formattedException);
+                var ex = new ArgumentException(formattedException);
                 _ = ErrorLogger.LogAsync(ex, formattedException);
             }
         }
@@ -764,7 +763,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
         try
         {
-            var match = Regex.Match(headerText, @"\d+");
+            var match = MyRegex1().Match(headerText);
 
             if (!match.Success || !int.TryParse(match.Value, out var size))
             {
@@ -796,7 +795,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
             if (string.IsNullOrEmpty(headerText))
                 continue;
 
-            var match = Regex.Match(headerText, @"\d+");
+            var match = MyRegex().Match(headerText);
 
             if (match.Success && int.TryParse(match.Value, out var size))
             {
@@ -856,13 +855,13 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
             if (sender is MenuItem menuItem)
             {
                 // Handle nullable bool properly
-                var isChecked = menuItem.IsChecked == true;
+                var isChecked = menuItem.IsChecked;
                 App.SettingsManager.UseMameDescription = isChecked;
                 App.SettingsManager.SaveSettings();
 
                 // Refresh the list immediately after the setting changes
                 // Only refresh if MAME data is actually available, otherwise it's pointless
-                if (_mameLookup != null && _mameLookup.Count > 0)
+                if (_mameLookup is { Count: > 0 })
                     await RefreshMissingImagesList();
             }
         }
@@ -943,7 +942,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         }
     }
 
-    private void TxtRomFolder_LostFocus(object sender, RoutedEventArgs e)
+    private void TxtRomFolder_LostFocus(object sender, RoutedEventArgs routedEventArgs)
     {
         if (sender is TextBox textBox)
         {
@@ -963,7 +962,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
     {
         if (e.Key == Key.Enter && sender is TextBox)
         {
-            TxtRomFolder_LostFocus(sender, new RoutedEventArgs(LostFocusEvent, sender));
+            TxtRomFolder_LostFocus(sender, e);
             e.Handled = true;
         }
     }
@@ -1072,7 +1071,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         {
             _findSimilarCts?.Dispose();
             _loadMissingCts?.Dispose();
-            _findSimilarSemaphore?.Dispose();
+            _findSimilarSemaphore.Dispose();
         }
         catch
         {
@@ -1081,4 +1080,10 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
         GC.SuppressFinalize(this);
     }
+
+    [GeneratedRegex(@"\d+")]
+    private static partial Regex MyRegex();
+
+    [GeneratedRegex(@"\d+")]
+    private static partial Regex MyRegex1();
 }

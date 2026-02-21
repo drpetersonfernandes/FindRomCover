@@ -32,7 +32,7 @@ public static class ErrorLogger
 
         if (ex == null)
         {
-            ex = new Exception("No exception provided");
+            ex = new InvalidOperationException("No exception provided");
         }
 
         // Get OS and environment details
@@ -43,23 +43,24 @@ public static class ErrorLogger
         var os = Environment.OSVersion;
         if (os.Platform == PlatformID.Win32NT)
         {
-            if (os.Version.Major >= 10)
+            switch (os.Version.Major)
             {
-                friendlyWindowsVersion = "Windows 10 or Windows 11";
-            }
-            else if (os.Version.Major == 6)
-            {
-                switch (os.Version.Minor)
-                {
-                    case 1: friendlyWindowsVersion = "Windows 7"; break;
-                    case 2: friendlyWindowsVersion = "Windows 8"; break;
-                    case 3: friendlyWindowsVersion = "Windows 8.1"; break;
-                    default: friendlyWindowsVersion = "Older Windows NT"; break;
-                }
-            }
-            else
-            {
-                friendlyWindowsVersion = "Older Windows NT";
+                case >= 10:
+                    friendlyWindowsVersion = "Windows 10 or Windows 11";
+                    break;
+                case 6:
+                    switch (os.Version.Minor)
+                    {
+                        case 1: friendlyWindowsVersion = "Windows 7"; break;
+                        case 2: friendlyWindowsVersion = "Windows 8"; break;
+                        case 3: friendlyWindowsVersion = "Windows 8.1"; break;
+                        default: friendlyWindowsVersion = "Older Windows NT"; break;
+                    }
+
+                    break;
+                default:
+                    friendlyWindowsVersion = "Older Windows NT";
+                    break;
             }
         }
         else

@@ -100,10 +100,8 @@ public static class ImageProcessor
             magickImage.Quality = 90;
             magickImage.Format = MagickFormat.Png;
 
-            // Write to target path
-            magickImage.Write(targetPath);
-
-            return File.Exists(targetPath);
+            // Write to target path with retry logic for file locking issues
+            return WriteImageWithRetry(magickImage, targetPath, sourcePath);
         }
         catch (MagickException ex)
         {
@@ -111,6 +109,118 @@ public static class ImageProcessor
                 MessageBoxButton.OK, MessageBoxImage.Error);
             _ = ErrorLogger.LogAsync(ex, $"Magick.NET error: {sourcePath}");
             return false;
+        }
+    }
+
+    private static bool WriteImageWithRetry(MagickImage magickImage, string targetPath, string sourcePath)
+    {
+        const int maxRetries = 5;
+        const int baseDelayMs = 100;
+        Exception? lastException = null;
+
+        for (var attempt = 1; attempt <= maxRetries; attempt++)
+        {
+            var tempPath = targetPath + ".tmp";
+            try
+            {
+                // Clean up any leftover temp file from previous attempts
+                if (File.Exists(tempPath))
+                {
+                    try
+                    {
+                        File.Delete(tempPath);
+                    }
+                    catch
+                    {
+                        /* ignore */
+                    }
+                }
+
+                // Write to temporary file first
+                magickImage.Write(tempPath);
+
+                // Ensure the file was written successfully
+                if (!File.Exists(tempPath))
+                {
+                    throw new IOException("Failed to write temporary file");
+                }
+
+                // If target exists, try to delete it with retry
+                if (File.Exists(targetPath))
+                {
+                    DeleteFileWithRetry(targetPath, attempt);
+                }
+
+                // Move temp file to target (atomic operation on most file systems)
+                File.Move(tempPath, targetPath);
+
+                return File.Exists(targetPath);
+            }
+            catch (IOException ex) when (attempt < maxRetries)
+            {
+                lastException = ex;
+                // Calculate delay with exponential backoff (100ms, 200ms, 400ms, 800ms, 1600ms)
+                var delay = baseDelayMs * Math.Pow(2, attempt - 1);
+                Thread.Sleep((int)delay);
+            }
+            catch (UnauthorizedAccessException ex) when (attempt < maxRetries)
+            {
+                lastException = ex;
+                // Retry on permission issues (may be caused by antivirus/OneDrive)
+                var delay = baseDelayMs * Math.Pow(2, attempt - 1);
+                Thread.Sleep((int)delay);
+            }
+            catch (MagickException ex) when (attempt < maxRetries && ex.Message.Contains("WriteBlob"))
+            {
+                lastException = ex;
+                // Retry on WriteBlob errors specifically
+                var delay = baseDelayMs * Math.Pow(2, attempt - 1);
+                Thread.Sleep((int)delay);
+            }
+            catch (Exception ex) when (attempt < maxRetries)
+            {
+                lastException = ex;
+                // Catch any other exceptions and retry
+                var delay = baseDelayMs * Math.Pow(2, attempt - 1);
+                Thread.Sleep((int)delay);
+            }
+        }
+
+        // All retries exhausted - log the error and show message
+        var errorMessage = $"Failed to save image after {maxRetries} attempts. The file may be locked by another process (e.g., OneDrive sync, antivirus).\n\nTarget: {targetPath}";
+        if (lastException != null)
+        {
+            errorMessage += $"\n\nLast error: {lastException.Message}";
+        }
+
+        MessageBox.Show(errorMessage, "File Write Error",
+            MessageBoxButton.OK, MessageBoxImage.Error);
+
+        _ = ErrorLogger.LogAsync(
+            lastException ?? new IOException("Write failed after all retries"),
+            $"WriteBlob failed after {maxRetries} retries for: {sourcePath}");
+
+        return false;
+    }
+
+    private static void DeleteFileWithRetry(string filePath, int attempt)
+    {
+        try
+        {
+            File.Delete(filePath);
+        }
+        catch (IOException)
+        {
+            // If delete fails, wait a bit and try once more
+            if (attempt < 3)
+            {
+                Thread.Sleep(50);
+                File.Delete(filePath);
+            }
+            else
+            {
+                throw;
+            }
         }
     }
 

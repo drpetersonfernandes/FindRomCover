@@ -85,7 +85,7 @@ public static class SimilarityCalculator
 
         // Sort candidates by similarity score and limit to prevent memory issues
         var topCandidates = candidateFiles
-            .OrderByDescending(x => x.SimilarityScore)
+            .OrderByDescending(static x => x.SimilarityScore)
             .Take(App.SettingsManager.MaxImagesToLoad)
             .ToList();
 
@@ -147,7 +147,7 @@ public static class SimilarityCalculator
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        result.SimilarImages = imageList.OrderByDescending(x => x.SimilarityScore).ToList();
+        result.SimilarImages = imageList.OrderByDescending(static x => x.SimilarityScore).ToList();
         result.ProcessingErrors = processingErrors.ToList(); // Convert to List for the result object
 
         return result;

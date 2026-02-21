@@ -261,13 +261,13 @@ public class SettingsManager : INotifyPropertyChanged
             if (extensionsElement != null)
             {
                 _supportedExtensions = extensionsElement.Elements("Extension")
-                    .Select(e => e.Value)
-                    .Where(e => !string.IsNullOrEmpty(e))
+                    .Select(static e => e.Value)
+                    .Where(static e => !string.IsNullOrEmpty(e))
                     .ToArray();
             }
 
             // Check if supported extensions is null or empty (fixes issue #4)
-            if (_supportedExtensions == null || _supportedExtensions.Length == 0)
+            if (_supportedExtensions.Length == 0)
             {
                 _supportedExtensions = GetDefaultExtensions();
             }

@@ -19,7 +19,7 @@ public partial class SettingsWindow
 
         _settingsManager = settingsManager ?? throw new ArgumentNullException(nameof(settingsManager));
 
-        _supportedExtensions = new ObservableCollection<string>(_settingsManager.SupportedExtensions.OrderBy(e => e, StringComparer.OrdinalIgnoreCase));
+        _supportedExtensions = new ObservableCollection<string>(_settingsManager.SupportedExtensions.OrderBy(static e => e, StringComparer.OrdinalIgnoreCase));
         DataContext = new { SupportedExtensions = _supportedExtensions };
     }
 
@@ -99,7 +99,7 @@ public partial class SettingsWindow
         {
             // Validate all extensions before saving
             var invalidExtensions = _supportedExtensions
-                .Where(ext => !IsValidExtension(ext))
+                .Where(static ext => !IsValidExtension(ext))
                 .ToList();
 
             if (invalidExtensions.Count != 0)
