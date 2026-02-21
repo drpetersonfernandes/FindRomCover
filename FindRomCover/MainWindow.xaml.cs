@@ -795,8 +795,10 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
         if (imageData.ImagePath != null)
         {
-            // Pass the UseImage method as the action
-            element.ContextMenu = ButtonFactory.CreateContextMenu(imageData.ImagePath, UseImage);
+            // Pass the UseImage method as the action and reuse cached menu if available
+            element.ContextMenu = ButtonFactory.CreateContextMenu(imageData.ImagePath, UseImage, imageData.CachedContextMenu);
+            // Store the menu in the ImageData for future reuse
+            imageData.CachedContextMenu = element.ContextMenu;
         }
     }
 

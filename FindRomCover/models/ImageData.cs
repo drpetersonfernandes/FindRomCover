@@ -30,4 +30,9 @@ public class ImageData(string? imagePath, string? imageName, double similaritySc
     public double SimilarityScore { get; init; } = similarityScore;
     public BitmapImage? ImageSource { get; init; }
     public BitmapImage DisplayImage => ImageSource ?? GetBrokenImage();
+
+    /// <summary>
+    /// Cached context menu for this image to avoid recreating it on every right-click.
+    /// </summary>
+    public System.Windows.Controls.ContextMenu? CachedContextMenu { get; set; }
 }

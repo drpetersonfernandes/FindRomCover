@@ -33,14 +33,20 @@ public static class ButtonFactory
         );
     }
 
-    public static ContextMenu CreateContextMenu(string imagePath, Action<string?> useImageAction)
+    public static ContextMenu CreateContextMenu(string imagePath, Action<string?> useImageAction, ContextMenu? existingMenu = null)
     {
         if (string.IsNullOrEmpty(imagePath))
         {
-            return new ContextMenu(); // Return empty menu
+            return existingMenu ?? new ContextMenu(); // Return existing or empty menu
         }
 
-        var contextMenu = new ContextMenu();
+        // Reuse existing menu if provided and it has items (not empty)
+        if (existingMenu is { Items.Count: > 0 })
+        {
+            return existingMenu;
+        }
+
+        var contextMenu = existingMenu ?? new ContextMenu();
 
         // Only add "Use This Image" menu item if the action is provided
         {
