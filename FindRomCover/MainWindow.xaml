@@ -86,8 +86,8 @@
                     ContextMenuOpening="Image_ContextMenuOpening">
                 <StackPanel>
                     <Image
-                        Width="{Binding Settings.ImageWidth}"
-                        Height="{Binding Settings.ImageHeight}"
+                        Width="{Binding Path=Settings.ImageWidth, RelativeSource={RelativeSource AncestorType=Window}}"
+                        Height="{Binding Path=Settings.ImageHeight, RelativeSource={RelativeSource AncestorType=Window}}"
                         Source="{Binding DisplayImage}">
                         <!-- Removed the DataTrigger that was causing UI freezing -->
                     </Image>
