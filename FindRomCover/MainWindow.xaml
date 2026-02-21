@@ -318,10 +318,10 @@
                         </ScrollViewer>
 
                         <!-- Loading Overlay -->
-                        <Grid Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
-                              Visibility="Collapsed">
+                        <Grid Background="{DynamicResource MahApps.Brushes.ThemeBackground}">
                             <Grid.Style>
                                 <Style TargetType="Grid">
+                                    <Setter Property="Visibility" Value="Collapsed" />
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsFindingSimilar}" Value="True">
                                             <Setter Property="Visibility" Value="Visible" />
