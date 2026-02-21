@@ -159,33 +159,35 @@ public static class SimilarityCalculator
         var lengthA = a.Length;
         var lengthB = b.Length;
 
-        var prevRow = new int[lengthB + 1];
-        var currRow = new int[lengthB + 1];
+        var previousRow = new int[lengthB + 1];
+        var currentRow = new int[lengthB + 1];
 
         // Initialize the first row
         for (var j = 0; j <= lengthB; j++)
         {
-            prevRow[j] = j;
+            previousRow[j] = j;
         }
 
         // Fill in the rest of the matrix
         for (var i = 1; i <= lengthA; i++)
         {
-            currRow[0] = i;
+            currentRow[0] = i;
 
             for (var j = 1; j <= lengthB; j++)
             {
                 var cost = b[j - 1] == a[i - 1] ? 0 : 1;
-                currRow[j] = Math.Min(
-                    Math.Min(prevRow[j] + 1, currRow[j - 1] + 1),
-                    prevRow[j - 1] + cost);
+                currentRow[j] = Math.Min(
+                    Math.Min(previousRow[j] + 1, currentRow[j - 1] + 1),
+                    previousRow[j - 1] + cost);
             }
 
-            // Swap rows
-            (prevRow, currRow) = (currRow, prevRow);
+            // Swap rows for next iteration. After swap, 'previousRow' holds the completed row.
+            (previousRow, currentRow) = (currentRow, previousRow);
         }
 
-        var similarityThreshold = (1.0 - prevRow[lengthB] / (double)Math.Max(a.Length, b.Length)) * 100;
+        // After the final swap, 'previousRow' contains the last computed row (the result).
+        var levenshteinDistance = previousRow[lengthB];
+        var similarityThreshold = (1.0 - levenshteinDistance / (double)Math.Max(a.Length, b.Length)) * 100;
         return Math.Round(similarityThreshold, 2);
     }
 

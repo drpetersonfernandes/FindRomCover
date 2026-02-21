@@ -763,7 +763,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
         try
         {
-            var match = MyRegex1().Match(headerText);
+            var match = MyRegex().Match(headerText);
 
             if (!match.Success || !int.TryParse(match.Value, out var size))
             {
@@ -1083,7 +1083,4 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
     [GeneratedRegex(@"\d+")]
     private static partial Regex MyRegex();
-
-    [GeneratedRegex(@"\d+")]
-    private static partial Regex MyRegex1();
 }

@@ -1,12 +1,13 @@
 using System.IO;
 using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace FindRomCover.Services;
 
 public class AudioService : IAudioService
 {
-    private readonly MediaPlayer? _mediaPlayer;
-    private readonly Uri? _soundUri;
+    private MediaPlayer? _mediaPlayer;
+    private Uri? _soundUri;
     private bool _isSoundAvailable;
 
     public AudioService()
@@ -17,13 +18,16 @@ public class AudioService : IAudioService
         {
             try
             {
-                _mediaPlayer = new MediaPlayer();
-                _soundUri = new Uri(soundPath, UriKind.Absolute);
-
-                // Open the media to pre-buffer it, which avoids delays on the first playback.
-                _mediaPlayer.Open(_soundUri);
-                _mediaPlayer.MediaFailed += OnMediaFailed;
-                _isSoundAvailable = true;
+                // MediaPlayer is a DispatcherObject and must be created on the UI thread.
+                // If we're not on the UI thread, marshal the initialization to it.
+                if (Dispatcher.CurrentDispatcher != System.Windows.Application.Current.Dispatcher)
+                {
+                    System.Windows.Application.Current.Dispatcher.Invoke(() => InitializeMediaPlayer(soundPath));
+                }
+                else
+                {
+                    InitializeMediaPlayer(soundPath);
+                }
             }
             catch (Exception ex)
             {
@@ -55,9 +59,32 @@ public class AudioService : IAudioService
         else
         {
             _isSoundAvailable = false;
-            _mediaPlayer = new MediaPlayer(); // Initialize to avoid null reference issues
+            // Initialize on UI thread to avoid threading issues
+            if (Dispatcher.CurrentDispatcher != System.Windows.Application.Current.Dispatcher)
+            {
+                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                {
+                    _mediaPlayer = new MediaPlayer(); // Initialize to avoid null reference issues
+                });
+            }
+            else
+            {
+                _mediaPlayer = new MediaPlayer();
+            }
+
             _ = ErrorLogger.LogAsync(new FileNotFoundException($"Sound file not found: {soundPath}"), "Sound file missing. Audio feedback will be disabled.");
         }
+    }
+
+    private void InitializeMediaPlayer(string soundPath)
+    {
+        _mediaPlayer = new MediaPlayer();
+        _soundUri = new Uri(soundPath, UriKind.Absolute);
+
+        // Open the media to pre-buffer it, which avoids delays on the first playback.
+        _mediaPlayer.Open(_soundUri);
+        _mediaPlayer.MediaFailed += OnMediaFailed;
+        _isSoundAvailable = true;
     }
 
     private void OnMediaFailed(object? sender, ExceptionEventArgs e)

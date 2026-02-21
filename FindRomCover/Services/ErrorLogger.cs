@@ -85,39 +85,78 @@ public static class ErrorLogger
         currentErrorMessage += $"Stack Trace:\n{ex.StackTrace}\n\n";
         currentErrorMessage += "--------------------------------------------------------------------------------------------------------------\n\n\n"; // Separator
 
+        // 1. Append the new error message to the user-specific log (this one persists)
+        // 2. Append the new error message to the API-sending log (this one gets cleared)
+        // These file operations are protected by the lock
         await LogFileLock.WaitAsync(); // Acquire the lock
         try
         {
-            // 1. Append the new error message to the user-specific log (this one persists)
             await File.AppendAllTextAsync(UserLogFilePath, currentErrorMessage);
-
-            // 2. Append the new error message to the API-sending log (this one gets cleared)
             await File.AppendAllTextAsync(ApiLogFilePath, currentErrorMessage);
+        }
+        catch (Exception loggingEx)
+        {
+            // Log any exceptions that occur during the logging process itself to an internal log
+            await WriteInternalLogAsync($"Failed to write to log files: {loggingEx.Message}");
+            return;
+        }
+        finally
+        {
+            LogFileLock.Release(); // Release the lock
+        }
 
-            // 3. Read the entire content of the API-sending log file
-            var contentToSend = await File.ReadAllTextAsync(ApiLogFilePath);
+        // 3. Read the entire content of the API-sending log file
+        // 4. Attempt to send the entire log file content to the API
+        // These operations happen OUTSIDE the lock to prevent blocking other threads during network I/O
+        string contentToSend;
+        await LogFileLock.WaitAsync(); // Acquire the lock for reading
+        try
+        {
+            contentToSend = await File.ReadAllTextAsync(ApiLogFilePath);
+        }
+        catch (Exception loggingEx)
+        {
+            await WriteInternalLogAsync($"Failed to read API log file: {loggingEx.Message}");
+            return;
+        }
+        finally
+        {
+            LogFileLock.Release(); // Release the lock
+        }
 
-            // 4. Attempt to send the entire log file content to the API
-            if (!string.IsNullOrEmpty(contentToSend))
+        if (!string.IsNullOrEmpty(contentToSend))
+        {
+            var sendSuccess = false;
+            try
             {
-                if (await SendLogToApiAsync(contentToSend))
+                sendSuccess = await SendLogToApiAsync(contentToSend);
+            }
+            catch (Exception loggingEx)
+            {
+                // Log any exceptions that occur during the API sending process to an internal log
+                await WriteInternalLogAsync($"Failed to send log to API: {loggingEx.Message}");
+            }
+
+            // 5. If sending is successful, clear the API-sending log file
+            if (sendSuccess)
+            {
+                await LogFileLock.WaitAsync(); // Acquire the lock for clearing
+                try
                 {
-                    // 5. If sending is successful, clear the API-sending log file
                     if (File.Exists(ApiLogFilePath))
                     {
                         await File.WriteAllTextAsync(ApiLogFilePath, string.Empty);
                     }
                 }
+                catch (Exception loggingEx)
+                {
+                    await WriteInternalLogAsync($"Failed to clear API log file: {loggingEx.Message}");
+                }
+                finally
+                {
+                    LogFileLock.Release(); // Release the lock
+                }
             }
-        }
-        catch (Exception loggingEx)
-        {
-            // Log any exceptions that occur during the logging process itself to an internal log
-            await WriteInternalLogAsync($"Failed to process or send log: {loggingEx.Message}");
-        }
-        finally
-        {
-            LogFileLock.Release(); // Release the lock
         }
     }
 

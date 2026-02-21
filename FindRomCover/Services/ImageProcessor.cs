@@ -145,14 +145,10 @@ public static class ImageProcessor
                     throw new IOException("Failed to write temporary file");
                 }
 
-                // If target exists, try to delete it with retry
-                if (File.Exists(targetPath))
-                {
-                    DeleteFileWithRetry(targetPath, attempt);
-                }
-
-                // Move temp file to target (atomic operation on most file systems)
-                File.Move(tempPath, targetPath);
+                // Move temp file to target with overwrite (atomic replace operation)
+                // Using overwrite parameter ensures atomicity - either the operation succeeds
+                // and the new file is in place, or it fails and the original remains
+                File.Move(tempPath, targetPath, true);
 
                 return File.Exists(targetPath);
             }
@@ -202,28 +198,4 @@ public static class ImageProcessor
 
         return false;
     }
-
-    private static void DeleteFileWithRetry(string filePath, int attempt)
-    {
-        try
-        {
-            File.Delete(filePath);
-        }
-        catch (IOException)
-        {
-            // If delete fails, wait a bit and try once more
-            if (attempt < 3)
-            {
-                Thread.Sleep(50);
-                File.Delete(filePath);
-            }
-            else
-            {
-                throw;
-            }
-        }
-    }
-
-    // Magick.NET handles all validation, orientation, and format conversion internally
-    // No need for separate validation or fallback methods
 }

@@ -34,8 +34,9 @@ public class MameManager
 
         if (!File.Exists(datPath))
         {
-            // Throw exception to be handled by the caller (MainWindow), correcting the original behavior's intent.
-            throw new FileNotFoundException("The file 'mame.dat' could not be found.", datPath);
+            // Return empty list instead of throwing to prevent Lazy<T> from caching the exception.
+            // This allows the application to retry loading when the file becomes available.
+            return [];
         }
 
         try

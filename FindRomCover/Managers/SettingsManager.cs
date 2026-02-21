@@ -326,7 +326,12 @@ public class SettingsManager : INotifyPropertyChanged
                         new XElement("UseMameDescription", UseMameDescription.ToString().ToLowerInvariant())
                     )
                 );
-                doc.Save(SettingsFilePath);
+
+                // Write to a temporary file first, then atomically replace the original
+                // This prevents corruption of settings.xml if the app crashes during write
+                var tempFilePath = SettingsFilePath + ".tmp";
+                doc.Save(tempFilePath);
+                File.Move(tempFilePath, SettingsFilePath, true);
             }
             catch (UnauthorizedAccessException ex)
             {
