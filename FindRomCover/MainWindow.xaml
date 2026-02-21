@@ -317,9 +317,29 @@
                             </ItemsControl>
                         </ScrollViewer>
 
-                        <!-- Loading Indicator -->
-                        <controls:ProgressRing IsActive="{Binding IsFindingSimilar}" HorizontalAlignment="Center"
-                                               VerticalAlignment="Center" />
+                        <!-- Loading Overlay -->
+                        <Grid Background="{DynamicResource MahApps.Brushes.ThemeBackground}"
+                              Visibility="Collapsed">
+                            <Grid.Style>
+                                <Style TargetType="Grid">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsFindingSimilar}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Grid.Style>
+                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <controls:ProgressRing IsActive="{Binding IsFindingSimilar}" 
+                                                       Width="60" Height="60"
+                                                       Margin="0,0,0,15" />
+                                <TextBlock Text="Please wait ... Loading"
+                                           FontSize="16"
+                                           FontWeight="SemiBold"
+                                           HorizontalAlignment="Center"
+                                           Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}" />
+                            </StackPanel>
+                        </Grid>
 
                         <!-- Empty State Message -->
                         <TextBlock Text="Select a missing cover from the list to see suggestions."
