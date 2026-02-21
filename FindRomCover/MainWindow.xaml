@@ -341,56 +341,74 @@
                             </StackPanel>
                         </Grid>
 
-                        <!-- Empty State Messages -->
-                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed">
-                            <StackPanel.Style>
-                                <Style TargetType="StackPanel">
+                        <!-- Empty State Overlay -->
+                        <Grid Background="{DynamicResource MahApps.Brushes.ThemeBackground}">
+                            <Grid.Style>
+                                <Style TargetType="Grid">
+                                    <Setter Property="Visibility" Value="Collapsed" />
                                     <Style.Triggers>
+                                        <!-- Show overlay when not loading and SimilarImages is empty -->
                                         <MultiDataTrigger>
                                             <MultiDataTrigger.Conditions>
-                                                <Condition
-                                                    Binding="{Binding ElementName=ImageScrollViewer, Path=DataContext.SimilarImages.Count}"
-                                                    Value="0" />
+                                                <Condition Binding="{Binding SimilarImages.Count}" Value="0" />
                                                 <Condition Binding="{Binding IsFindingSimilar}" Value="False" />
                                             </MultiDataTrigger.Conditions>
                                             <Setter Property="Visibility" Value="Visible" />
                                         </MultiDataTrigger>
                                     </Style.Triggers>
                                 </Style>
-                            </StackPanel.Style>
+                            </Grid.Style>
+                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="20">
+                                <!-- Message when no item is selected (no search has been performed) -->
+                                <TextBlock Text="Select a missing cover from the list to see suggestions."
+                                           FontSize="16"
+                                           FontWeight="SemiBold"
+                                           TextWrapping="Wrap"
+                                           TextAlignment="Center"
+                                           Foreground="{DynamicResource MahApps.Brushes.Gray5}"
+                                           Visibility="Collapsed">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding HasSearchedSimilar}" Value="False">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
 
-                            <!-- Message when no search has been performed -->
-                            <TextBlock Text="Select a missing cover from the list to see suggestions."
-                                       HorizontalAlignment="Center"
-                                       Foreground="{DynamicResource MahApps.Brushes.Gray5}"
-                                       Visibility="Collapsed">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding HasSearchedSimilar}" Value="False">
-                                                <Setter Property="Visibility" Value="Visible" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-
-                            <!-- Message when search returned no results -->
-                            <TextBlock Text="No similar images found."
-                                       HorizontalAlignment="Center"
-                                       Foreground="{DynamicResource MahApps.Brushes.Gray5}"
-                                       Visibility="Collapsed">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding HasSearchedSimilar}" Value="True">
-                                                <Setter Property="Visibility" Value="Visible" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                        </StackPanel>
+                                <!-- Message when search returned no results (threshold too high) -->
+                                <StackPanel Visibility="Collapsed" HorizontalAlignment="Center">
+                                    <StackPanel.Style>
+                                        <Style TargetType="StackPanel">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding HasSearchedSimilar}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </StackPanel.Style>
+                                    <TextBlock Text="No similar images found"
+                                               FontSize="18"
+                                               FontWeight="Bold"
+                                               TextAlignment="Center"
+                                               Foreground="{DynamicResource MahApps.Brushes.Gray5}"
+                                               Margin="0,0,0,10" />
+                                    <TextBlock Text="No images matched the current similarity threshold."
+                                               FontSize="14"
+                                               TextWrapping="Wrap"
+                                               TextAlignment="Center"
+                                               Foreground="{DynamicResource MahApps.Brushes.Gray6}"
+                                               Margin="0,0,0,5" />
+                                    <TextBlock Text="Try lowering the threshold in the menu to see more results."
+                                               FontSize="12"
+                                               TextWrapping="Wrap"
+                                               TextAlignment="Center"
+                                               Foreground="{DynamicResource MahApps.Brushes.Gray7}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Grid>
                     </Grid>
                 </Grid>
             </GroupBox>
