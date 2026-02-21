@@ -152,6 +152,7 @@ public partial class SettingsWindow
             _ = ErrorLogger.LogAsync(ex, "Error in BtnSave_Click");
             MessageBox.Show("An error occurred while saving settings. Your changes were not saved.",
                 "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            DialogResult = false;
         }
     }
 

@@ -148,83 +148,87 @@ public static class ImageProcessor
         const int maxRetries = 5;
         const int baseDelayMs = 100;
         Exception? lastException = null;
+        var tempPath = targetPath + ".tmp";
 
-        for (var attempt = 1; attempt <= maxRetries; attempt++)
+        try
         {
-            var tempPath = targetPath + ".tmp";
-            try
+            for (var attempt = 1; attempt <= maxRetries; attempt++)
             {
-                // Clean up any leftover temp file from previous attempts
-                if (File.Exists(tempPath))
+                try
                 {
-                    try
+                    // Clean up any leftover temp file from previous attempts
+                    if (File.Exists(tempPath))
                     {
-                        File.Delete(tempPath);
+                        try
+                        {
+                            File.Delete(tempPath);
+                        }
+                        catch
+                        {
+                            /* ignore - will retry or clean up at end */
+                        }
                     }
-                    catch
+
+                    // Write to temporary file first
+                    magickImage.Write(tempPath);
+
+                    // Ensure the file was written successfully
+                    if (!File.Exists(tempPath))
                     {
-                        /* ignore */
+                        throw new IOException("Failed to write temporary file");
                     }
+
+                    // Move temp file to target with overwrite (atomic replace operation)
+                    // Using overwrite parameter ensures atomicity - either the operation succeeds
+                    // and the new file is in place, or it fails and the original remains
+                    File.Move(tempPath, targetPath, true);
+
+                    return File.Exists(targetPath);
                 }
-
-                // Write to temporary file first
-                magickImage.Write(tempPath);
-
-                // Ensure the file was written successfully
-                if (!File.Exists(tempPath))
+                catch (IOException ex) when (attempt < maxRetries)
                 {
-                    throw new IOException("Failed to write temporary file");
+                    lastException = ex;
+                    // Calculate delay with exponential backoff (100ms, 200ms, 400ms, 800ms, 1600ms)
+                    var delay = baseDelayMs * Math.Pow(2, attempt - 1);
+                    Thread.Sleep((int)delay);
                 }
-
-                // Move temp file to target with overwrite (atomic replace operation)
-                // Using overwrite parameter ensures atomicity - either the operation succeeds
-                // and the new file is in place, or it fails and the original remains
-                File.Move(tempPath, targetPath, true);
-
-                return File.Exists(targetPath);
-            }
-            catch (IOException ex) when (attempt < maxRetries)
-            {
-                lastException = ex;
-                // Calculate delay with exponential backoff (100ms, 200ms, 400ms, 800ms, 1600ms)
-                var delay = baseDelayMs * Math.Pow(2, attempt - 1);
-                Thread.Sleep((int)delay);
-            }
-            catch (UnauthorizedAccessException ex) when (attempt < maxRetries)
-            {
-                lastException = ex;
-                // Retry on permission issues (may be caused by antivirus/OneDrive)
-                var delay = baseDelayMs * Math.Pow(2, attempt - 1);
-                Thread.Sleep((int)delay);
-            }
-            catch (MagickException ex) when (attempt < maxRetries && ex.Message.Contains("WriteBlob"))
-            {
-                lastException = ex;
-                // Retry on WriteBlob errors specifically
-                var delay = baseDelayMs * Math.Pow(2, attempt - 1);
-                Thread.Sleep((int)delay);
-            }
-            catch (Exception ex) when (attempt < maxRetries)
-            {
-                lastException = ex;
-                // Catch any other exceptions and retry
-                var delay = baseDelayMs * Math.Pow(2, attempt - 1);
-                Thread.Sleep((int)delay);
-            }
-            finally
-            {
-                // Clean up temp file if it still exists (in case of exception before Move)
-                // Only delete if we haven't successfully moved the file (on success, tempPath no longer exists)
-                if (File.Exists(tempPath))
+                catch (UnauthorizedAccessException ex) when (attempt < maxRetries)
                 {
-                    try
-                    {
-                        File.Delete(tempPath);
-                    }
-                    catch
-                    {
-                        // Ignore - will be cleaned up on next startup
-                    }
+                    lastException = ex;
+                    // Retry on permission issues (may be caused by antivirus/OneDrive)
+                    var delay = baseDelayMs * Math.Pow(2, attempt - 1);
+                    Thread.Sleep((int)delay);
+                }
+                catch (MagickException ex) when (attempt < maxRetries && ex.Message.Contains("WriteBlob"))
+                {
+                    lastException = ex;
+                    // Retry on WriteBlob errors specifically
+                    var delay = baseDelayMs * Math.Pow(2, attempt - 1);
+                    Thread.Sleep((int)delay);
+                }
+                catch (Exception ex) when (attempt < maxRetries)
+                {
+                    lastException = ex;
+                    // Catch any other exceptions and retry
+                    var delay = baseDelayMs * Math.Pow(2, attempt - 1);
+                    Thread.Sleep((int)delay);
+                }
+            }
+        }
+        finally
+        {
+            // Final cleanup attempt: ensure temp file is deleted after all retries
+            // This handles cases where File.Move failed after partial write, or file was locked
+            if (File.Exists(tempPath))
+            {
+                try
+                {
+                    File.Delete(tempPath);
+                }
+                catch (Exception cleanupEx)
+                {
+                    // Log the cleanup failure but don't throw - will be cleaned up on next startup
+                    _ = ErrorLogger.LogAsync(cleanupEx, $"Failed to cleanup temp file: {tempPath}");
                 }
             }
         }

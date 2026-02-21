@@ -21,14 +21,14 @@ public static class ButtonFactory
         CancellationToken cancellationToken)
     {
         // Perform all work off-thread safely
-        return Task.Run(() =>
-                SimilarityCalculator.CalculateSimilarity(
+        return Task.Run(async () =>
+                await SimilarityCalculator.CalculateSimilarityAsync(
                     selectedRomFileName,
                     imageFolderPath,
                     similarityThreshold,
                     similarityAlgorithm,
                     cancellationToken
-                ),
+                ).ConfigureAwait(false),
             cancellationToken
         );
     }
@@ -43,6 +43,15 @@ public static class ButtonFactory
         // Reuse existing menu if provided and it has items (not empty)
         if (existingMenu is { Items.Count: > 0 })
         {
+            // Update CommandParameter for all menu items to use the new imagePath
+            foreach (var item in existingMenu.Items)
+            {
+                if (item is MenuItem menuItem)
+                {
+                    menuItem.CommandParameter = imagePath;
+                }
+            }
+
             return existingMenu;
         }
 

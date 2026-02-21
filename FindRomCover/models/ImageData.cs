@@ -26,7 +26,7 @@ public class ImageData(string? imagePath, string? imageName, double similaritySc
     }
 
     public string? ImagePath { get; init; } = imagePath;
-    public string? ImageName { get; set; } = imageName;
+    public string? ImageName { get; init; } = imageName;
     public double SimilarityScore { get; init; } = similarityScore;
     public BitmapImage? ImageSource { get; init; }
     public BitmapImage DisplayImage => ImageSource ?? GetBrokenImage();

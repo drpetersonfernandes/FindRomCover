@@ -302,61 +302,82 @@ public class SettingsManager : INotifyPropertyChanged
 
     public void SaveSettings()
     {
+        // Capture all settings values under lock to ensure consistency
+        XDocument doc;
         lock (_saveLock)
         {
+            doc = new XDocument(
+                new XElement("Settings",
+                    new XElement("SimilarityThreshold", SimilarityThreshold.ToString(CultureInfo.InvariantCulture)),
+                    new XElement("SupportedExtensions",
+                        SupportedExtensions.Select(static ext => new XElement("Extension", ext))
+                    ),
+                    new XElement("ImageSize",
+                        new XElement("Width", ImageWidth),
+                        new XElement("Height", ImageHeight)
+                    ),
+                    new XElement("SimilarityAlgorithm", SelectedSimilarityAlgorithm),
+                    new XElement("MaxImagesToLoad", MaxImagesToLoad),
+                    new XElement("ImageLoaderMaxRetries", ImageLoaderMaxRetries),
+                    new XElement("ImageLoaderRetryDelayMilliseconds", ImageLoaderRetryDelayMilliseconds),
+                    new XElement("ApiTimeoutSeconds", ApiTimeoutSeconds),
+                    new XElement("BaseTheme", BaseTheme),
+                    new XElement("AccentColor", AccentColor),
+                    new XElement("UseMameDescription", UseMameDescription.ToString().ToLowerInvariant())
+                )
+            );
+        }
+
+        // Perform file I/O outside the lock to avoid blocking other threads
+        var tempFilePath = SettingsFilePath + ".tmp";
+        try
+        {
+            // Write to a temporary file first, then atomically replace the original
+            // This prevents corruption of settings.xml if the app crashes during write
+            doc.Save(tempFilePath);
+
+            // Use File.Copy + File.Delete instead of File.Move with overwrite
+            // This is more reliable on Windows when the target file is in use
+            File.Copy(tempFilePath, SettingsFilePath, true);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            MessageBox.Show($"Access denied to settings.xml: {ex.Message}\n\n" +
+                            "Try running as administrator or checking file permissions.\n\n" +
+                            "Your settings will not be saved!",
+                "Settings Error", MessageBoxButton.OK, MessageBoxImage.Error);
+
+            _ = ErrorLogger.LogAsync(ex, "Failed to save settings");
+        }
+        catch (IOException ex)
+        {
+            MessageBox.Show($"Error saving settings to settings.xml: {ex.Message}\n\n" +
+                            "Your settings will not be saved!",
+                "Settings Error", MessageBoxButton.OK, MessageBoxImage.Error);
+
+            _ = ErrorLogger.LogAsync(ex, "Failed to save settings");
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error saving settings to settings.xml: {ex.Message}\n\n" +
+                            "Your settings will not be saved!",
+                "Settings Error", MessageBoxButton.OK, MessageBoxImage.Error);
+
+            _ = ErrorLogger.LogAsync(ex, "Failed to save settings");
+        }
+        finally
+        {
+            // Clean up temp file if it exists
             try
             {
-                var doc = new XDocument(
-                    new XElement("Settings",
-                        new XElement("SimilarityThreshold", SimilarityThreshold.ToString(CultureInfo.InvariantCulture)),
-                        new XElement("SupportedExtensions",
-                            SupportedExtensions.Select(static ext => new XElement("Extension", ext))
-                        ),
-                        new XElement("ImageSize",
-                            new XElement("Width", ImageWidth),
-                            new XElement("Height", ImageHeight)
-                        ),
-                        new XElement("SimilarityAlgorithm", SelectedSimilarityAlgorithm),
-                        new XElement("MaxImagesToLoad", MaxImagesToLoad),
-                        new XElement("ImageLoaderMaxRetries", ImageLoaderMaxRetries),
-                        new XElement("ImageLoaderRetryDelayMilliseconds", ImageLoaderRetryDelayMilliseconds),
-                        new XElement("ApiTimeoutSeconds", ApiTimeoutSeconds),
-                        new XElement("BaseTheme", BaseTheme),
-                        new XElement("AccentColor", AccentColor),
-                        new XElement("UseMameDescription", UseMameDescription.ToString().ToLowerInvariant())
-                    )
-                );
-
-                // Write to a temporary file first, then atomically replace the original
-                // This prevents corruption of settings.xml if the app crashes during write
-                var tempFilePath = SettingsFilePath + ".tmp";
-                doc.Save(tempFilePath);
-                File.Move(tempFilePath, SettingsFilePath, true);
+                if (File.Exists(tempFilePath))
+                {
+                    File.Delete(tempFilePath);
+                }
             }
-            catch (UnauthorizedAccessException ex)
+            catch
             {
-                MessageBox.Show($"Access denied to settings.xml: {ex.Message}\n\n" +
-                                "Try running as administrator or checking file permissions.\n\n" +
-                                "Your settings will not be saved!",
-                    "Settings Error", MessageBoxButton.OK, MessageBoxImage.Error);
-
-                _ = ErrorLogger.LogAsync(ex, "Failed to save settings");
-            }
-            catch (IOException ex)
-            {
-                MessageBox.Show($"Error saving settings to settings.xml: {ex.Message}\n\n" +
-                                "Your settings will not be saved!",
-                    "Settings Error", MessageBoxButton.OK, MessageBoxImage.Error);
-
-                _ = ErrorLogger.LogAsync(ex, "Failed to save settings");
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error saving settings to settings.xml: {ex.Message}\n\n" +
-                                "Your settings will not be saved!",
-                    "Settings Error", MessageBoxButton.OK, MessageBoxImage.Error);
-
-                _ = ErrorLogger.LogAsync(ex, "Failed to save settings");
+                // Best effort cleanup - ignore errors
             }
         }
     }

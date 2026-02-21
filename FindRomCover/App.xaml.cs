@@ -29,50 +29,81 @@ public partial class App
 
     public static IAudioService AudioService => AudioServiceLazy.Value;
 
-    protected override void OnStartup(StartupEventArgs e)
+    /// <summary>
+    /// Safely executes an async task in a fire-and-forget manner with proper exception handling.
+    /// Prevents unobserved task exceptions from crashing the application.
+    /// </summary>
+    private static void FireAndForget(Func<Task> asyncAction)
     {
-        // Magick.NET resource limits
-        ResourceLimits.Memory = 512 * 1024 * 1024; // 512MB
-        ResourceLimits.Thread = 4; // Limit threads
-
-        // Check for command-line arguments. e.Args is more robust than Environment.CommandLine.
-        // Assumes the order is: <image_folder_path> <rom_folder_path>
-        if (e.Args.Length == 2)
+        _ = Task.Run(async () =>
         {
-            var imageFolderPath = e.Args[0];
-            var romFolderPath = e.Args[1];
-
-            var imagePathValid = Directory.Exists(imageFolderPath);
-            var romPathValid = Directory.Exists(romFolderPath);
-
-            if (imagePathValid && romPathValid)
+            try
             {
-                StartupImageFolderPath = imageFolderPath;
-                StartupRomFolderPath = romFolderPath;
+                await asyncAction().ConfigureAwait(false);
             }
-            else
+            catch
             {
-                var invalidPaths = new List<string>();
-                if (!imagePathValid)
-                    invalidPaths.Add($"Image folder: '{imageFolderPath}'");
-                if (!romPathValid)
-                    invalidPaths.Add($"ROM folder: '{romFolderPath}'");
-
-                MessageBox.Show(
-                    $"The following command-line paths are invalid or do not exist:\n\n{string.Join("\n", invalidPaths)}\n\nThe application will start with empty folder paths.",
-                    "Invalid Command-Line Arguments", MessageBoxButton.OK, MessageBoxImage.Warning);
+                // Exceptions are already logged by ErrorLogger.LogAsync
+                // This prevents unobserved task exceptions from propagating
             }
-        }
+        });
+    }
 
-        // Clean up orphaned temp files from previous crashes
-        // This handles temp files left behind if the app crashed during image processing
-        if (!string.IsNullOrEmpty(StartupRomFolderPath))
+    protected override async void OnStartup(StartupEventArgs e)
+    {
+        try
         {
-            ImageProcessor.CleanupOrphanedTempFiles(StartupRomFolderPath);
-        }
+            // Magick.NET resource limits
+            ResourceLimits.Memory = 512 * 1024 * 1024; // 512MB
+            ResourceLimits.Thread = 4; // Limit threads
 
-        base.OnStartup(e);
-        ApplyTheme(SettingsManager.BaseTheme, SettingsManager.AccentColor);
+            // Check for command-line arguments. e.Args is more robust than Environment.CommandLine.
+            // Assumes the order is: <image_folder_path> <rom_folder_path>
+            if (e.Args.Length == 2)
+            {
+                var imageFolderPath = e.Args[0];
+                var romFolderPath = e.Args[1];
+
+                var imagePathValid = Directory.Exists(imageFolderPath);
+                var romPathValid = Directory.Exists(romFolderPath);
+
+                if (imagePathValid && romPathValid)
+                {
+                    StartupImageFolderPath = imageFolderPath;
+                    StartupRomFolderPath = romFolderPath;
+                }
+                else
+                {
+                    var invalidPaths = new List<string>();
+                    if (!imagePathValid)
+                        invalidPaths.Add($"Image folder: '{imageFolderPath}'");
+                    if (!romPathValid)
+                        invalidPaths.Add($"ROM folder: '{romFolderPath}'");
+
+                    MessageBox.Show(
+                        $"The following command-line paths are invalid or do not exist:\n\n{string.Join("\n", invalidPaths)}\n\nThe application will start with empty folder paths.",
+                        "Invalid Command-Line Arguments", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+            }
+
+            // Clean up orphaned temp files from previous crashes asynchronously
+            // This handles temp files left behind if the app crashed during image processing
+            if (!string.IsNullOrEmpty(StartupRomFolderPath))
+            {
+                await Task.Run(static () => ImageProcessor.CleanupOrphanedTempFiles(StartupRomFolderPath));
+            }
+
+            // Apply theme BEFORE creating MainWindow to prevent theme flashing
+            ApplyTheme(SettingsManager.BaseTheme, SettingsManager.AccentColor);
+
+            // Create and show MainWindow manually (StartupUri removed from App.xaml)
+            var mainWindow = new MainWindow();
+            mainWindow.Show();
+        }
+        catch (Exception ex)
+        {
+            _ = ErrorLogger.LogAsync(ex, "Error in method 'OnStartup'");
+        }
     }
 
     protected override void OnExit(ExitEventArgs e)
@@ -81,6 +112,9 @@ public partial class App
         {
             disposableAudioService.Dispose();
         }
+
+        // Dispose the ErrorLogger's HttpClient to prevent resource leaks
+        ErrorLogger.Dispose();
 
         base.OnExit(e);
     }
@@ -101,7 +135,7 @@ public partial class App
         }
         catch (Exception ex)
         {
-            _ = ErrorLogger.LogAsync(ex, $"Error applying theme: {baseTheme}.{accentColor}");
+            FireAndForget(() => ErrorLogger.LogAsync(ex, $"Error applying theme: {baseTheme}.{accentColor}"));
         }
     }
 

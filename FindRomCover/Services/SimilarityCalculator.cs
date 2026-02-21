@@ -6,7 +6,7 @@ namespace FindRomCover.Services;
 
 public static class SimilarityCalculator
 {
-    public static SimilarityCalculationResult CalculateSimilarity(
+    public static async Task<SimilarityCalculationResult> CalculateSimilarityAsync(
         string selectedFileName,
         string imageFolderPath,
         double similarityThreshold,
@@ -92,14 +92,14 @@ public static class SimilarityCalculator
 
         try
         {
-            Parallel.ForEach(topCandidates, parallelOptions, candidate =>
+            var tasks = topCandidates.Select(async candidate =>
             {
-                semaphore.Wait(cancellationToken);
+                await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
                 try
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    var imageSource = ImageLoader.LoadImageToMemory(candidate.FilePath);
+                    var imageSource = await ImageLoader.LoadImageToMemoryAsync(candidate.FilePath);
 
                     var imageData = new ImageData(candidate.FilePath, candidate.ImageName, candidate.SimilarityScore)
                     {
@@ -126,7 +126,9 @@ public static class SimilarityCalculator
                 {
                     semaphore.Release();
                 }
-            });
+            }).ToArray();
+
+            await Task.WhenAll(tasks).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -199,7 +201,8 @@ public static class SimilarityCalculator
         var union = new HashSet<string>(setA);
         union.UnionWith(setB);
 
-        return union.Count == 0 ? 0 : intersection.Count / (double)union.Count * 100;
+        // If both sets are empty (both strings are empty), they are 100% similar
+        return union.Count == 0 ? 100 : intersection.Count / (double)union.Count * 100;
     }
 
     private static HashSet<string> GetNgrams(string input, int n)
@@ -296,6 +299,8 @@ public static class SimilarityCalculator
         }
 
         var jaroWinkler = jaro + prefixLength * scalingFactor * (1 - jaro);
+        // Cap the result at 1.0 (100%) as per standard Jaro-Winkler specification
+        jaroWinkler = Math.Min(jaroWinkler, 1.0);
         return jaroWinkler * 100;
     }
 }

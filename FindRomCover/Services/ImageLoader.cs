@@ -6,7 +6,7 @@ namespace FindRomCover.Services;
 
 public static class ImageLoader
 {
-    public static BitmapImage? LoadImageToMemory(string? imagePath)
+    public static async Task<BitmapImage?> LoadImageToMemoryAsync(string? imagePath)
     {
         if (string.IsNullOrEmpty(imagePath)) return null;
 
@@ -42,7 +42,7 @@ public static class ImageLoader
             {
                 if (i < maxRetries - 1)
                 {
-                    Thread.Sleep(delayMilliseconds);
+                    await Task.Delay(delayMilliseconds);
                 }
                 else
                 {
@@ -76,14 +76,19 @@ public static class ImageLoader
 
         magickImage.AutoOrient();
 
+        // Write image to memory stream and copy to byte array
+        // This ensures the bitmap has its own copy of the data
         using var memoryStream = new MemoryStream();
         magickImage.Write(memoryStream, MagickFormat.Png);
         memoryStream.Position = 0;
 
+        // Copy stream data to byte array so BitmapImage owns the data
+        var imageBytes = memoryStream.ToArray();
+
         var bitmapImage = new BitmapImage();
         bitmapImage.BeginInit();
         bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
-        bitmapImage.StreamSource = memoryStream;
+        bitmapImage.StreamSource = new MemoryStream(imageBytes);
         bitmapImage.EndInit();
 
         if (bitmapImage.CanFreeze)

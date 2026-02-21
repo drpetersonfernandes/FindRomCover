@@ -1,6 +1,5 @@
 using System.IO;
 using System.Windows.Media;
-using System.Windows.Threading;
 
 namespace FindRomCover.Services;
 
@@ -18,11 +17,11 @@ public class AudioService : IAudioService
         {
             try
             {
-                // MediaPlayer is a DispatcherObject and must be created on the UI thread.
-                // If we're not on the UI thread, marshal the initialization to it.
-                if (Thread.CurrentThread != System.Windows.Application.Current.Dispatcher.Thread)
+                // MediaPlayer requires STA thread apartment state.
+                // Use InvokeAsync to avoid potential deadlocks with synchronous Invoke.
+                if (Thread.CurrentThread.GetApartmentState() != ApartmentState.STA)
                 {
-                    System.Windows.Application.Current.Dispatcher.Invoke(() => InitializeMediaPlayer(soundPath));
+                    System.Windows.Application.Current.Dispatcher.InvokeAsync(() => InitializeMediaPlayer(soundPath)).Wait();
                 }
                 else
                 {
@@ -60,12 +59,12 @@ public class AudioService : IAudioService
         {
             _isSoundAvailable = false;
             // Initialize on UI thread to avoid threading issues
-            if (Dispatcher.CurrentDispatcher != System.Windows.Application.Current.Dispatcher)
+            if (Thread.CurrentThread.GetApartmentState() != ApartmentState.STA)
             {
-                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     _mediaPlayer = new MediaPlayer(); // Initialize to avoid null reference issues
-                });
+                }).Wait();
             }
             else
             {

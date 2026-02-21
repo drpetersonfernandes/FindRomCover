@@ -86,8 +86,8 @@
                     ContextMenuOpening="Image_ContextMenuOpening">
                 <StackPanel>
                     <Image
-                        Width="{Binding Path=Settings.ImageWidth, RelativeSource={RelativeSource AncestorType=Window}}"
-                        Height="{Binding Path=Settings.ImageHeight, RelativeSource={RelativeSource AncestorType=Window}}"
+                        Width="{Binding Settings.ImageWidth}"
+                        Height="{Binding Settings.ImageHeight}"
                         Source="{Binding DisplayImage}">
                         <!-- Removed the DataTrigger that was causing UI freezing -->
                     </Image>
@@ -275,6 +275,7 @@
                         <Grid Grid.Row="1">
                             <ScrollViewer VerticalScrollBarVisibility="Auto">
                                 <ListBox x:Name="LstMissingImages" 
+                                         ItemsSource="{Binding MissingImages}"
                                          SelectionChanged="LstMissingImages_SelectionChanged"
                                          KeyDown="LstMissingImages_KeyDown"
                                          DisplayMemberPath="RomName"

@@ -9,7 +9,11 @@ namespace FindRomCover.Services;
 
 public static class ErrorLogger
 {
+    // Use IHttpClientFactory pattern with static instance that can be disposed on app exit
     private static readonly HttpClient HttpClient = new();
+    private static bool _isDisposed;
+    private static readonly object DisposeLock = new();
+
     private const string ApiKey = "hjh7yu6t56tyr540o9u8767676r5674534453235264c75b6t7ggghgg76trf564e";
     private const string BugReportApiUrl = "https://www.purelogiccode.com/bugreport/api/send-bug-report";
 
@@ -27,6 +31,22 @@ public static class ErrorLogger
 
     // Separate semaphore for internal log to avoid race conditions while preventing deadlocks with main LogFileLock
     private static readonly SemaphoreSlim InternalLogFileLock = new(1, 1);
+
+    /// <summary>
+    /// Disposes the HttpClient when the application is shutting down.
+    /// Should be called from Application.OnExit or similar.
+    /// </summary>
+    public static void Dispose()
+    {
+        lock (DisposeLock)
+        {
+            if (!_isDisposed)
+            {
+                HttpClient.Dispose();
+                _isDisposed = true;
+            }
+        }
+    }
 
     public static async Task LogAsync(Exception? ex, string? contextMessage = null)
     {
@@ -90,43 +110,38 @@ public static class ErrorLogger
 
         // 1. Append the new error message to the user-specific log (this one persists)
         // 2. Append the new error message to the API-sending log (this one gets cleared)
-        // These file operations are protected by the lock
-        await LogFileLock.WaitAsync(); // Acquire the lock
+        // 3. Read the entire content of the API-sending log file
+        // All file operations are protected by a single lock acquisition to avoid deadlock risks
+        string contentToSend;
+        var lockAcquired = false;
         try
         {
+            await LogFileLock.WaitAsync(); // Acquire the lock once for all file operations
+            lockAcquired = true;
+
             await File.AppendAllTextAsync(UserLogFilePath, currentErrorMessage);
             await File.AppendAllTextAsync(ApiLogFilePath, currentErrorMessage);
-        }
-        catch (Exception loggingEx)
-        {
-            // Log any exceptions that occur during the logging process itself to an internal log
-            await WriteInternalLogAsync($"Failed to write to log files: {loggingEx.Message}");
-            return;
-        }
-        finally
-        {
-            LogFileLock.Release(); // Release the lock
-        }
 
-        // 3. Read the entire content of the API-sending log file
-        // 4. Attempt to send the entire log file content to the API
-        // These operations happen OUTSIDE the lock to prevent blocking other threads during network I/O
-        string contentToSend;
-        await LogFileLock.WaitAsync(); // Acquire the lock for reading
-        try
-        {
+            // Read the content while still holding the lock to ensure consistency
             contentToSend = await File.ReadAllTextAsync(ApiLogFilePath);
         }
         catch (Exception loggingEx)
         {
-            await WriteInternalLogAsync($"Failed to read API log file: {loggingEx.Message}");
+            // Log any exceptions that occur during the logging process itself to an internal log
+            await WriteInternalLogAsync($"Failed to write/read log files: {loggingEx.Message}");
             return;
         }
         finally
         {
-            LogFileLock.Release(); // Release the lock
+            // Always release the lock if it was acquired, even if an exception occurred
+            if (lockAcquired)
+            {
+                LogFileLock.Release();
+            }
         }
 
+        // 4. Attempt to send the entire log file content to the API
+        // This happens OUTSIDE the lock to prevent blocking other threads during network I/O
         if (!string.IsNullOrEmpty(contentToSend))
         {
             var sendSuccess = false;

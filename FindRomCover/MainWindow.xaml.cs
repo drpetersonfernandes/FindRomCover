@@ -31,6 +31,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
     private string _selectedRomFileName = string.Empty;
 
     public ObservableCollection<ImageData> SimilarImages { get; set; } = [];
+    public ObservableCollection<MissingImageItem> MissingImages { get; set; } = [];
 
     public bool IsCheckingMissing
     {
@@ -86,6 +87,9 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
         // Subscribe to SettingsManager PropertyChanged to update UI for non-binding properties (like menu checks)
         Settings.PropertyChanged += AppSettingsManagerPropertyChanged;
+
+        // Subscribe to Closed event to ensure cleanup happens even if OnClosed isn't called
+        Closed += MainWindow_Closed;
 
         // Load _machines and _mameLookup
         LoadMameData();
@@ -410,12 +414,14 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
             cancellationToken.ThrowIfCancellationRequested();
 
             // Only update UI if we got valid results
-            LstMissingImages.Items.Clear();
+            MissingImages.Clear();
             SimilarImages.Clear();
 
-            foreach (var (romName, searchName) in missingFiles)
+            // Batch add items to ObservableCollection for better performance
+            var missingImageItems = missingFiles.Select(static mf => new MissingImageItem(mf.RomName, mf.SearchName)).ToList();
+            foreach (var item in missingImageItems)
             {
-                LstMissingImages.Items.Add(new { RomName = romName, SearchName = searchName });
+                MissingImages.Add(item);
             }
 
             UpdateMissingCount();
@@ -493,9 +499,15 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
             _findSimilarCts = new CancellationTokenSource();
             var cancellationToken = _findSimilarCts.Token;
 
-            dynamic selectedItem = LstMissingImages.SelectedItem;
-            string romName = selectedItem.RomName;
-            string searchName = selectedItem.SearchName;
+            if (LstMissingImages.SelectedItem is not MissingImageItem selectedItem)
+            {
+                IsFindingSimilar = false;
+                _findSimilarCts = null;
+                return;
+            }
+
+            var romName = selectedItem.RomName;
+            var searchName = selectedItem.SearchName;
             _selectedRomFileName = romName;
 
             // --- Core logic with robust progress indicator handling ---
@@ -518,6 +530,10 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
                     {
                         await Application.Current.Dispatcher.InvokeAsync(() =>
                         {
+                            // Check cancellation again inside the dispatcher to avoid race condition
+                            if (cancellationToken.IsCancellationRequested)
+                                return;
+
                             var textBlock = new TextBlock();
                             textBlock.Inlines.Add(new Run("Search Query: "));
                             textBlock.Inlines.Add(new Run($"{searchName} ") { FontWeight = FontWeights.Bold });
@@ -638,21 +654,21 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         try
         {
             var oldIndex = LstMissingImages.SelectedIndex;
-            LstMissingImages.Items.RemoveAt(oldIndex);
+            MissingImages.RemoveAt(oldIndex);
 
             // Select next logical item
-            if (LstMissingImages.Items.Count > 0)
+            if (MissingImages.Count > 0)
             {
                 // Calculate new index - ensure it's valid
-                var newIndex = Math.Min(oldIndex, LstMissingImages.Items.Count - 1);
+                var newIndex = Math.Min(oldIndex, MissingImages.Count - 1);
 
                 LstMissingImages.SelectedIndex = newIndex;
 
                 // Only scroll if we have a valid item to scroll to
-                if (newIndex >= 0 && LstMissingImages.Items.Count > newIndex)
+                if (newIndex >= 0 && MissingImages.Count > newIndex)
                 {
-                    var itemToScrollTo = LstMissingImages.Items[newIndex];
-                    if (itemToScrollTo != null) LstMissingImages.ScrollIntoView(itemToScrollTo);
+                    var itemToScrollTo = MissingImages[newIndex];
+                    LstMissingImages.ScrollIntoView(itemToScrollTo);
                 }
             }
             else
@@ -671,7 +687,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
     private void UpdateMissingCount()
     {
-        LabelMissingRoms.Content = "MISSING COVERS: " + LstMissingImages.Items.Count;
+        LabelMissingRoms.Content = "MISSING COVERS: " + MissingImages.Count;
     }
 
     private void SetSimilarityAlgorithm_Click(object sender, RoutedEventArgs e)
@@ -819,7 +835,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         LstMissingImages.IsEnabled = BtnCheckForMissingImages.IsEnabled; // Keep LstMissingImages enabled state in sync
         if (!BtnCheckForMissingImages.IsEnabled)
         {
-            LstMissingImages.Items.Clear();
+            MissingImages.Clear();
             SimilarImages.Clear();
             LblSearchQuery.Content = null;
             UpdateMissingCount();
@@ -868,10 +884,11 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
             _loadMissingCts = null;
         }
 
-        _loadMissingCts = new CancellationTokenSource();
+        var cts = new CancellationTokenSource();
+        _loadMissingCts = cts;
         try
         {
-            await LoadMissingImagesList(_loadMissingCts.Token);
+            await LoadMissingImagesList(cts.Token);
         }
         catch (OperationCanceledException)
         {
@@ -885,8 +902,12 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         finally
         {
             // Ensure CTS is disposed even if an exception occurs during LoadMissingImagesList
-            _loadMissingCts?.Dispose();
-            _loadMissingCts = null;
+            // Use local variable to avoid race condition with concurrent calls
+            cts.Dispose();
+            if (_loadMissingCts == cts)
+            {
+                _loadMissingCts = null;
+            }
         }
     }
 
@@ -962,7 +983,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         LstMissingImages.IsEnabled = BtnCheckForMissingImages.IsEnabled; // Keep LstMissingImages enabled state in sync
         if (!BtnCheckForMissingImages.IsEnabled)
         {
-            LstMissingImages.Items.Clear();
+            MissingImages.Clear();
             SimilarImages.Clear();
             LblSearchQuery.Content = null;
             UpdateMissingCount();
@@ -1021,9 +1042,14 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         }
     }
 
-    protected override void OnClosed(EventArgs e)
+    private void MainWindow_Closed(object? sender, EventArgs e)
     {
         Settings.PropertyChanged -= AppSettingsManagerPropertyChanged;
+        Dispose();
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
         Dispose();
         base.OnClosed(e);
     }
