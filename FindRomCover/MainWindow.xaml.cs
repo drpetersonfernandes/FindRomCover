@@ -57,6 +57,20 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         }
     }
 
+    private bool _hasSearchedSimilar;
+
+    public bool HasSearchedSimilar
+    {
+        get => _hasSearchedSimilar;
+        set
+        {
+            if (_hasSearchedSimilar == value) return;
+
+            _hasSearchedSimilar = value;
+            OnPropertyChanged(nameof(HasSearchedSimilar));
+        }
+    }
+
     public object DisplayImage { get; } = new();
     public object ImageName { get; } = new();
     public object SimilarityScore { get; } = new();
@@ -484,6 +498,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
                 SimilarImages.Clear();
                 LblSearchQuery.Content = null;
                 IsFindingSimilar = false;
+                HasSearchedSimilar = false;
                 _findSimilarCts = null;
                 return;
             }
@@ -549,6 +564,9 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
                             {
                                 SimilarImages.Add(imageData);
                             }
+
+                            // Mark that a search has been performed
+                            HasSearchedSimilar = true;
 
                             // --- NEW: Display processing errors to the user ---
                             if (similarityResult.ProcessingErrors.Count > 0)

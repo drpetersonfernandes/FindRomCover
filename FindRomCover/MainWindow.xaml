@@ -341,7 +341,7 @@
                             </StackPanel>
                         </Grid>
 
-                        <!-- Empty State Message -->
+                        <!-- Empty State Message - No Selection -->
                         <TextBlock Text="Select a missing cover from the list to see suggestions."
                                    HorizontalAlignment="Center" VerticalAlignment="Center"
                                    Foreground="{DynamicResource MahApps.Brushes.Gray5}"
@@ -355,6 +355,30 @@
                                                     Binding="{Binding ElementName=ImageScrollViewer, Path=DataContext.SimilarImages.Count}"
                                                     Value="0" />
                                                 <Condition Binding="{Binding IsFindingSimilar}" Value="False" />
+                                                <Condition Binding="{Binding HasSearchedSimilar}" Value="False" />
+                                            </MultiDataTrigger.Conditions>
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </MultiDataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+
+                        <!-- Empty State Message - No Similar Images Found -->
+                        <TextBlock Text="No similar images found."
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   Foreground="{DynamicResource MahApps.Brushes.Gray5}"
+                                   Visibility="Collapsed">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Style.Triggers>
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition
+                                                    Binding="{Binding ElementName=ImageScrollViewer, Path=DataContext.SimilarImages.Count}"
+                                                    Value="0" />
+                                                <Condition Binding="{Binding IsFindingSimilar}" Value="False" />
+                                                <Condition Binding="{Binding HasSearchedSimilar}" Value="True" />
                                             </MultiDataTrigger.Conditions>
                                             <Setter Property="Visibility" Value="Visible" />
                                         </MultiDataTrigger>
