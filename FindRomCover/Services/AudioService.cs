@@ -20,7 +20,7 @@ public class AudioService : IAudioService
             {
                 // MediaPlayer is a DispatcherObject and must be created on the UI thread.
                 // If we're not on the UI thread, marshal the initialization to it.
-                if (Dispatcher.CurrentDispatcher != System.Windows.Application.Current.Dispatcher)
+                if (Thread.CurrentThread != System.Windows.Application.Current.Dispatcher.Thread)
                 {
                     System.Windows.Application.Current.Dispatcher.Invoke(() => InitializeMediaPlayer(soundPath));
                 }

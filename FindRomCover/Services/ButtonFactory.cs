@@ -13,7 +13,7 @@ namespace FindRomCover.Services;
 
 public static class ButtonFactory
 {
-    public static async Task<SimilarityCalculationResult> CreateSimilarImagesCollection( // Changed return type
+    public static Task<SimilarityCalculationResult> CreateSimilarImagesCollection(
         string selectedRomFileName,
         string imageFolderPath,
         double similarityThreshold,
@@ -21,18 +21,16 @@ public static class ButtonFactory
         CancellationToken cancellationToken)
     {
         // Perform all work off-thread safely
-        var result = await SimilarityCalculator.CalculateSimilarityAsync( // Await the new method
-            selectedRomFileName,
-            imageFolderPath,
-            similarityThreshold,
-            similarityAlgorithm,
+        return Task.Run(() =>
+                SimilarityCalculator.CalculateSimilarity(
+                    selectedRomFileName,
+                    imageFolderPath,
+                    similarityThreshold,
+                    similarityAlgorithm,
+                    cancellationToken
+                ),
             cancellationToken
         );
-
-        // Return the full result object
-        return cancellationToken.IsCancellationRequested
-            ? new SimilarityCalculationResult() // Return empty result if cancelled
-            : result;
     }
 
     public static ContextMenu CreateContextMenu(string imagePath, Action<string?> useImageAction)

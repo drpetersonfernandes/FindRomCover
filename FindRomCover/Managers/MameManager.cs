@@ -24,7 +24,8 @@ public class MameManager
     {
         // Accessing .Value will trigger the LoadMameDataFromFile factory method once,
         // and subsequent calls will return the cached result.
-        // If the factory method threw an exception, it will be re-thrown here.
+        // Note: If the file is not found, an empty list is cached and returned on all
+        // subsequent calls. The application must be restarted to reload the data.
         return MameDataCache.Value;
     }
 
@@ -34,8 +35,8 @@ public class MameManager
 
         if (!File.Exists(datPath))
         {
-            // Return empty list instead of throwing to prevent Lazy<T> from caching the exception.
-            // This allows the application to retry loading when the file becomes available.
+            // Return empty list instead of throwing to prevent Lazy<T> from caching an exception.
+            // Note: The empty list is cached permanently; application restart is required to reload.
             return [];
         }
 

@@ -6,7 +6,7 @@ namespace FindRomCover.Services;
 
 public static class SimilarityCalculator
 {
-    public static async Task<SimilarityCalculationResult> CalculateSimilarityAsync( // Changed return type
+    public static SimilarityCalculationResult CalculateSimilarity(
         string selectedFileName,
         string imageFolderPath,
         double similarityThreshold,
@@ -33,53 +33,50 @@ public static class SimilarityCalculator
             CancellationToken = cancellationToken
         };
 
-        await Task.Run(() =>
+        try
         {
-            try
+            Parallel.ForEach(allImageFiles, parallelOptions, imageFile =>
             {
-                Parallel.ForEach(allImageFiles, parallelOptions, imageFile =>
+                try
                 {
-                    try
-                    {
-                        cancellationToken.ThrowIfCancellationRequested();
-                        var imageName = Path.GetFileNameWithoutExtension(imageFile);
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var imageName = Path.GetFileNameWithoutExtension(imageFile);
 
-                        var similarityScore = algorithm switch
-                        {
-                            "Levenshtein Distance" => CalculateLevenshteinSimilarity(selectedFileName, imageName),
-                            "Jaccard Similarity" => CalculateJaccardIndex(selectedFileName, imageName),
-                            "Jaro-Winkler Distance" => CalculateJaroWinklerDistance(selectedFileName, imageName),
-                            _ => throw new NotImplementedException($"Algorithm {algorithm} is not implemented.")
-                        };
+                    var similarityScore = algorithm switch
+                    {
+                        "Levenshtein Distance" => CalculateLevenshteinSimilarity(selectedFileName, imageName),
+                        "Jaccard Similarity" => CalculateJaccardIndex(selectedFileName, imageName),
+                        "Jaro-Winkler Distance" => CalculateJaroWinklerDistance(selectedFileName, imageName),
+                        _ => throw new NotImplementedException($"Algorithm {algorithm} is not implemented.")
+                    };
 
-                        if (similarityScore >= similarityThreshold)
-                        {
-                            candidateFiles.Add((imageFile, imageName, similarityScore));
-                        }
-                    }
-                    catch (OperationCanceledException)
+                    if (similarityScore >= similarityThreshold)
                     {
-                        throw; // Re-throw cancellation
+                        candidateFiles.Add((imageFile, imageName, similarityScore));
                     }
-                    catch (Exception ex)
-                    {
-                        // Log the error and add to the collection for user notification
-                        _ = ErrorLogger.LogAsync(ex, $"Error processing file {imageFile} for similarity: {ex.Message}");
-                        processingErrors.Add($"Could not process image '{Path.GetFileName(imageFile)}' for similarity: {ex.Message}");
-                    }
-                });
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                _ = ErrorLogger.LogAsync(ex, $"Error in parallel processing of image files: {ex.Message}");
-                processingErrors.Add($"An unexpected error occurred during image file scanning: {ex.Message}");
-                // Do not re-throw here, let the process continue to load other images if possible.
-            }
-        }, cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw; // Re-throw cancellation
+                }
+                catch (Exception ex)
+                {
+                    // Log the error and add to the collection for user notification
+                    _ = ErrorLogger.LogAsync(ex, $"Error processing file {imageFile} for similarity: {ex.Message}");
+                    processingErrors.Add($"Could not process image '{Path.GetFileName(imageFile)}' for similarity: {ex.Message}");
+                }
+            });
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _ = ErrorLogger.LogAsync(ex, $"Error in parallel processing of image files: {ex.Message}");
+            processingErrors.Add($"An unexpected error occurred during image file scanning: {ex.Message}");
+            // Do not re-throw here, let the process continue to load other images if possible.
+        }
 
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -93,57 +90,54 @@ public static class SimilarityCalculator
         var semaphore = new SemaphoreSlim(Environment.ProcessorCount, Environment.ProcessorCount);
         var imageList = new ConcurrentBag<ImageData>();
 
-        await Task.Run(() =>
+        try
         {
-            try
+            Parallel.ForEach(topCandidates, parallelOptions, candidate =>
             {
-                Parallel.ForEach(topCandidates, parallelOptions, candidate =>
+                semaphore.Wait(cancellationToken);
+                try
                 {
-                    semaphore.Wait(cancellationToken);
-                    try
-                    {
-                        cancellationToken.ThrowIfCancellationRequested();
+                    cancellationToken.ThrowIfCancellationRequested();
 
-                        var imageSource = ImageLoader.LoadImageToMemory(candidate.FilePath);
+                    var imageSource = ImageLoader.LoadImageToMemory(candidate.FilePath);
 
-                        var imageData = new ImageData(candidate.FilePath, candidate.ImageName, candidate.SimilarityScore)
-                        {
-                            ImageSource = imageSource
-                        };
-                        imageList.Add(imageData);
+                    var imageData = new ImageData(candidate.FilePath, candidate.ImageName, candidate.SimilarityScore)
+                    {
+                        ImageSource = imageSource
+                    };
+                    imageList.Add(imageData);
 
-                        if (imageSource == null)
-                        {
-                            processingErrors.Add($"Image '{Path.GetFileName(candidate.FilePath)}' could not be loaded (corrupted or empty).");
-                        }
-                    }
-                    catch (OperationCanceledException)
+                    if (imageSource == null)
                     {
-                        throw; // Re-throw cancellation
+                        processingErrors.Add($"Image '{Path.GetFileName(candidate.FilePath)}' could not be loaded (corrupted or empty).");
                     }
-                    catch (Exception ex)
-                    {
-                        // Log the error and add to the collection for user notification
-                        _ = ErrorLogger.LogAsync(ex, $"Error loading image {candidate.FilePath} for display: {ex.Message}");
-                        processingErrors.Add($"Could not load image '{Path.GetFileName(candidate.FilePath)}' for display: {ex.Message}");
-                    }
-                    finally
-                    {
-                        semaphore.Release();
-                    }
-                });
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                _ = ErrorLogger.LogAsync(ex, $"Error in parallel image loading for display: {ex.Message}");
-                processingErrors.Add($"An unexpected error occurred during image loading for display: {ex.Message}");
-                // Do not re-throw here, let the process continue to load other images if possible.
-            }
-        }, cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw; // Re-throw cancellation
+                }
+                catch (Exception ex)
+                {
+                    // Log the error and add to the collection for user notification
+                    _ = ErrorLogger.LogAsync(ex, $"Error loading image {candidate.FilePath} for display: {ex.Message}");
+                    processingErrors.Add($"Could not load image '{Path.GetFileName(candidate.FilePath)}' for display: {ex.Message}");
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
+            });
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _ = ErrorLogger.LogAsync(ex, $"Error in parallel image loading for display: {ex.Message}");
+            processingErrors.Add($"An unexpected error occurred during image loading for display: {ex.Message}");
+            // Do not re-throw here, let the process continue to load other images if possible.
+        }
 
         cancellationToken.ThrowIfCancellationRequested();
 

@@ -128,15 +128,15 @@
                 <MenuItem x:Name="Menu90" Click="SetSimilarityThreshold_Click" Header="90%" IsCheckable="True" />
             </MenuItem>
             <MenuItem x:Name="ImageSizeMenu" Header="Set Thumbnail Size">
-                <MenuItem x:Name="Thumbnail100" Click="SetThumbnailSize_Click" Header="100 pixels" IsCheckable="True" />
-                <MenuItem x:Name="Thumbnail150" Click="SetThumbnailSize_Click" Header="150 pixels" IsCheckable="True" />
-                <MenuItem x:Name="Thumbnail200" Click="SetThumbnailSize_Click" Header="200 pixels" IsCheckable="True" />
-                <MenuItem x:Name="Thumbnail250" Click="SetThumbnailSize_Click" Header="250 pixels" IsCheckable="True" />
-                <MenuItem x:Name="Thumbnail300" Click="SetThumbnailSize_Click" Header="300 pixels" IsCheckable="True" />
-                <MenuItem x:Name="Thumbnail350" Click="SetThumbnailSize_Click" Header="350 pixels" IsCheckable="True" />
-                <MenuItem x:Name="Thumbnail400" Click="SetThumbnailSize_Click" Header="400 pixels" IsCheckable="True" />
-                <MenuItem x:Name="Thumbnail450" Click="SetThumbnailSize_Click" Header="450 pixels" IsCheckable="True" />
-                <MenuItem x:Name="Thumbnail500" Click="SetThumbnailSize_Click" Header="500 pixels" IsCheckable="True" />
+                <MenuItem x:Name="Thumbnail100" Click="SetThumbnailSize_Click" Header="100 pixels" IsCheckable="True" Tag="100" />
+                <MenuItem x:Name="Thumbnail150" Click="SetThumbnailSize_Click" Header="150 pixels" IsCheckable="True" Tag="150" />
+                <MenuItem x:Name="Thumbnail200" Click="SetThumbnailSize_Click" Header="200 pixels" IsCheckable="True" Tag="200" />
+                <MenuItem x:Name="Thumbnail250" Click="SetThumbnailSize_Click" Header="250 pixels" IsCheckable="True" Tag="250" />
+                <MenuItem x:Name="Thumbnail300" Click="SetThumbnailSize_Click" Header="300 pixels" IsCheckable="True" Tag="300" />
+                <MenuItem x:Name="Thumbnail350" Click="SetThumbnailSize_Click" Header="350 pixels" IsCheckable="True" Tag="350" />
+                <MenuItem x:Name="Thumbnail400" Click="SetThumbnailSize_Click" Header="400 pixels" IsCheckable="True" Tag="400" />
+                <MenuItem x:Name="Thumbnail450" Click="SetThumbnailSize_Click" Header="450 pixels" IsCheckable="True" Tag="450" />
+                <MenuItem x:Name="Thumbnail500" Click="SetThumbnailSize_Click" Header="500 pixels" IsCheckable="True" Tag="500" />
             </MenuItem>
             <MenuItem Header="Settings">
                 <MenuItem x:Name="MenuUseMameDescription" Header="Use MAME Description" IsCheckable="True" Click="MenuUseMameDescription_Click">

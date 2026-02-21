@@ -4,9 +4,7 @@ namespace FindRomCover.models;
 
 public class ImageData(string? imagePath, string? imageName, double similarityScore)
 {
-    private static readonly BitmapImage BrokenImage = LoadBrokenImagePlaceholder();
-
-    private static BitmapImage LoadBrokenImagePlaceholder()
+    private static readonly Lazy<BitmapImage> BrokenImageLazy = new(static () =>
     {
         try
         {
@@ -20,11 +18,16 @@ public class ImageData(string? imagePath, string? imageName, double similaritySc
             // If the broken image resource is not available, create a simple placeholder
             return new BitmapImage(); // Empty bitmap
         }
+    });
+
+    private static BitmapImage GetBrokenImage()
+    {
+        return BrokenImageLazy.Value;
     }
 
     public string? ImagePath { get; init; } = imagePath;
     public string? ImageName { get; set; } = imageName;
     public double SimilarityScore { get; init; } = similarityScore;
     public BitmapImage? ImageSource { get; init; }
-    public BitmapImage DisplayImage => ImageSource ?? BrokenImage;
+    public BitmapImage DisplayImage => ImageSource ?? GetBrokenImage();
 }

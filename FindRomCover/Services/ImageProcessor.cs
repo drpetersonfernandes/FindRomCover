@@ -7,6 +7,37 @@ namespace FindRomCover.Services;
 
 public static class ImageProcessor
 {
+    /// <summary>
+    /// Cleans up orphaned .tmp files from previous application crashes.
+    /// Should be called on application startup for directories where images are saved.
+    /// </summary>
+    /// <param name="directoryPath">The directory to clean up.</param>
+    public static void CleanupOrphanedTempFiles(string directoryPath)
+    {
+        if (!Directory.Exists(directoryPath))
+            return;
+
+        try
+        {
+            var tempFiles = Directory.GetFiles(directoryPath, "*.tmp");
+            foreach (var tempFile in tempFiles)
+            {
+                try
+                {
+                    File.Delete(tempFile);
+                }
+                catch
+                {
+                    // Ignore errors - file may be in use by another process
+                }
+            }
+        }
+        catch
+        {
+            // Ignore errors - directory may not be accessible
+        }
+    }
+
     public static bool ConvertAndSaveImage(string sourcePath, string targetPath)
     {
         var directory = Path.GetDirectoryName(targetPath);
@@ -179,6 +210,22 @@ public static class ImageProcessor
                 // Catch any other exceptions and retry
                 var delay = baseDelayMs * Math.Pow(2, attempt - 1);
                 Thread.Sleep((int)delay);
+            }
+            finally
+            {
+                // Clean up temp file if it still exists (in case of exception before Move)
+                // Only delete if we haven't successfully moved the file (on success, tempPath no longer exists)
+                if (File.Exists(tempPath))
+                {
+                    try
+                    {
+                        File.Delete(tempPath);
+                    }
+                    catch
+                    {
+                        // Ignore - will be cleaned up on next startup
+                    }
+                }
             }
         }
 

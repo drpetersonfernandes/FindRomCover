@@ -25,8 +25,9 @@ public static class ImageLoader
             {
                 return LoadWithMagickNetInternal(imagePath);
             }
-            catch (MagickException)
+            catch (MagickException ex)
             {
+                _ = ErrorLogger.LogAsync(ex, $"Image corruption detected, attempting recovery: {Path.GetFileName(imagePath)}");
                 try
                 {
                     return LoadWithMagickNetInternal(imagePath, true);

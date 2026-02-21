@@ -25,6 +25,9 @@ public static class ErrorLogger
     // Semaphore to ensure only one thread writes to/reads from the log files at a time
     private static readonly SemaphoreSlim LogFileLock = new(1, 1);
 
+    // Separate semaphore for internal log to avoid race conditions while preventing deadlocks with main LogFileLock
+    private static readonly SemaphoreSlim InternalLogFileLock = new(1, 1);
+
     public static async Task LogAsync(Exception? ex, string? contextMessage = null)
     {
         var version = Assembly.GetEntryAssembly()?.GetName().Version?.ToString();
@@ -245,9 +248,16 @@ public static class ErrorLogger
         try
         {
             var logMessage = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {message}{Environment.NewLine}";
-            // This internal log does not use the main LogFileLock to avoid deadlocks if the main logging system is broken.
-            // It's a last-resort log.
-            await File.AppendAllTextAsync(InternalLogFilePath, logMessage);
+            // Use InternalLogFileLock to prevent race conditions while avoiding deadlocks with main LogFileLock
+            await InternalLogFileLock.WaitAsync();
+            try
+            {
+                await File.AppendAllTextAsync(InternalLogFilePath, logMessage);
+            }
+            finally
+            {
+                InternalLogFileLock.Release();
+            }
         }
         catch
         {

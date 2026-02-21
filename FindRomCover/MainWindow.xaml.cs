@@ -4,7 +4,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.ComponentModel;
 using System.Globalization;
-using System.Text.RegularExpressions;
 using System.Windows.Documents;
 using System.Windows.Input;
 using FindRomCover.Managers;
@@ -364,9 +363,8 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
                         if (++processedCount % 100 == 0)
                         {
                             cancellationToken.ThrowIfCancellationRequested();
+                            await Task.Yield(); // Yield periodically to prevent blocking
                         }
-
-                        await Task.Yield(); // Yield to prevent blocking
 
                         if (FindCorrespondingImage(romName, imageFolderPath) == null)
                         {
@@ -750,29 +748,21 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
     private void SetThumbnailSize_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is not MenuItem { Header: not null } menuItem)
+        if (sender is not MenuItem menuItem)
         {
             return;
         }
 
-        var headerText = menuItem.Header.ToString();
-        if (string.IsNullOrEmpty(headerText))
+        // Get size from Tag property instead of parsing header text
+        if (menuItem.Tag is not int size && !int.TryParse(menuItem.Tag?.ToString(), out size))
         {
+            MessageBox.Show("Invalid thumbnail size selected.",
+                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             return;
         }
 
         try
         {
-            var match = MyRegex().Match(headerText);
-
-            if (!match.Success || !int.TryParse(match.Value, out var size))
-            {
-                MessageBox.Show("Invalid thumbnail size selected.",
-                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-
-                return;
-            }
-
             App.SettingsManager.ImageWidth = size;
             App.SettingsManager.ImageHeight = size;
             App.SettingsManager.SaveSettings();
@@ -791,13 +781,8 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         {
             if (item is not MenuItem menuItem) continue;
 
-            var headerText = menuItem.Header?.ToString();
-            if (string.IsNullOrEmpty(headerText))
-                continue;
-
-            var match = MyRegex().Match(headerText);
-
-            if (match.Success && int.TryParse(match.Value, out var size))
+            // Get size from Tag property instead of parsing header text
+            if (menuItem.Tag is int size || int.TryParse(menuItem.Tag?.ToString(), out size))
             {
                 menuItem.IsChecked = size == currentSize;
             }
@@ -1021,15 +1006,6 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         var romPathValid = !string.IsNullOrEmpty(romPath) && Directory.Exists(romPath);
         var imagePathValid = !string.IsNullOrEmpty(imagePath) && Directory.Exists(imagePath);
 
-        // Store valid paths when detected
-        if (romPathValid)
-        {
-        }
-
-        if (imagePathValid)
-        {
-        }
-
         BtnCheckForMissingImages.IsEnabled = romPathValid && imagePathValid;
         LstMissingImages.IsEnabled = romPathValid && imagePathValid;
 
@@ -1056,31 +1032,11 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         _findSimilarCts?.Cancel();
         _loadMissingCts?.Cancel();
 
-        // Give pending operations a moment to cancel
-        try
-        {
-            Task.Delay(100).Wait(); // Brief wait for cancellation to propagate
-        }
-        catch
-        {
-            // Ignore any errors during the delay
-        }
-
         // Now dispose resources
-        try
-        {
-            _findSimilarCts?.Dispose();
-            _loadMissingCts?.Dispose();
-            _findSimilarSemaphore.Dispose();
-        }
-        catch
-        {
-            // Ignore disposal errors
-        }
+        _findSimilarCts?.Dispose();
+        _loadMissingCts?.Dispose();
+        _findSimilarSemaphore.Dispose();
 
         GC.SuppressFinalize(this);
     }
-
-    [GeneratedRegex(@"\d+")]
-    private static partial Regex MyRegex();
 }

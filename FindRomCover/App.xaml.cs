@@ -64,6 +64,13 @@ public partial class App
             }
         }
 
+        // Clean up orphaned temp files from previous crashes
+        // This handles temp files left behind if the app crashed during image processing
+        if (!string.IsNullOrEmpty(StartupRomFolderPath))
+        {
+            ImageProcessor.CleanupOrphanedTempFiles(StartupRomFolderPath);
+        }
+
         base.OnStartup(e);
         ApplyTheme(SettingsManager.BaseTheme, SettingsManager.AccentColor);
     }
