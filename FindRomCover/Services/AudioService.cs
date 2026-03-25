@@ -89,6 +89,15 @@ public class AudioService : IAudioService
     private void OnMediaFailed(object? sender, ExceptionEventArgs e)
     {
         _isSoundAvailable = false; // Prevent further attempts
+
+        // Silently handle known codec/media infrastructure errors (e.g. 0xC00D11BA)
+        // that indicate missing codecs or incompatible Windows Media Foundation components.
+        // These are environment issues, not application bugs.
+        if (e.ErrorException is System.Runtime.InteropServices.COMException or InvalidOperationException)
+        {
+            return;
+        }
+
         _ = ErrorLogger.LogAsync(e.ErrorException, $"Failed to play sound: {_soundUri}");
     }
 
