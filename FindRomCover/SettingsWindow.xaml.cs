@@ -87,9 +87,16 @@ public partial class SettingsWindow
 
     private void BtnRemove_Click(object sender, RoutedEventArgs e)
     {
-        if (LstSupportedExtensions.SelectedItem is string selectedExtension)
+        try
         {
-            _supportedExtensions.Remove(selectedExtension);
+            if (LstSupportedExtensions.SelectedItem is string selectedExtension)
+            {
+                _supportedExtensions.Remove(selectedExtension);
+            }
+        }
+        catch (Exception ex)
+        {
+            _ = ErrorLogger.LogAsync(ex, "Error in method BtnRemove_Click");
         }
     }
 

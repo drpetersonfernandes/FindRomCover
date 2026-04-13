@@ -20,16 +20,11 @@ public class ImageData(string? imagePath, string? imageName, double similaritySc
         }
     });
 
-    private static BitmapImage GetBrokenImage()
-    {
-        return BrokenImageLazy.Value;
-    }
-
     public string? ImagePath { get; init; } = imagePath;
     public string? ImageName { get; init; } = imageName;
     public double SimilarityScore { get; init; } = similarityScore;
     public BitmapImage? ImageSource { get; init; }
-    public BitmapImage DisplayImage => ImageSource ?? GetBrokenImage();
+    public BitmapImage DisplayImage => ImageSource ?? BrokenImageLazy.Value;
 
     /// <summary>
     /// Cached context menu for this image to avoid recreating it on every right-click.

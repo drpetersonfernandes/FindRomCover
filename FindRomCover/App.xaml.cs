@@ -88,9 +88,9 @@ public partial class App
 
             // Clean up orphaned temp files from previous crashes asynchronously
             // This handles temp files left behind if the app crashed during image processing
-            if (!string.IsNullOrEmpty(StartupRomFolderPath))
+            if (!string.IsNullOrEmpty(StartupImageFolderPath))
             {
-                await Task.Run(static () => ImageProcessor.CleanupOrphanedTempFiles(StartupRomFolderPath));
+                await Task.Run(static () => ImageProcessor.CleanupOrphanedTempFiles(StartupImageFolderPath));
             }
 
             // Apply theme BEFORE creating MainWindow to prevent theme flashing

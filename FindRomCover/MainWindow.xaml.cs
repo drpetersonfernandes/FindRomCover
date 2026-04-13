@@ -71,10 +71,6 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         }
     }
 
-    public object DisplayImage { get; } = new();
-    public object ImageName { get; } = new();
-    public object SimilarityScore { get; } = new();
-
     public MainWindow()
     {
         InitializeComponent();
@@ -931,16 +927,8 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
     private void TxtImageFolder_LostFocus(object sender, RoutedEventArgs e)
     {
-        if (sender is TextBox textBox)
+        if (sender is TextBox)
         {
-            var newPath = textBox.Text.Trim();
-
-            // Only update the 'last valid path' if the new path is actually valid.
-            // Do not revert the text if it's invalid, allowing the user to correct it.
-            if (!string.IsNullOrEmpty(newPath) && Directory.Exists(newPath))
-            {
-            }
-
             UpdateUiStateForFolderPaths();
         }
     }
@@ -959,27 +947,17 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
     private void TxtImageFolder_PreviewKeyDown(object sender, KeyEventArgs keyEventArgs)
     {
-        if (keyEventArgs.Key == Key.Enter && sender is TextBox) // Corrected line
+        if (keyEventArgs.Key == Key.Enter && sender is TextBox)
         {
-            // Trigger the same logic as LostFocus when Enter is pressed
             TxtImageFolder_LostFocus(sender, new RoutedEventArgs(LostFocusEvent, sender));
-            // Prevent the Enter key from being processed further (e.g., adding a newline)
-            keyEventArgs.Handled = true; // Corrected line
+            keyEventArgs.Handled = true;
         }
     }
 
     private void TxtRomFolder_LostFocus(object sender, RoutedEventArgs routedEventArgs)
     {
-        if (sender is TextBox textBox)
+        if (sender is TextBox)
         {
-            var newPath = textBox.Text.Trim();
-
-            // Only update the 'last valid path' if the new path is actually valid.
-            // Do not revert the text if it's invalid, allowing the user to correct it.
-            if (!string.IsNullOrEmpty(newPath) && Directory.Exists(newPath))
-            {
-            }
-
             UpdateUiStateForFolderPaths();
         }
     }
@@ -1053,7 +1031,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         // Also clear suggestions if paths become invalid
         if (!romPathValid || !imagePathValid)
         {
-            LstMissingImages.Items.Clear();
+            MissingImages.Clear();
             SimilarImages.Clear();
             LblSearchQuery.Content = null;
             UpdateMissingCount();

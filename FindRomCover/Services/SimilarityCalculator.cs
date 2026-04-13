@@ -42,13 +42,24 @@ public static class SimilarityCalculator
                     cancellationToken.ThrowIfCancellationRequested();
                     var imageName = Path.GetFileNameWithoutExtension(imageFile);
 
-                    var similarityScore = algorithm switch
+                    double similarityScore;
+                    switch (algorithm)
                     {
-                        "Levenshtein Distance" => CalculateLevenshteinSimilarity(selectedFileName, imageName),
-                        "Jaccard Similarity" => CalculateJaccardIndex(selectedFileName, imageName),
-                        "Jaro-Winkler Distance" => CalculateJaroWinklerDistance(selectedFileName, imageName),
-                        _ => throw new NotImplementedException($"Algorithm {algorithm} is not implemented.")
-                    };
+                        case "Levenshtein Distance":
+                            similarityScore = CalculateLevenshteinSimilarity(selectedFileName, imageName);
+                            break;
+                        case "Jaccard Similarity":
+                            similarityScore = CalculateJaccardIndex(selectedFileName, imageName);
+                            break;
+                        case "Jaro-Winkler Distance":
+                            similarityScore = CalculateJaroWinklerDistance(selectedFileName, imageName);
+                            break;
+                        default:
+                            var errorMessage = $"Algorithm '{algorithm}' is not implemented.";
+                            var ex = new NotImplementedException(errorMessage);
+                            _ = ErrorLogger.LogAsync(ex, errorMessage);
+                            throw ex;
+                    }
 
                     if (similarityScore >= similarityThreshold)
                     {

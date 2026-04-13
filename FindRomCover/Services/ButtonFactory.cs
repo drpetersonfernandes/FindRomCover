@@ -37,6 +37,8 @@ public static class ButtonFactory
     {
         if (string.IsNullOrEmpty(imagePath))
         {
+            const string errorMessage = "CreateContextMenu called with null or empty imagePath";
+            _ = ErrorLogger.LogAsync(new ArgumentException(errorMessage, nameof(imagePath)), errorMessage);
             return existingMenu ?? new ContextMenu(); // Return existing or empty menu
         }
 
