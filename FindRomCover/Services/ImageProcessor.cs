@@ -1,12 +1,36 @@
 using System.IO;
 using System.Windows;
-using MessageBox = System.Windows.MessageBox;
 using ImageMagick;
 
 namespace FindRomCover.Services;
 
+/// <summary>
+/// Provides image processing functionality for converting, saving, and manipulating image files.
+/// </summary>
+/// <remarks>
+/// This service uses the Magick.NET library for robust image processing capabilities.
+/// It includes retry logic for handling file locking issues and atomic file operations
+/// to prevent corruption during save operations.
+/// </remarks>
 public static class ImageProcessor
 {
+    /// <summary>
+    /// Represents the result of an image save operation, containing success status and error details if applicable.
+    /// </summary>
+    /// <param name="Success">Indicates whether the save operation was successful.</param>
+    /// <param name="ErrorMessage">The error message to display to the user if the operation failed.</param>
+    /// <param name="ErrorTitle">The title for the error dialog.</param>
+    /// <param name="ErrorIcon">The icon to display in the error dialog.</param>
+    /// <param name="Exception">The exception that caused the failure, if any.</param>
+    /// <param name="LogContext">Additional context information for logging purposes.</param>
+    public sealed record ImageSaveResult(
+        bool Success,
+        string? ErrorMessage = null,
+        string? ErrorTitle = null,
+        MessageBoxImage ErrorIcon = MessageBoxImage.None,
+        Exception? Exception = null,
+        string? LogContext = null);
+
     /// <summary>
     /// Cleans up orphaned .tmp files from previous application crashes.
     /// Should be called on application startup for directories where images are saved.
@@ -38,40 +62,76 @@ public static class ImageProcessor
         }
     }
 
-    public static bool ConvertAndSaveImage(string sourcePath, string targetPath)
+    /// <summary>
+    /// Converts an image file to PNG format and saves it to the specified target path asynchronously.
+    /// </summary>
+    /// <param name="sourcePath">The path to the source image file.</param>
+    /// <param name="targetPath">The path where the converted PNG image should be saved.</param>
+    /// <param name="cancellationToken">A cancellation token to allow the operation to be cancelled.</param>
+    /// <returns>
+    /// A <see cref="ImageSaveResult"/> containing the result of the operation.
+    /// Success is true if the image was successfully converted and saved.
+    /// </returns>
+    /// <exception cref="OperationCanceledException">Thrown when the operation is cancelled via the cancellationToken.</exception>
+    /// <remarks>
+    /// This method performs several validation checks before processing:
+    /// 1. Verifies source and target paths are different
+    /// 2. Tests write permissions to the target directory
+    /// 3. Handles existing file deletion with appropriate error messages
+    /// 
+    /// The conversion process:
+    /// 1. Auto-orients the image based on EXIF data
+    /// 2. Sets PNG format with 90% quality
+    /// 3. Uses retry logic for handling file locking issues
+    /// </remarks>
+    public static Task<ImageSaveResult> ConvertAndSaveImageAsync(string sourcePath, string targetPath, CancellationToken cancellationToken)
+    {
+        return Task.Run(async () => await ConvertAndSaveImageCoreAsync(sourcePath, targetPath, cancellationToken), cancellationToken);
+    }
+
+    /// <summary>
+    /// Core implementation for converting and saving an image.
+    /// </summary>
+    /// <param name="sourcePath">The path to the source image file.</param>
+    /// <param name="targetPath">The target path for the converted image.</param>
+    /// <param name="cancellationToken">A cancellation token to allow the operation to be cancelled.</param>
+    /// <returns>A <see cref="ImageSaveResult"/> containing the result of the operation.</returns>
+    private static async Task<ImageSaveResult> ConvertAndSaveImageCoreAsync(string sourcePath, string targetPath, CancellationToken cancellationToken)
     {
         var directory = Path.GetDirectoryName(targetPath);
         if (directory == null)
         {
-            return false;
+            return new ImageSaveResult(false, "Invalid target path.", "Error", MessageBoxImage.Error);
         }
 
         if (sourcePath == targetPath)
         {
-            MessageBox.Show("Source and target paths are the same.\n\n" +
-                            "Please choose another target path.", "Error",
-                MessageBoxButton.OK, MessageBoxImage.Error);
-            return false;
+            return new ImageSaveResult(false, "Source and target paths are the same.\n\nPlease choose another target path.", "Error", MessageBoxImage.Error);
         }
 
         try
         {
             // Test if we can write to the directory
             var testFile = Path.Combine(directory, $"{Guid.NewGuid()}.tmp");
-            File.WriteAllText(testFile, string.Empty);
+            await File.WriteAllTextAsync(testFile, string.Empty, cancellationToken).ConfigureAwait(false);
             File.Delete(testFile);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Cannot write to directory: {directory}\n\n" +
-                            $"Error: {ex.Message}\n\n" +
-                            $"Try running as administrator.",
-                "Permission Error", MessageBoxButton.OK, MessageBoxImage.Error);
-
-            _ = ErrorLogger.LogAsync(ex, $"Cannot write to directory: {directory}");
-
-            return false;
+            return new ImageSaveResult(
+                false,
+                $"Cannot write to directory: {directory}\n\nError: {ex.Message}\n\nTry running as administrator.",
+                "Permission Error",
+                MessageBoxImage.Error,
+                ex,
+                $"Cannot write to directory: {directory}");
         }
+
+        cancellationToken.ThrowIfCancellationRequested();
 
         if (File.Exists(targetPath))
         {
@@ -81,39 +141,49 @@ public static class ImageProcessor
             }
             catch (IOException ex)
             {
-                MessageBox.Show($"The file '{Path.GetFileName(targetPath)}' is in use by another process.",
+                return new ImageSaveResult(false,
+                    $"The file '{Path.GetFileName(targetPath)}' is in use by another process.",
                     "File in Use",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
-
-                _ = ErrorLogger.LogAsync(ex, $"User cancelled retry for file in use: {targetPath}");
-
-                return false;
+                    MessageBoxImage.Error,
+                    ex,
+                    $"User cancelled retry for file in use: {targetPath}");
             }
             catch (UnauthorizedAccessException ex)
             {
-                MessageBox.Show($"Access denied to file: {targetPath}\n\nTry running as administrator.",
-                    "Permission Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                _ = ErrorLogger.LogAsync(ex, $"Access denied: {targetPath}");
-
-                return false;
+                return new ImageSaveResult(false,
+                    $"Access denied to file: {targetPath}\n\nTry running as administrator.",
+                    "Permission Error",
+                    MessageBoxImage.Error,
+                    ex,
+                    $"Access denied: {targetPath}");
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error deleting file: {ex.Message}", "Error",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
-                _ = ErrorLogger.LogAsync(ex, $"Error deleting file: {targetPath}");
-
-                return false;
+                return new ImageSaveResult(false,
+                    $"Error deleting file: {ex.Message}",
+                    "Error",
+                    MessageBoxImage.Error,
+                    ex,
+                    $"Error deleting file: {targetPath}");
             }
         }
 
-        return ProcessImage(sourcePath, targetPath);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return await ProcessImageAsync(sourcePath, targetPath, cancellationToken).ConfigureAwait(false);
     }
 
-    private static bool ProcessImage(string sourcePath, string targetPath)
+    /// <summary>
+    /// Processes the image using Magick.NET with proper validation.
+    /// </summary>
+    /// <param name="sourcePath">The source image path.</param>
+    /// <param name="targetPath">The target path for the processed image.</param>
+    /// <param name="cancellationToken">A cancellation token to allow the operation to be cancelled.</param>
+    /// <returns>A <see cref="ImageSaveResult"/> containing the result of the operation.</returns>
+    private static async Task<ImageSaveResult> ProcessImageAsync(string sourcePath, string targetPath, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(sourcePath) || !File.Exists(sourcePath))
-            return false;
+            return new ImageSaveResult(false, "Source image could not be found.", "Image Not Found", MessageBoxImage.Error);
 
         try
         {
@@ -132,18 +202,37 @@ public static class ImageProcessor
             magickImage.Format = MagickFormat.Png;
 
             // Write to target path with retry logic for file locking issues
-            return WriteImageWithRetry(magickImage, targetPath, sourcePath);
+            return await WriteImageWithRetryAsync(magickImage, targetPath, sourcePath, cancellationToken).ConfigureAwait(false);
         }
         catch (MagickException ex)
         {
-            MessageBox.Show($"Error processing image with Magick.NET: {ex.Message}", "Image Processing Error",
-                MessageBoxButton.OK, MessageBoxImage.Error);
-            _ = ErrorLogger.LogAsync(ex, $"Magick.NET error: {sourcePath}");
-            return false;
+            return new ImageSaveResult(false,
+                $"Error processing image with Magick.NET: {ex.Message}",
+                "Image Processing Error",
+                MessageBoxImage.Error,
+                ex,
+                $"Magick.NET error: {sourcePath}");
         }
     }
 
-    private static bool WriteImageWithRetry(MagickImage magickImage, string targetPath, string sourcePath)
+    /// <summary>
+    /// Writes the image to the target path with retry logic for handling file locking issues.
+    /// </summary>
+    /// <param name="magickImage">The MagickImage to write.</param>
+    /// <param name="targetPath">The target path for the image.</param>
+    /// <param name="sourcePath">The source path (used for error messages).</param>
+    /// <param name="cancellationToken">A cancellation token to allow the operation to be cancelled.</param>
+    /// <returns>A <see cref="ImageSaveResult"/> indicating success or failure with details.</returns>
+    /// <exception cref="OperationCanceledException">Thrown when the operation is cancelled via the cancellationToken.</exception>
+    /// <remarks>
+    /// This method implements exponential backoff retry logic to handle transient file locking
+    /// issues commonly caused by antivirus software, cloud sync services (OneDrive), or
+    /// other applications accessing the file.
+    /// 
+    /// The write process uses a temporary file followed by an atomic move operation to ensure
+    /// that the target file is never in a partially written state.
+    /// </remarks>
+    private static async Task<ImageSaveResult> WriteImageWithRetryAsync(MagickImage magickImage, string targetPath, string sourcePath, CancellationToken cancellationToken)
     {
         const int maxRetries = 5;
         const int baseDelayMs = 100;
@@ -154,6 +243,8 @@ public static class ImageProcessor
         {
             for (var attempt = 1; attempt <= maxRetries; attempt++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 try
                 {
                     // Clean up any leftover temp file from previous attempts
@@ -170,7 +261,7 @@ public static class ImageProcessor
                     }
 
                     // Write to temporary file first
-                    magickImage.Write(tempPath);
+                    await magickImage.WriteAsync(tempPath, cancellationToken).ConfigureAwait(false);
 
                     // Ensure the file was written successfully
                     if (!File.Exists(tempPath))
@@ -183,35 +274,46 @@ public static class ImageProcessor
                     // and the new file is in place, or it fails and the original remains
                     File.Move(tempPath, targetPath, true);
 
-                    return File.Exists(targetPath);
+                    return File.Exists(targetPath)
+                        ? new ImageSaveResult(true)
+                        : new ImageSaveResult(false,
+                            "The image was processed but the target file was not created.",
+                            "File Write Error",
+                            MessageBoxImage.Error,
+                            new IOException("Target file was not created"),
+                            $"WriteBlob failed for: {sourcePath}");
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
                 }
                 catch (IOException ex) when (attempt < maxRetries)
                 {
                     lastException = ex;
                     // Calculate delay with exponential backoff (100ms, 200ms, 400ms, 800ms, 1600ms)
                     var delay = baseDelayMs * Math.Pow(2, attempt - 1);
-                    Thread.Sleep((int)delay);
+                    await Task.Delay((int)delay, cancellationToken).ConfigureAwait(false);
                 }
                 catch (UnauthorizedAccessException ex) when (attempt < maxRetries)
                 {
                     lastException = ex;
                     // Retry on permission issues (may be caused by antivirus/OneDrive)
                     var delay = baseDelayMs * Math.Pow(2, attempt - 1);
-                    Thread.Sleep((int)delay);
+                    await Task.Delay((int)delay, cancellationToken).ConfigureAwait(false);
                 }
                 catch (MagickException ex) when (attempt < maxRetries && ex.Message.Contains("WriteBlob"))
                 {
                     lastException = ex;
                     // Retry on WriteBlob errors specifically
                     var delay = baseDelayMs * Math.Pow(2, attempt - 1);
-                    Thread.Sleep((int)delay);
+                    await Task.Delay((int)delay, cancellationToken).ConfigureAwait(false);
                 }
                 catch (Exception ex) when (attempt < maxRetries)
                 {
                     lastException = ex;
                     // Catch any other exceptions and retry
                     var delay = baseDelayMs * Math.Pow(2, attempt - 1);
-                    Thread.Sleep((int)delay);
+                    await Task.Delay((int)delay, cancellationToken).ConfigureAwait(false);
                 }
             }
         }
@@ -240,13 +342,12 @@ public static class ImageProcessor
             errorMessage += $"\n\nLast error: {lastException.Message}";
         }
 
-        MessageBox.Show(errorMessage, "File Write Error",
-            MessageBoxButton.OK, MessageBoxImage.Error);
-
-        _ = ErrorLogger.LogAsync(
+        return new ImageSaveResult(
+            false,
+            errorMessage,
+            "File Write Error",
+            MessageBoxImage.Error,
             lastException ?? new IOException("Write failed after all retries"),
             $"WriteBlob failed after {maxRetries} retries for: {sourcePath}");
-
-        return false;
     }
 }

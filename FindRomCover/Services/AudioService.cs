@@ -3,12 +3,31 @@ using System.Windows.Media;
 
 namespace FindRomCover.Services;
 
+/// <summary>
+/// Provides audio feedback functionality for user interactions.
+/// </summary>
+/// <remarks>
+/// This service initializes a MediaPlayer instance on the UI thread and plays a click sound
+/// in response to user actions. It gracefully handles missing audio files, codec issues,
+/// and environment problems (e.g., missing Windows Media Player components).
+/// 
+/// The service automatically disables itself if audio playback fails to prevent repeated errors.
+/// </remarks>
 public class AudioService : IAudioService
 {
     private MediaPlayer? _mediaPlayer;
     private Uri? _soundUri;
     private bool _isSoundAvailable;
 
+    /// <summary>
+    /// Initializes a new instance of the AudioService.
+    /// Attempts to load and pre-buffer the click sound from the application's audio folder.
+    /// </summary>
+    /// <remarks>
+    /// The constructor attempts to initialize audio playback on the UI thread (STA).
+    /// If the sound file is missing or audio infrastructure is unavailable, the service
+    /// silently disables itself without throwing exceptions.
+    /// </remarks>
     public AudioService()
     {
         var soundPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "audio", "click.mp3");
@@ -51,7 +70,7 @@ public class AudioService : IAudioService
 
                 // For any other initialization error, log it.
                 var errorMessage =
-                    $"Audio service initialization failed for: {soundPath}. Audio feedback will be disabled. Error: {ex.Message}";
+                    $"Audio service initialization failed for: {soundPath}. Audio feedback will be disabled.";
                 _ = ErrorLogger.LogAsync(ex, errorMessage);
             }
         }
@@ -75,6 +94,10 @@ public class AudioService : IAudioService
         }
     }
 
+    /// <summary>
+    /// Initializes the MediaPlayer with the specified sound file.
+    /// </summary>
+    /// <param name="soundPath">The path to the sound file.</param>
     private void InitializeMediaPlayer(string soundPath)
     {
         _mediaPlayer = new MediaPlayer();
@@ -86,6 +109,16 @@ public class AudioService : IAudioService
         _isSoundAvailable = true;
     }
 
+    /// <summary>
+    /// Handles media playback failures by disabling audio.
+    /// </summary>
+    /// <param name="sender">The source of the event.</param>
+    /// <param name="e">Exception information for the failure.</param>
+    /// <remarks>
+    /// Silently handles known codec/media infrastructure errors (e.g., 0xC00D11BA)
+    /// that indicate missing codecs or incompatible Windows Media Foundation components.
+    /// These are environment issues, not application bugs.
+    /// </remarks>
     private void OnMediaFailed(object? sender, ExceptionEventArgs e)
     {
         _isSoundAvailable = false; // Prevent further attempts
@@ -98,9 +131,17 @@ public class AudioService : IAudioService
             return;
         }
 
-        _ = ErrorLogger.LogAsync(e.ErrorException, $"Failed to play sound: {_soundUri}");
+        _ = ErrorLogger.LogAsync(e.ErrorException, $"Error playing sound: {_soundUri}");
     }
 
+    /// <summary>
+    /// Plays the click sound if audio is available.
+    /// </summary>
+    /// <remarks>
+    /// Stops any currently playing sound before starting playback to ensure
+    /// rapid clicks are properly audible. If playback fails, audio is disabled
+    /// to prevent repeated errors.
+    /// </remarks>
     public void PlayClickSound()
     {
         if (!_isSoundAvailable) return;
@@ -118,6 +159,9 @@ public class AudioService : IAudioService
         }
     }
 
+    /// <summary>
+    /// Releases the MediaPlayer resources.
+    /// </summary>
     public void Dispose()
     {
         try

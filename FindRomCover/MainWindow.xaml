@@ -11,24 +11,33 @@
                       WindowStartupLocation="CenterScreen">
 
     <Window.Resources>
-        <!-- DataTemplate for image cells - kept here because it references MainWindow event handlers -->
+        <!-- DataTemplate for image cells -->
         <DataTemplate x:Key="ImageCellTemplate">
             <Button Style="{StaticResource ImageSuggestionButtonStyle}"
                     Click="ImageCell_Click"
-                    ContextMenuOpening="Image_ContextMenuOpening">
+                    ContextMenuOpening="Image_ContextMenuOpening"
+                    AutomationProperties.Name="{Binding ImageName, StringFormat='Image: {0}'}"
+                    AutomationProperties.HelpText="{Binding SimilarityScore, StringFormat='Similarity: {0:F2}%'}">
                 <StackPanel>
-                    <Image
-                        Width="{Binding Path=Settings.ImageWidth, RelativeSource={RelativeSource AncestorType=Window}}"
-                        Height="{Binding Path=Settings.ImageHeight, RelativeSource={RelativeSource AncestorType=Window}}"
-                        Source="{Binding DisplayImage}" />
-                    <TextBlock HorizontalAlignment="Center" Text="{Binding ImageName}" FontWeight="Bold"
-                               Margin="0,5,0,0" TextTrimming="CharacterEllipsis" ToolTip="{Binding ImageName}"/>
+                        <Image
+                        Width="{Binding Path=Settings.ImageWidth, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=200}"
+                        Height="{Binding Path=Settings.ImageHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=200}"
+                        Source="{Binding DisplayImage, FallbackValue={x:Null}}" />
+                    <TextBlock HorizontalAlignment="Center" Text="{Binding ImageName, FallbackValue=''}" FontWeight="Bold"
+                               Margin="0,5,0,0" TextTrimming="CharacterEllipsis" ToolTip="{Binding ImageName, FallbackValue=''}"/>
                     <TextBlock HorizontalAlignment="Center"
-                               Text="{Binding SimilarityScore, StringFormat={}{0:F2}%}" FontWeight="Bold" />
+                               Text="{Binding SimilarityScore, StringFormat={}{0:F2}%, FallbackValue='0.00%'}" FontWeight="Bold" />
                 </StackPanel>
             </Button>
         </DataTemplate>
     </Window.Resources>
+
+    <Window.InputBindings>
+        <!-- Keyboard shortcuts for common actions -->
+        <KeyBinding Key="F5" Command="{Binding CheckForMissingImagesCommand}" />
+        <KeyBinding Key="Delete" Command="{Binding RemoveSelectedItemCommand}" />
+        <KeyBinding Key="Escape" Command="{Binding ExitCommand}" />
+    </Window.InputBindings>
 
     <Grid>
         <Grid.RowDefinitions>
@@ -36,7 +45,9 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Menu Grid.Row="0" Name="MainMenu">
+        <Menu Grid.Row="0" Name="MainMenu"
+              AutomationProperties.Name="Main Menu"
+              AutomationProperties.HelpText="Application menu with settings and options">
             <!-- Menu Items remain the same, but placed here for context -->
             <MenuItem x:Name="MenuSimilarityAlgorithms" Header="Set Similarity Algorithm">
                 <MenuItem x:Name="MenuAlgorithmJaccard" Click="SetSimilarityAlgorithm_Click"
@@ -89,32 +100,29 @@
                     <MenuItem.Icon>
                         <Image Source="pack://application:,,,/images/theme.png" Width="16" Height="16" />
                     </MenuItem.Icon>
-                    <MenuItem x:Name="RedAccent" Header="Red" Click="ChangeAccentColor_Click" IsCheckable="True" />
-                    <MenuItem x:Name="GreenAccent" Header="Green" Click="ChangeAccentColor_Click" IsCheckable="True" />
-                    <MenuItem x:Name="BlueAccent" Header="Blue" Click="ChangeAccentColor_Click" IsCheckable="True" />
-                    <MenuItem x:Name="PurpleAccent" Header="Purple" Click="ChangeAccentColor_Click" IsCheckable="True" />
-                    <MenuItem x:Name="OrangeAccent" Header="Orange" Click="ChangeAccentColor_Click" IsCheckable="True" />
-                    <MenuItem x:Name="LimeAccent" Header="Lime" Click="ChangeAccentColor_Click" IsCheckable="True" />
-                    <MenuItem x:Name="EmeraldAccent" Header="Emerald" Click="ChangeAccentColor_Click"
-                              IsCheckable="True" />
-                    <MenuItem x:Name="TealAccent" Header="Teal" Click="ChangeAccentColor_Click" IsCheckable="True" />
-                    <MenuItem x:Name="CyanAccent" Header="Cyan" Click="ChangeAccentColor_Click" IsCheckable="True" />
-                    <MenuItem x:Name="CobaltAccent" Header="Cobalt" Click="ChangeAccentColor_Click" IsCheckable="True" />
-                    <MenuItem x:Name="IndigoAccent" Header="Indigo" Click="ChangeAccentColor_Click" IsCheckable="True" />
-                    <MenuItem x:Name="VioletAccent" Header="Violet" Click="ChangeAccentColor_Click" IsCheckable="True" />
-                    <MenuItem x:Name="PinkAccent" Header="Pink" Click="ChangeAccentColor_Click" IsCheckable="True" />
-                    <MenuItem x:Name="MagentaAccent" Header="Magenta" Click="ChangeAccentColor_Click"
-                              IsCheckable="True" />
-                    <MenuItem x:Name="CrimsonAccent" Header="Crimson" Click="ChangeAccentColor_Click"
-                              IsCheckable="True" />
-                    <MenuItem x:Name="AmberAccent" Header="Amber" Click="ChangeAccentColor_Click" IsCheckable="True" />
-                    <MenuItem x:Name="YellowAccent" Header="Yellow" Click="ChangeAccentColor_Click" IsCheckable="True" />
-                    <MenuItem x:Name="BrownAccent" Header="Brown" Click="ChangeAccentColor_Click" IsCheckable="True" />
-                    <MenuItem x:Name="OliveAccent" Header="Olive" Click="ChangeAccentColor_Click" IsCheckable="True" />
-                    <MenuItem x:Name="SteelAccent" Header="Steel" Click="ChangeAccentColor_Click" IsCheckable="True" />
-                    <MenuItem x:Name="MauveAccent" Header="Mauve" Click="ChangeAccentColor_Click" IsCheckable="True" />
-                    <MenuItem x:Name="TaupeAccent" Header="Taupe" Click="ChangeAccentColor_Click" IsCheckable="True" />
-                    <MenuItem x:Name="SiennaAccent" Header="Sienna" Click="ChangeAccentColor_Click" IsCheckable="True" />
+                    <MenuItem x:Name="RedAccent" Header="Red" Click="ChangeAccentColor_Click" IsCheckable="True" Tag="Red" />
+                    <MenuItem x:Name="GreenAccent" Header="Green" Click="ChangeAccentColor_Click" IsCheckable="True" Tag="Green" />
+                    <MenuItem x:Name="BlueAccent" Header="Blue" Click="ChangeAccentColor_Click" IsCheckable="True" Tag="Blue" />
+                    <MenuItem x:Name="PurpleAccent" Header="Purple" Click="ChangeAccentColor_Click" IsCheckable="True" Tag="Purple" />
+                    <MenuItem x:Name="OrangeAccent" Header="Orange" Click="ChangeAccentColor_Click" IsCheckable="True" Tag="Orange" />
+                    <MenuItem x:Name="LimeAccent" Header="Lime" Click="ChangeAccentColor_Click" IsCheckable="True" Tag="Lime" />
+                    <MenuItem x:Name="EmeraldAccent" Header="Emerald" Click="ChangeAccentColor_Click" IsCheckable="True" Tag="Emerald" />
+                    <MenuItem x:Name="TealAccent" Header="Teal" Click="ChangeAccentColor_Click" IsCheckable="True" Tag="Teal" />
+                    <MenuItem x:Name="CyanAccent" Header="Cyan" Click="ChangeAccentColor_Click" IsCheckable="True" Tag="Cyan" />
+                    <MenuItem x:Name="CobaltAccent" Header="Cobalt" Click="ChangeAccentColor_Click" IsCheckable="True" Tag="Cobalt" />
+                    <MenuItem x:Name="IndigoAccent" Header="Indigo" Click="ChangeAccentColor_Click" IsCheckable="True" Tag="Indigo" />
+                    <MenuItem x:Name="VioletAccent" Header="Violet" Click="ChangeAccentColor_Click" IsCheckable="True" Tag="Violet" />
+                    <MenuItem x:Name="PinkAccent" Header="Pink" Click="ChangeAccentColor_Click" IsCheckable="True" Tag="Pink" />
+                    <MenuItem x:Name="MagentaAccent" Header="Magenta" Click="ChangeAccentColor_Click" IsCheckable="True" Tag="Magenta" />
+                    <MenuItem x:Name="CrimsonAccent" Header="Crimson" Click="ChangeAccentColor_Click" IsCheckable="True" Tag="Crimson" />
+                    <MenuItem x:Name="AmberAccent" Header="Amber" Click="ChangeAccentColor_Click" IsCheckable="True" Tag="Amber" />
+                    <MenuItem x:Name="YellowAccent" Header="Yellow" Click="ChangeAccentColor_Click" IsCheckable="True" Tag="Yellow" />
+                    <MenuItem x:Name="BrownAccent" Header="Brown" Click="ChangeAccentColor_Click" IsCheckable="True" Tag="Brown" />
+                    <MenuItem x:Name="OliveAccent" Header="Olive" Click="ChangeAccentColor_Click" IsCheckable="True" Tag="Olive" />
+                    <MenuItem x:Name="SteelAccent" Header="Steel" Click="ChangeAccentColor_Click" IsCheckable="True" Tag="Steel" />
+                    <MenuItem x:Name="MauveAccent" Header="Mauve" Click="ChangeAccentColor_Click" IsCheckable="True" Tag="Mauve" />
+                    <MenuItem x:Name="TaupeAccent" Header="Taupe" Click="ChangeAccentColor_Click" IsCheckable="True" Tag="Taupe" />
+                    <MenuItem x:Name="SiennaAccent" Header="Sienna" Click="ChangeAccentColor_Click" IsCheckable="True" Tag="Sienna" />
                 </MenuItem>
             </MenuItem>
             <MenuItem Header="Donate">
@@ -132,7 +140,7 @@
                 </MenuItem>
             </MenuItem>
             <MenuItem Header="Exit">
-                <MenuItem Click="Exit_Click" Header="Exit">
+                <MenuItem Click="Exit_Click" Header="Exit" InputGestureText="Alt+F4">
                     <MenuItem.Icon>
                         <Image Source="pack://application:,,,/images/exit.png" Width="16" Height="16" />
                     </MenuItem.Icon>
@@ -166,9 +174,14 @@
                                      controls:TextBoxHelper.Watermark="Path to your ROM folder..."
                                      TextChanged="TxtRomFolder_TextChanged"
                                      LostFocus="TxtRomFolder_LostFocus"
-                                     PreviewKeyDown="TxtRomFolder_PreviewKeyDown" />
+                                     PreviewKeyDown="TxtRomFolder_PreviewKeyDown"
+                                     AutomationProperties.Name="ROM Folder Path"
+                                     AutomationProperties.HelpText="Enter the path to your ROM files folder"
+                                     TabIndex="1" />
                             <Button Grid.Column="1" Content="Browse..." Margin="5,0,0,0"
-                                    Click="BtnBrowseRomFolder_Click" />
+                                    Click="BtnBrowseRomFolder_Click"
+                                    AutomationProperties.Name="Browse ROM Folder"
+                                    TabIndex="2" />
                         </Grid>
                         <Grid Margin="0,5,0,5">
                             <Grid.ColumnDefinitions>
@@ -178,9 +191,14 @@
                                      controls:TextBoxHelper.Watermark="Path to your image folder..."
                                      TextChanged="TxtImageFolder_TextChanged"
                                      LostFocus="TxtImageFolder_LostFocus"
-                                     PreviewKeyDown="TxtImageFolder_PreviewKeyDown" />
+                                     PreviewKeyDown="TxtImageFolder_PreviewKeyDown"
+                                     AutomationProperties.Name="Image Folder Path"
+                                     AutomationProperties.HelpText="Enter the path to your cover images folder"
+                                     TabIndex="3" />
                             <Button Grid.Column="1" Content="Browse..." Margin="5,0,0,0"
-                                    Click="BtnBrowseImageFolder_Click" />
+                                    Click="BtnBrowseImageFolder_Click"
+                                    AutomationProperties.Name="Browse Image Folder"
+                                    TabIndex="4" />
                         </Grid>
                     </StackPanel>
                 </GroupBox>
@@ -188,10 +206,10 @@
                 <!-- Step 2: Missing Covers -->
                 <GroupBox Grid.Row="1" Margin="0,0,0,0">
                     <GroupBox.Header>
-<StackPanel Orientation="Horizontal">
-    <Label x:Name="LabelMissingRoms" Content="LIST OF MISSING COVERS" Padding="0,0,5,0" 
-           Foreground="{DynamicResource MahApps.Brushes.IdealForeground}" />
-</StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <Label x:Name="LabelMissingRoms" Content="LIST OF MISSING COVERS" Padding="0,0,5,0" 
+                                   Foreground="{DynamicResource MahApps.Brushes.IdealForeground}" />
+                        </StackPanel>
                     </GroupBox.Header>
                     <Grid>
                         <Grid.RowDefinitions>
@@ -200,16 +218,24 @@
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
                         <Button Grid.Row="0" Content="Check for Missing Images" x:Name="BtnCheckForMissingImages" Click="BtnCheckForMissingImages_Click"
-                                Margin="5"/>
+                                Margin="5"
+                                AutomationProperties.Name="Check for Missing Images"
+                                AutomationProperties.HelpText="Press to scan for ROM files without cover images"
+                                IsDefault="True"
+                                TabIndex="5" />
 
                         <Grid Grid.Row="1">
-                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                          AutomationProperties.Name="Missing Images List">
                                 <ListBox x:Name="LstMissingImages" 
                                          ItemsSource="{Binding MissingImages}"
                                          SelectionChanged="LstMissingImages_SelectionChanged"
                                          KeyDown="LstMissingImages_KeyDown"
                                          DisplayMemberPath="RomName"
-                                         BorderThickness="0" />
+                                         BorderThickness="0"
+                                         AutomationProperties.Name="Missing Images"
+                                         AutomationProperties.HelpText="List of ROM files without cover images. Press Delete to remove an item."
+                                         TabIndex="6" />
                             </ScrollViewer>
                             <controls:ProgressRing IsActive="{Binding IsCheckingMissing}" HorizontalAlignment="Center"
                                                    VerticalAlignment="Center" />
@@ -217,7 +243,10 @@
 
                         <Button Grid.Row="2" x:Name="BtnRemoveSelectedItem" Content="Remove Selected Item from List"
                                 Click="BtnRemoveSelectedItem_Click" Margin="5"
-                                IsEnabled="{Binding ElementName=LstMissingImages, Path=SelectedItem, Converter={StaticResource IsNotNullConverter}}" />
+                                IsEnabled="{Binding ElementName=LstMissingImages, Path=SelectedItem, Converter={StaticResource IsNotNullConverter}}"
+                                AutomationProperties.Name="Remove Selected Item"
+                                AutomationProperties.HelpText="Remove the selected ROM from the missing list"
+                                TabIndex="7" />
                     </Grid>
                 </GroupBox>
             </Grid>
@@ -230,12 +259,17 @@
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
-                    <Label x:Name="LblSearchQuery" Grid.Row="0" Margin="5,0,5,5" />
+                    <Label x:Name="LblSearchQuery" Grid.Row="0" Margin="5,0,5,5"
+                           AutomationProperties.Name="Search Query"
+                           AutomationProperties.LiveSetting="Polite" />
 
                     <Grid Grid.Row="1">
                         <!-- Image Display -->
-                        <ScrollViewer x:Name="ImageScrollViewer" VerticalScrollBarVisibility="Auto">
-                            <ItemsControl ItemsSource="{Binding SimilarImages}">
+                        <ScrollViewer x:Name="ImageScrollViewer" VerticalScrollBarVisibility="Auto"
+                                      AutomationProperties.Name="Similar Images Scroll Area">
+                            <ItemsControl ItemsSource="{Binding SimilarImages}"
+                                          AutomationProperties.Name="Similar Images"
+                                          AutomationProperties.HelpText="Images that match the selected ROM name">
                                 <ItemsControl.ItemTemplate>
                                     <StaticResource ResourceKey="ImageCellTemplate" />
                                 </ItemsControl.ItemTemplate>
@@ -267,7 +301,9 @@
                                            FontSize="16"
                                            FontWeight="SemiBold"
                                            HorizontalAlignment="Center"
-                                           Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}" />
+                                           Foreground="{DynamicResource MahApps.Brushes.ThemeForeground}"
+                                           AutomationProperties.Name="Loading"
+                                           AutomationProperties.LiveSetting="Assertive" />
                             </StackPanel>
                         </Grid>
 

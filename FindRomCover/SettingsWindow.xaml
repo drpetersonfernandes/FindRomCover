@@ -23,7 +23,9 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0" TextWrapping="Wrap" Margin="0,0,0,10">
+        <TextBlock Grid.Row="0" TextWrapping="Wrap" Margin="0,0,0,10"
+                   AutomationProperties.Name="Instructions"
+                   AutomationProperties.HelpText="Manage the list of supported ROM file extensions">
             Manage the list of supported ROM file extensions.
         </TextBlock>
 
@@ -31,17 +33,32 @@
                  x:Name="LstSupportedExtensions"
                  BorderBrush="Gray"
                  BorderThickness="1"
-                 ItemsSource="{Binding Source={StaticResource SortedExtensions}}" />
+                 ItemsSource="{Binding Source={StaticResource SortedExtensions}}"
+                 AutomationProperties.Name="Supported Extensions List"
+                 AutomationProperties.HelpText="List of file extensions that will be recognized as ROM files"
+                 TabIndex="1" />
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,10,0,0">
-            <Button x:Name="BtnAdd" Content="Add..." Width="100" Margin="0,0,10,0" Click="BtnAdd_Click"/>
+            <Button x:Name="BtnAdd" Content="Add..." Width="100" Margin="0,0,10,0" Click="BtnAdd_Click"
+                    AutomationProperties.Name="Add Extension"
+                    AutomationProperties.HelpText="Add a new file extension to the list"
+                    TabIndex="2" />
             <Button x:Name="BtnRemove" Content="Remove" Width="100" Click="BtnRemove_Click"
-                    IsEnabled="{Binding ElementName=LstSupportedExtensions, Path=SelectedItem, Converter={StaticResource IsNotNullConverter}}"/>
+                    IsEnabled="{Binding ElementName=LstSupportedExtensions, Path=SelectedItem, Converter={StaticResource IsNotNullConverter}}"
+                    AutomationProperties.Name="Remove Extension"
+                    AutomationProperties.HelpText="Remove the selected file extension from the list"
+                    TabIndex="3" />
         </StackPanel>
 
         <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
-            <Button x:Name="BtnSave" Content="Save" Width="100" Margin="0,0,10,0" Click="BtnSave_Click" IsDefault="True"/>
-            <Button x:Name="BtnCancel" Content="Cancel" Width="100" IsCancel="True" Click="BtnCancel_Click"/>
+            <Button x:Name="BtnSave" Content="Save" Width="100" Margin="0,0,10,0" Click="BtnSave_Click" IsDefault="True"
+                    AutomationProperties.Name="Save Extensions"
+                    AutomationProperties.HelpText="Save the list of extensions"
+                    TabIndex="4" />
+            <Button x:Name="BtnCancel" Content="Cancel" Width="100" IsCancel="True" Click="BtnCancel_Click"
+                    AutomationProperties.Name="Cancel"
+                    AutomationProperties.HelpText="Discard changes and close"
+                    TabIndex="5" />
         </StackPanel>
     </Grid>
 </controls:MetroWindow>

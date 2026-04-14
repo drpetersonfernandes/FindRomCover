@@ -8,22 +8,52 @@ using MessageBox = System.Windows.MessageBox;
 
 namespace FindRomCover.Managers;
 
+/// <summary>
+/// Manages application settings persistence and provides data binding support for UI updates.
+/// </summary>
+/// <remarks>
+/// This class handles loading and saving of application settings to an XML file (settings.xml).
+/// It implements <see cref="INotifyPropertyChanged"/> to support WPF data binding and automatic UI updates.
+/// 
+/// All property setters include validation and clamping to ensure values remain within valid ranges.
+/// Settings are automatically saved when properties change through the UI.
+/// </remarks>
 public class SettingsManager : INotifyPropertyChanged
 {
+    /// <summary>
+    /// Occurs when a property value changes.
+    /// </summary>
     public event PropertyChangedEventHandler? PropertyChanged;
 
+    /// <summary>
+    /// Raises the PropertyChanged event for the specified property.
+    /// </summary>
+    /// <param name="propertyName">The name of the property that changed.</param>
     private void OnPropertyChanged(string propertyName)
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 
+    /// <summary>
+    /// The path to the settings XML file in the application directory.
+    /// </summary>
     private static readonly string SettingsFilePath =
-        Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.xml");
+        Path.Combine(AppDomain.CurrentDomain.BaseDirectory, AppConstants.SettingsFileName);
 
+    /// <summary>
+    /// Lock object for thread-safe save operations.
+    /// </summary>
     private readonly object _saveLock = new();
 
     private double _similarityThreshold;
 
+    /// <summary>
+    /// Gets or sets the minimum similarity threshold (0-100) for image matching.
+    /// </summary>
+    /// <value>
+    /// A value between 0 and 100 representing the percentage similarity required
+    /// for an image to be considered a match. Default is 70.
+    /// </value>
     public double SimilarityThreshold
     {
         get => _similarityThreshold;
@@ -40,6 +70,13 @@ public class SettingsManager : INotifyPropertyChanged
 
     private bool _useMameDescription;
 
+    /// <summary>
+    /// Gets or sets whether to use MAME game descriptions for searching.
+    /// </summary>
+    /// <value>
+    /// <c>true</c> to search using MAME game descriptions instead of ROM filenames;
+    /// <c>false</c> to use ROM filenames directly. Default is false.
+    /// </value>
     public bool UseMameDescription
     {
         get => _useMameDescription;
@@ -54,6 +91,13 @@ public class SettingsManager : INotifyPropertyChanged
 
     private string[] _supportedExtensions = Array.Empty<string>();
 
+    /// <summary>
+    /// Gets or sets the array of supported ROM file extensions.
+    /// </summary>
+    /// <value>
+    /// An array of file extensions (without dots) that should be scanned when looking for ROM files.
+    /// Default includes common arcade and console ROM extensions.
+    /// </value>
     public string[] SupportedExtensions
     {
         get => _supportedExtensions;
@@ -68,6 +112,12 @@ public class SettingsManager : INotifyPropertyChanged
 
     private int _imageWidth;
 
+    /// <summary>
+    /// Gets or sets the width of image thumbnails in pixels.
+    /// </summary>
+    /// <value>
+    /// A value between 50 and 2000. Default is 300.
+    /// </value>
     public int ImageWidth
     {
         get => _imageWidth;
@@ -84,6 +134,12 @@ public class SettingsManager : INotifyPropertyChanged
 
     private int _imageHeight;
 
+    /// <summary>
+    /// Gets or sets the height of image thumbnails in pixels.
+    /// </summary>
+    /// <value>
+    /// A value between 50 and 2000. Default is 300.
+    /// </value>
     public int ImageHeight
     {
         get => _imageHeight;
@@ -100,6 +156,13 @@ public class SettingsManager : INotifyPropertyChanged
 
     private string _selectedSimilarityAlgorithm = string.Empty;
 
+    /// <summary>
+    /// Gets or sets the algorithm used for calculating string similarity.
+    /// </summary>
+    /// <value>
+    /// One of: "Levenshtein Distance", "Jaccard Similarity", "Jaro-Winkler Distance".
+    /// Default is "Jaro-Winkler Distance".
+    /// </value>
     public string SelectedSimilarityAlgorithm
     {
         get => _selectedSimilarityAlgorithm;
@@ -114,6 +177,12 @@ public class SettingsManager : INotifyPropertyChanged
 
     private string _baseTheme = string.Empty;
 
+    /// <summary>
+    /// Gets or sets the base theme for the application appearance.
+    /// </summary>
+    /// <value>
+    /// "Light" or "Dark". Default is "Light".
+    /// </value>
     public string BaseTheme
     {
         get => _baseTheme;
@@ -128,6 +197,13 @@ public class SettingsManager : INotifyPropertyChanged
 
     private string _accentColor = string.Empty;
 
+    /// <summary>
+    /// Gets or sets the accent color for the application theme.
+    /// </summary>
+    /// <value>
+    /// A color name such as "Blue", "Red", "Green", etc.
+    /// Default is "Blue".
+    /// </value>
     public string AccentColor
     {
         get => _accentColor;
@@ -142,6 +218,12 @@ public class SettingsManager : INotifyPropertyChanged
 
     private int _maxImagesToLoad = 30;
 
+    /// <summary>
+    /// Gets or sets the maximum number of similar images to load and display.
+    /// </summary>
+    /// <value>
+    /// The maximum number of images to load. Default is 30.
+    /// </value>
     public int MaxImagesToLoad
     {
         get => _maxImagesToLoad;
@@ -156,6 +238,12 @@ public class SettingsManager : INotifyPropertyChanged
 
     private int _imageLoaderMaxRetries = 3;
 
+    /// <summary>
+    /// Gets or sets the number of retry attempts when loading an image fails.
+    /// </summary>
+    /// <value>
+    /// The number of retry attempts. Default is 3.
+    /// </value>
     public int ImageLoaderMaxRetries
     {
         get => _imageLoaderMaxRetries;
@@ -170,6 +258,12 @@ public class SettingsManager : INotifyPropertyChanged
 
     private int _imageLoaderRetryDelayMilliseconds = 200;
 
+    /// <summary>
+    /// Gets or sets the delay between retry attempts when loading images.
+    /// </summary>
+    /// <value>
+    /// The delay in milliseconds. Default is 200.
+    /// </value>
     public int ImageLoaderRetryDelayMilliseconds
     {
         get => _imageLoaderRetryDelayMilliseconds;
@@ -184,6 +278,12 @@ public class SettingsManager : INotifyPropertyChanged
 
     private int _apiTimeoutSeconds = 30;
 
+    /// <summary>
+    /// Gets or sets the timeout duration for API calls when sending error reports.
+    /// </summary>
+    /// <value>
+    /// The timeout in seconds. Default is 30.
+    /// </value>
     public int ApiTimeoutSeconds
     {
         get => _apiTimeoutSeconds;
@@ -196,6 +296,13 @@ public class SettingsManager : INotifyPropertyChanged
         }
     }
 
+    /// <summary>
+    /// Initializes a new instance of the SettingsManager class and loads settings from file.
+    /// </summary>
+    /// <remarks>
+    /// If the settings file does not exist, default settings are created and saved.
+    /// If loading fails, an error is shown and default settings are used.
+    /// </remarks>
     public SettingsManager()
     {
         LoadSettings();
@@ -300,6 +407,20 @@ public class SettingsManager : INotifyPropertyChanged
         }
     }
 
+    /// <summary>
+    /// Saves the current settings to the settings.xml file.
+    /// </summary>
+    /// <remarks>
+    /// This method uses a temporary file approach for atomic writes:
+    /// 1. Writes to a temporary file first
+    /// 2. Copies the temp file to the target location
+    /// 3. Cleans up the temporary file
+    /// 
+    /// This ensures that the settings file is never in a partially written state,
+    /// even if the application crashes during the save operation.
+    /// 
+    /// Errors during save are shown to the user and logged.
+    /// </remarks>
     public void SaveSettings()
     {
         // Capture all settings values under lock to ensure consistency
@@ -384,12 +505,12 @@ public class SettingsManager : INotifyPropertyChanged
 
     private void SetDefaultSettings()
     {
-        _similarityThreshold = 70;
+        _similarityThreshold = double.Parse(AppConstants.Messages.DefaultSimilarityThreshold, CultureInfo.InvariantCulture);
         _supportedExtensions = GetDefaultExtensions();
         _imageWidth = 300;
         _imageHeight = 300;
-        _selectedSimilarityAlgorithm = "Jaro-Winkler Distance";
-        _baseTheme = "Light";
+        _selectedSimilarityAlgorithm = AppConstants.Algorithms.JaroWinkler;
+        _baseTheme = AppConstants.Themes.Light;
         _accentColor = "Blue";
         _useMameDescription = false;
     }

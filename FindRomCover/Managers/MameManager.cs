@@ -1,91 +1,50 @@
-using System.IO;
-using System.Windows;
+using FindRomCover.Models;
 using FindRomCover.Services;
 using MessagePack;
-using MessageBox = System.Windows.MessageBox;
 
 namespace FindRomCover.Managers;
 
+/// <summary>
+/// @deprecated This class is deprecated. Use MameData and MameDataService instead.
+/// This class is just a thin wrapper for backwards compatibility to enable gradual migration.
+/// </summary>
+/// <remarks>
+/// This class exists to maintain backwards compatibility with existing code that uses MameManager.
+/// New code should use <see cref="MameData"/> and <see cref="MameDataService"/> directly.
+/// </remarks>
 [MessagePackObject]
 public class MameManager
 {
+    /// <summary>
+    /// Gets or sets the MAME machine name (ROM name).
+    /// </summary>
     [Key(0)]
     public string MachineName { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Gets or sets the human-readable description of the arcade game.
+    /// </summary>
     [Key(1)]
     public string Description { get; set; } = string.Empty;
 
-    private static readonly string DefaultDatPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "mame.dat");
-
-    // Use Lazy<T> for thread-safe, one-time initialization of the MAME data cache.
-    private static readonly Lazy<List<MameManager>> MameDataCache = new(LoadMameDataFromFile, true);
-
+    /// <summary>
+    /// @deprecated This method is deprecated. Use MameDataService.LoadFromDat() instead.
+    /// </summary>
+    /// <returns>A list of MameManager objects containing MAME game data.</returns>
+    /// <remarks>
+    /// This method delegates to <see cref="MameDataService.LoadFromDat()"/> and converts
+    /// the results to legacy MameManager objects for backwards compatibility.
+    /// </remarks>
     public static List<MameManager> LoadFromDat()
     {
-        // Accessing .Value will trigger the LoadMameDataFromFile factory method once,
-        // and subsequent calls will return the cached result.
-        // Note: If the file is not found, an empty list is cached and returned on all
-        // subsequent calls. The application must be restarted to reload the data.
-        return MameDataCache.Value;
-    }
+        // Get data from the new service
+        var mameDataList = MameDataService.LoadFromDat();
 
-    private static List<MameManager> LoadMameDataFromFile()
-    {
-        var datPath = DefaultDatPath;
-
-        if (!File.Exists(datPath))
+        // Convert to legacy MameManager objects for backward compatibility
+        return mameDataList.Select(static data => new MameManager
         {
-            // Return empty list instead of throwing to prevent Lazy<T> from caching an exception.
-            // Note: The empty list is cached permanently; application restart is required to reload.
-            return [];
-        }
-
-        try
-        {
-            // Read the binary data from the DAT file
-            var binaryData = File.ReadAllBytes(datPath);
-
-            // Deserialize the binary data to a list of MameManager objects
-            return MessagePackSerializer.Deserialize<List<MameManager>>(binaryData);
-        }
-        catch (MessagePackSerializationException ex)
-        {
-            // Specific handling for MessagePack deserialization errors
-            const string contextMessage = "The file mame.dat is corrupted or not in the correct MessagePack format.";
-            _ = ErrorLogger.LogAsync(ex, contextMessage);
-
-            MessageBox.Show(contextMessage, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-
-            return []; // return an empty list
-        }
-        catch (IOException ex)
-        {
-            // Handle file access issues
-            const string contextMessage = "Error reading the file mame.dat (possibly locked by another process).";
-            _ = ErrorLogger.LogAsync(ex, contextMessage);
-
-            MessageBox.Show(contextMessage, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-
-            return []; // return an empty list
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            // Handle permission issues
-            const string contextMessage = "Access denied to the file mame.dat.";
-            _ = ErrorLogger.LogAsync(ex, contextMessage);
-
-            MessageBox.Show(contextMessage, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-
-            return []; // return an empty list
-        }
-        catch (Exception ex)
-        {
-            const string contextMessage = "An unexpected error occurred while loading mame.dat.";
-            _ = ErrorLogger.LogAsync(ex, contextMessage);
-
-            MessageBox.Show(contextMessage, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-
-            return []; // return an empty list
-        }
+            MachineName = data.MachineName,
+            Description = data.Description
+        }).ToList();
     }
 }

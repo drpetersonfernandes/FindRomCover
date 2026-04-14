@@ -7,10 +7,11 @@ using System.Globalization;
 using System.Windows.Documents;
 using System.Windows.Input;
 using FindRomCover.Managers;
-using FindRomCover.models;
+using FindRomCover.Models;
 using FindRomCover.Services;
 using Microsoft.Win32;
 using Application = System.Windows.Application;
+using ICommand = System.Windows.Input.ICommand;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 using MenuItem = System.Windows.Controls.MenuItem;
 using MessageBox = System.Windows.MessageBox;
@@ -27,7 +28,8 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
     private readonly SemaphoreSlim _findSimilarSemaphore = new(1, 1); // Semaphore to ensure only one search runs at a time
 
     public event PropertyChangedEventHandler? PropertyChanged;
-    public SettingsManager Settings => App.SettingsManager;
+    public SettingsManager Settings { get; }
+
     private string _selectedRomFileName = string.Empty;
 
     public ObservableCollection<ImageData> SimilarImages { get; set; } = [];
@@ -71,10 +73,25 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         }
     }
 
-    public MainWindow()
+    // Commands for keyboard shortcuts
+    public ICommand CheckForMissingImagesCommand { get; }
+    public ICommand RemoveSelectedItemCommand { get; }
+    public ICommand ExitCommand { get; }
+
+    public MainWindow(SettingsManager settingsManager)
     {
+        Settings = settingsManager ?? throw new ArgumentNullException(nameof(settingsManager));
         InitializeComponent();
         DataContext = this;
+
+        // Initialize commands
+        CheckForMissingImagesCommand = new DelegateCommand(
+            _ => BtnCheckForMissingImages_Click(this, new RoutedEventArgs()),
+            _ => BtnCheckForMissingImages?.IsEnabled ?? false);
+        RemoveSelectedItemCommand = new DelegateCommand(
+            _ => BtnRemoveSelectedItem_Click(this, new RoutedEventArgs()),
+            _ => LstMissingImages?.SelectedItem != null);
+        ExitCommand = new DelegateCommand(_ => Close());
 
         // Set folder paths from command-line arguments if provided by App.xaml.cs
         if (!string.IsNullOrEmpty(App.StartupImageFolderPath) && !string.IsNullOrEmpty(App.StartupRomFolderPath))
@@ -149,19 +166,19 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         }
     }
 
-    private static void DisableMameDescriptionSetting()
+    private void DisableMameDescriptionSetting()
     {
-        if (App.SettingsManager.UseMameDescription)
+        if (Settings.UseMameDescription)
         {
-            App.SettingsManager.UseMameDescription = false;
-            App.SettingsManager.SaveSettings();
+            Settings.UseMameDescription = false;
+            Settings.SaveSettings();
         }
     }
 
     private void UpdateBaseThemeMenuChecks()
     {
-        LightTheme.IsChecked = App.SettingsManager.BaseTheme == "Light";
-        DarkTheme.IsChecked = App.SettingsManager.BaseTheme == "Dark";
+        LightTheme.IsChecked = Settings.BaseTheme == "Light";
+        DarkTheme.IsChecked = Settings.BaseTheme == "Dark";
     }
 
     private async void AppSettingsManagerPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -173,8 +190,8 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
             switch (e.PropertyName)
             {
                 case nameof(SettingsManager.BaseTheme):
-                    LightTheme.IsChecked = App.SettingsManager.BaseTheme == "Light";
-                    DarkTheme.IsChecked = App.SettingsManager.BaseTheme == "Dark";
+                    LightTheme.IsChecked = Settings.BaseTheme == "Light";
+                    DarkTheme.IsChecked = Settings.BaseTheme == "Dark";
                     break;
                 case nameof(SettingsManager.AccentColor):
                     UpdateAccentColorChecks();
@@ -213,7 +230,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         if (sender is not MenuItem menuItem) return;
 
         var theme = menuItem.Name == "LightTheme" ? "Light" : "Dark";
-        App.ChangeTheme(theme, App.SettingsManager.AccentColor); // Use static App.ChangeTheme
+        App.ChangeTheme(theme, Settings.AccentColor); // Use static App.ChangeTheme
     }
 
     private void ChangeAccentColor_Click(object sender, RoutedEventArgs e)
@@ -221,12 +238,12 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         if (sender is not MenuItem menuItem) return;
 
         var accent = menuItem.Name.Replace("Accent", "");
-        App.ChangeTheme(App.SettingsManager.BaseTheme, accent); // Use static App.ChangeTheme
+        App.ChangeTheme(Settings.BaseTheme, accent); // Use static App.ChangeTheme
     }
 
     private void UpdateAccentColorChecks()
     {
-        var currentAccent = App.SettingsManager.AccentColor;
+        var currentAccent = Settings.AccentColor;
         foreach (var item in MenuAccentColors.Items)
         {
             if (item is not MenuItem { Header: not null } menuItem) continue;
@@ -310,7 +327,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
     private async Task LoadMissingImagesList(CancellationToken cancellationToken = default)
     {
-        if ((App.SettingsManager.SupportedExtensions.Length == 0))
+        if ((Settings.SupportedExtensions.Length == 0))
         {
             MessageBox.Show("No supported file extensions loaded. Please check file 'settings.xml' or edit them in the Settings menu.", "Warning",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -341,7 +358,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
                     var allRomNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                     var supportedExtensionsSet = new HashSet<string>(
-                        App.SettingsManager.SupportedExtensions.Select(static ext => "." + ext),
+                        Settings.SupportedExtensions.Select(static ext => "." + ext),
                         StringComparer.OrdinalIgnoreCase);
 
                     var enumerationOptions = new EnumerationOptions
@@ -382,7 +399,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
                         if (FindCorrespondingImage(romName, imageFolderPath) == null)
                         {
-                            if (App.SettingsManager.UseMameDescription &&
+                            if (Settings.UseMameDescription &&
                                 _mameLookup != null &&
                                 _mameLookup.TryGetValue(romName, out var description) &&
                                 !string.IsNullOrEmpty(description))
@@ -485,129 +502,139 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
     {
         try
         {
-            // --- Start of method: setup and early exit conditions ---
-            _findSimilarCts?.Cancel();
-            _findSimilarCts?.Dispose();
+            // Requery commands that depend on selection
+            CommandManager.InvalidateRequerySuggested();
 
-            if (LstMissingImages.SelectedItem == null)
-            {
-                SimilarImages.Clear();
-                LblSearchQuery.Content = null;
-                IsFindingSimilar = false;
-                HasSearchedSimilar = false;
-                _findSimilarCts = null;
-                return;
-            }
-
-            var imageFolderPath = GetValidatedImageFolderPath();
-            if (string.IsNullOrEmpty(imageFolderPath))
-            {
-                IsFindingSimilar = false;
-                _findSimilarCts = null;
-                return;
-            }
-
-            _findSimilarCts = new CancellationTokenSource();
-            var cancellationToken = _findSimilarCts.Token;
-
-            if (LstMissingImages.SelectedItem is not MissingImageItem selectedItem)
-            {
-                IsFindingSimilar = false;
-                _findSimilarCts = null;
-                return;
-            }
-
-            var romName = selectedItem.RomName;
-            var searchName = selectedItem.SearchName;
-            _selectedRomFileName = romName;
-
-            // --- Core logic with robust progress indicator handling ---
-            IsFindingSimilar = true;
             try
             {
-                await _findSimilarSemaphore.WaitAsync(cancellationToken);
+                // --- Start of method: setup and early exit conditions ---
+                _findSimilarCts?.Cancel();
+                _findSimilarCts?.Dispose();
+
+                if (LstMissingImages.SelectedItem == null)
+                {
+                    SimilarImages.Clear();
+                    LblSearchQuery.Content = null;
+                    IsFindingSimilar = false;
+                    HasSearchedSimilar = false;
+                    _findSimilarCts = null;
+                    return;
+                }
+
+                var imageFolderPath = GetValidatedImageFolderPath();
+                if (string.IsNullOrEmpty(imageFolderPath))
+                {
+                    IsFindingSimilar = false;
+                    _findSimilarCts = null;
+                    return;
+                }
+
+                _findSimilarCts = new CancellationTokenSource();
+                var cancellationToken = _findSimilarCts.Token;
+
+                if (LstMissingImages.SelectedItem is not MissingImageItem selectedItem)
+                {
+                    IsFindingSimilar = false;
+                    _findSimilarCts = null;
+                    return;
+                }
+
+                var romName = selectedItem.RomName;
+                var searchName = selectedItem.SearchName;
+                _selectedRomFileName = romName;
+
+                // --- Core logic with robust progress indicator handling ---
+                IsFindingSimilar = true;
                 try
                 {
-                    var similarityResult = await ButtonFactory.CreateSimilarImagesCollection(
-                        searchName,
-                        imageFolderPath,
-                        Settings.SimilarityThreshold,
-                        Settings.SelectedSimilarityAlgorithm,
-                        cancellationToken
-                    );
-
-                    // Only update UI if operation wasn't cancelled
-                    if (!cancellationToken.IsCancellationRequested)
+                    await _findSimilarSemaphore.WaitAsync(cancellationToken);
+                    try
                     {
-                        await Application.Current.Dispatcher.InvokeAsync(() =>
+                        var similarityResult = await ButtonFactory.CreateSimilarImagesCollection(
+                            searchName,
+                            imageFolderPath,
+                            Settings.SimilarityThreshold,
+                            Settings.SelectedSimilarityAlgorithm,
+                            cancellationToken
+                        );
+
+                        // Only update UI if operation wasn't cancelled
+                        if (!cancellationToken.IsCancellationRequested)
                         {
-                            // Check cancellation again inside the dispatcher to avoid race condition
-                            if (cancellationToken.IsCancellationRequested)
-                                return;
-
-                            var textBlock = new TextBlock();
-                            textBlock.Inlines.Add(new Run("Search Query: "));
-                            textBlock.Inlines.Add(new Run($"{searchName} ") { FontWeight = FontWeights.Bold });
-                            textBlock.Inlines.Add(new Run("for ROM: "));
-                            textBlock.Inlines.Add(new Run($"{romName} ") { FontWeight = FontWeights.Bold });
-                            textBlock.Inlines.Add(new Run("with "));
-                            textBlock.Inlines.Add(new Run($"{Settings.SelectedSimilarityAlgorithm} ") { FontWeight = FontWeights.Bold });
-                            textBlock.Inlines.Add(new Run("algorithm"));
-                            LblSearchQuery.Content = textBlock;
-
-                            SimilarImages.Clear();
-                            foreach (var imageData in similarityResult.SimilarImages) // Use SimilarImages from result
+                            await Application.Current.Dispatcher.InvokeAsync(() =>
                             {
-                                SimilarImages.Add(imageData);
-                            }
+                                // Check cancellation again inside the dispatcher to avoid race condition
+                                if (cancellationToken.IsCancellationRequested)
+                                    return;
 
-                            // Mark that a search has been performed
-                            HasSearchedSimilar = true;
+                                var textBlock = new TextBlock();
+                                textBlock.Inlines.Add(new Run("Search Query: "));
+                                textBlock.Inlines.Add(new Run($"{searchName} ") { FontWeight = FontWeights.Bold });
+                                textBlock.Inlines.Add(new Run("for ROM: "));
+                                textBlock.Inlines.Add(new Run($"{romName} ") { FontWeight = FontWeights.Bold });
+                                textBlock.Inlines.Add(new Run("with "));
+                                textBlock.Inlines.Add(new Run($"{Settings.SelectedSimilarityAlgorithm} ") { FontWeight = FontWeights.Bold });
+                                textBlock.Inlines.Add(new Run("algorithm"));
+                                LblSearchQuery.Content = textBlock;
 
-                            // --- NEW: Display processing errors to the user ---
-                            if (similarityResult.ProcessingErrors.Count > 0)
-                            {
-                                var errorSummary = $"Encountered {similarityResult.ProcessingErrors.Count} issues while processing images:\n\n";
-                                errorSummary += string.Join("\n", similarityResult.ProcessingErrors.Take(5)); // Show first 5 errors
-                                if (similarityResult.ProcessingErrors.Count > 5)
+                                SimilarImages.Clear();
+                                foreach (var imageData in similarityResult.SimilarImages) // Use SimilarImages from result
                                 {
-                                    errorSummary += $"\n...and {similarityResult.ProcessingErrors.Count - 5} more. Check the application log for full details.";
+                                    SimilarImages.Add(imageData);
                                 }
 
-                                MessageBox.Show(errorSummary, "Image Processing Warnings", MessageBoxButton.OK, MessageBoxImage.Warning);
-                            }
-                            // --- END NEW ---
-                        });
+                                // Mark that a search has been performed
+                                HasSearchedSimilar = true;
 
-                        ImageScrollViewer.ScrollToTop();
+                                // --- NEW: Display processing errors to the user ---
+                                if (similarityResult.ProcessingErrors.Count > 0)
+                                {
+                                    var errorSummary = $"Encountered {similarityResult.ProcessingErrors.Count} issues while processing images:\n\n";
+                                    errorSummary += string.Join("\n", similarityResult.ProcessingErrors.Take(5)); // Show first 5 errors
+                                    if (similarityResult.ProcessingErrors.Count > 5)
+                                    {
+                                        errorSummary += $"\n...and {similarityResult.ProcessingErrors.Count - 5} more. Check the application log for full details.";
+                                    }
+
+                                    MessageBox.Show(errorSummary, "Image Processing Warnings", MessageBoxButton.OK, MessageBoxImage.Warning);
+                                }
+                                // --- END NEW ---
+                            });
+
+                            ImageScrollViewer.ScrollToTop();
+                        }
+                    }
+                    finally
+                    {
+                        _findSimilarSemaphore.Release();
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    // This is an expected outcome when the selection changes quickly.
+                    // No action or logging needed. The 'finally' block ensures cleanup.
+                }
+                catch (Exception ex)
+                {
+                    // For any other unexpected error, log it and notify the user.
+                    // The check for cancellationToken prevents showing an error for a cancelled operation
+                    // that might throw a different exception type during unwinding.
+                    if (!cancellationToken.IsCancellationRequested)
+                    {
+                        MessageBox.Show($"An error occurred while searching for similar images: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                        _ = ErrorLogger.LogAsync(ex, "Error in LstMissingImages_SelectionChanged");
                     }
                 }
                 finally
                 {
-                    _findSimilarSemaphore.Release();
+                    // This block ensures the progress ring is always turned off,
+                    // whether the operation succeeded, was cancelled, or failed.
+                    IsFindingSimilar = false;
                 }
-            }
-            catch (OperationCanceledException)
-            {
-                // This is an expected outcome when the selection changes quickly.
-                // No action or logging needed. The 'finally' block ensures cleanup.
             }
             catch (Exception ex)
             {
-                // For any other unexpected error, log it and notify the user.
-                // The check for cancellationToken prevents showing an error for a cancelled operation
-                // that might throw a different exception type during unwinding.
-                if (!cancellationToken.IsCancellationRequested)
-                {
-                    MessageBox.Show($"An error occurred while searching for similar images: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    _ = ErrorLogger.LogAsync(ex, "Error in LstMissingImages_SelectionChanged");
-                }
-            }
-            finally
-            {
-                // This block ensures the progress ring is always turned off,
-                // whether the operation succeeded, was cancelled, or failed.
-                IsFindingSimilar = false;
+                _ = ErrorLogger.LogAsync(ex, "Error in LstMissingImages_SelectionChanged");
             }
         }
         catch (Exception ex)
@@ -620,11 +647,11 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
     {
         if (sender is FrameworkElement { DataContext: ImageData { ImagePath: not null } imageData })
         {
-            UseImage(imageData.ImagePath);
+            _ = UseImageAsync(imageData.ImagePath);
         }
     }
 
-    public void UseImage(string? imagePath)
+    public async Task UseImageAsync(string? imagePath)
     {
         var imageFolderPath = GetValidatedImageFolderPath();
 
@@ -639,7 +666,8 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
         try
         {
-            if (ImageProcessor.ConvertAndSaveImage(imagePath, newFileName))
+            var result = await ImageProcessor.ConvertAndSaveImageAsync(imagePath, newFileName, CancellationToken.None);
+            if (result.Success)
             {
                 App.AudioService.PlayClickSound();
                 RemoveSelectedItem();
@@ -709,8 +737,8 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         if (sender is not MenuItem menuItem) return;
 
         var algorithm = menuItem.Header.ToString() ?? "Jaro-Winkler Distance";
-        App.SettingsManager.SelectedSimilarityAlgorithm = algorithm; // Update App.Settings
-        App.SettingsManager.SaveSettings(); // Save the settings
+        Settings.SelectedSimilarityAlgorithm = algorithm; // Update App.Settings
+        Settings.SaveSettings(); // Save the settings
     }
 
     private void UpdateSimilarityAlgorithmChecks()
@@ -719,7 +747,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         {
             if (item is MenuItem menuItem)
             {
-                menuItem.IsChecked = menuItem.Header.ToString() == App.SettingsManager.SelectedSimilarityAlgorithm; // Use App.Settings
+                menuItem.IsChecked = menuItem.Header.ToString() == Settings.SelectedSimilarityAlgorithm; // Use App.Settings
             }
         }
     }
@@ -737,8 +765,8 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
             if (double.TryParse(headerText, out var rate))
             {
-                App.SettingsManager.SimilarityThreshold = rate;
-                App.SettingsManager.SaveSettings();
+                Settings.SimilarityThreshold = rate;
+                Settings.SaveSettings();
             }
             else
             {
@@ -759,7 +787,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
     private void UpdateSimilarityThresholdChecks()
     {
-        var currentThreshold = App.SettingsManager.SimilarityThreshold;
+        var currentThreshold = Settings.SimilarityThreshold;
 
         foreach (var item in MySimilarityMenu.Items)
         {
@@ -793,9 +821,9 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
         try
         {
-            App.SettingsManager.ImageWidth = size;
-            App.SettingsManager.ImageHeight = size;
-            App.SettingsManager.SaveSettings();
+            Settings.ImageWidth = size;
+            Settings.ImageHeight = size;
+            Settings.SaveSettings();
         }
         catch (Exception ex)
         {
@@ -805,7 +833,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
     private void UpdateThumbnailSizeMenuChecks()
     {
-        var currentSize = App.SettingsManager.ImageWidth;
+        var currentSize = Settings.ImageWidth;
 
         foreach (var item in ImageSizeMenu.Items)
         {
@@ -825,8 +853,8 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
         if (imageData.ImagePath != null)
         {
-            // Pass the UseImage method as the action and reuse cached menu if available
-            element.ContextMenu = ButtonFactory.CreateContextMenu(imageData.ImagePath, UseImage, imageData.CachedContextMenu);
+            // Pass the UseImageAsync method wrapped as fire-and-forget action
+            element.ContextMenu = ButtonFactory.CreateContextMenu(imageData.ImagePath, path => { _ = UseImageAsync(path); }, imageData.CachedContextMenu);
             // Store the menu in the ImageData for future reuse
             imageData.CachedContextMenu = element.ContextMenu;
         }
@@ -834,7 +862,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
     private void EditExtensions_Click(object sender, RoutedEventArgs e)
     {
-        var settingsWindow = new SettingsWindow(App.SettingsManager) // Pass App.Settings
+        var settingsWindow = new SettingsWindow(Settings) // Pass App.Settings
         {
             Owner = this
         };
@@ -873,8 +901,8 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
             {
                 // Handle nullable bool properly
                 var isChecked = menuItem.IsChecked;
-                App.SettingsManager.UseMameDescription = isChecked;
-                App.SettingsManager.SaveSettings();
+                Settings.UseMameDescription = isChecked;
+                Settings.SaveSettings();
 
                 // Refresh the list immediately after the setting changes
                 // Only refresh if MAME data is actually available, otherwise it's pointless
@@ -935,7 +963,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
     private void UpdateMameDescriptionCheck()
     {
-        MenuUseMameDescription.IsChecked = App.SettingsManager.UseMameDescription;
+        MenuUseMameDescription.IsChecked = Settings.UseMameDescription;
     }
 
     private void BtnRemoveSelectedItem_Click(object sender, RoutedEventArgs e)
@@ -1036,6 +1064,8 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
             LblSearchQuery.Content = null;
             UpdateMissingCount();
         }
+
+        CommandManager.InvalidateRequerySuggested();
     }
 
     private void MainWindow_Closed(object? sender, EventArgs e)

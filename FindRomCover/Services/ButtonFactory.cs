@@ -2,7 +2,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
-using FindRomCover.models;
+using FindRomCover.Models;
 using Clipboard = System.Windows.Clipboard;
 using ContextMenu = System.Windows.Controls.ContextMenu;
 using Image = System.Windows.Controls.Image;
@@ -11,8 +11,29 @@ using MessageBox = System.Windows.MessageBox;
 
 namespace FindRomCover.Services;
 
+/// <summary>
+/// Factory class for creating UI elements related to similar image suggestions.
+/// Provides context menu creation and commands for image-related actions.
+/// </summary>
+/// <remarks>
+/// This factory centralizes the creation of context menus for image suggestions,
+/// ensuring consistent behavior and enabling caching of menu items for performance.
+/// </remarks>
 public static class ButtonFactory
 {
+    /// <summary>
+    /// Creates a collection of similar images by calculating similarity scores between a ROM file name
+    /// and all images in the specified folder.
+    /// </summary>
+    /// <param name="selectedRomFileName">The ROM file name to search for.</param>
+    /// <param name="imageFolderPath">The path to the folder containing images.</param>
+    /// <param name="similarityThreshold">The minimum similarity score (0-100) required for inclusion.</param>
+    /// <param name="similarityAlgorithm">The algorithm to use for similarity calculation.</param>
+    /// <param name="cancellationToken">A cancellation token to allow the operation to be cancelled.</param>
+    /// <returns>
+    /// A <see cref="Task{TResult}"/> containing a <see cref="SimilarityCalculationResult"/> with similar images and any processing errors.
+    /// </returns>
+    /// <exception cref="OperationCanceledException">Thrown when the operation is cancelled via the cancellationToken.</exception>
     public static Task<SimilarityCalculationResult> CreateSimilarImagesCollection(
         string selectedRomFileName,
         string imageFolderPath,
@@ -20,26 +41,44 @@ public static class ButtonFactory
         string similarityAlgorithm,
         CancellationToken cancellationToken)
     {
-        // Perform all work off-thread safely
-        return Task.Run(async () =>
-                await SimilarityCalculator.CalculateSimilarityAsync(
-                    selectedRomFileName,
-                    imageFolderPath,
-                    similarityThreshold,
-                    similarityAlgorithm,
-                    cancellationToken
-                ).ConfigureAwait(false),
-            cancellationToken
-        );
+        return SimilarityCalculator.CalculateSimilarityAsync(
+            selectedRomFileName,
+            imageFolderPath,
+            similarityThreshold,
+            similarityAlgorithm,
+            cancellationToken);
     }
 
+    /// <summary>
+    /// Creates or updates a context menu for an image suggestion.
+    /// </summary>
+    /// <param name="imagePath">The full path to the image file.</param>
+    /// <param name="useImageAction">The action to invoke when "Use This Image" is selected.</param>
+    /// <param name="existingMenu">An existing context menu to reuse (optional).</param>
+    /// <returns>
+    /// A <see cref="ContextMenu"/> containing menu items for image operations.
+    /// Returns an empty menu if imagePath is null or empty.
+    /// </returns>
+    /// <remarks>
+    /// This method supports menu reuse for performance optimization. When an existing menu is provided,
+    /// it updates the CommandParameter for all items instead of creating new menu items.
+    /// 
+    /// The context menu includes:
+    /// - "Use This Image": Applies the image to the selected ROM
+    /// - "Copy Image Filename": Copies the filename (without extension) to clipboard
+    /// - "Open File Location": Opens Windows Explorer to the image's folder
+    /// </remarks>
     public static ContextMenu CreateContextMenu(string imagePath, Action<string?> useImageAction, ContextMenu? existingMenu = null)
     {
         if (string.IsNullOrEmpty(imagePath))
         {
             const string errorMessage = "CreateContextMenu called with null or empty imagePath";
-            _ = ErrorLogger.LogAsync(new ArgumentException(errorMessage, nameof(imagePath)), errorMessage);
-            return existingMenu ?? new ContextMenu(); // Return existing or empty menu
+            var exception = new ArgumentException(errorMessage, nameof(imagePath));
+            _ = ErrorLogger.LogAsync(exception, errorMessage); // Using fire-and-forget pattern to avoid blocking UI
+
+            _ = ErrorLogger.LogAsync(exception, "Error creating context menu.");
+
+            return new ContextMenu(); // Return a fresh empty menu
         }
 
         // Reuse existing menu if provided and it has items (not empty)
@@ -63,7 +102,7 @@ public static class ButtonFactory
         {
             var useThisImageIcon = new Image
             {
-                Source = new BitmapImage(new Uri("pack://application:,,,/images/usethis.png")),
+                Source = CreateFrozenBitmapImage("pack://application:,,,/images/usethis.png"),
                 Width = 16,
                 Height = 16,
                 Margin = new Thickness(2)
@@ -81,7 +120,7 @@ public static class ButtonFactory
         // "Copy Image Filename" menu item
         var copyIcon = new Image
         {
-            Source = new BitmapImage(new Uri("pack://application:,,,/images/copy.png")),
+            Source = CreateFrozenBitmapImage("pack://application:,,,/images/copy.png"),
             Width = 16,
             Height = 16,
             Margin = new Thickness(2)
@@ -98,7 +137,7 @@ public static class ButtonFactory
         // "Open File Location" menu item
         var openLocationIcon = new Image
         {
-            Source = new BitmapImage(new Uri("pack://application:,,,/images/folder.png")),
+            Source = CreateFrozenBitmapImage("pack://application:,,,/images/folder.png"),
             Width = 16,
             Height = 16,
             Margin = new Thickness(2)
@@ -115,7 +154,12 @@ public static class ButtonFactory
         return contextMenu;
     }
 
-    // Command for copying the image filename without extension
+    /// <summary>
+    /// Gets a command that copies the image filename (without extension) to the clipboard.
+    /// </summary>
+    /// <remarks>
+    /// This command handles COMException that can occur when the clipboard is locked by another process.
+    /// </remarks>
     private static ICommand CopyImageFilenameCommand { get; } = new DelegateCommand(param =>
     {
         if (param is not string imagePath) return;
@@ -136,10 +180,16 @@ public static class ButtonFactory
             // The clipboard can be locked by other processes (e.g., remote desktop).
             MessageBox.Show("Could not copy to clipboard. It might be in use by another application.",
                 "Clipboard Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-            _ = ErrorLogger.LogAsync(ex, "Failed to set clipboard text due to COMException.");
+            _ = ErrorLogger.LogAsync(ex, "Failed to set clipboard text.");
         }
     });
 
+    /// <summary>
+    /// Gets a command that opens Windows Explorer to the folder containing the image.
+    /// </summary>
+    /// <remarks>
+    /// Uses ProcessStartInfo with explorer.exe and the /select parameter to highlight the file.
+    /// </remarks>
     private static ICommand OpenFileLocationCommand { get; } = new DelegateCommand(static param =>
     {
         if (param is not string imagePath || string.IsNullOrEmpty(imagePath))
@@ -160,4 +210,21 @@ public static class ButtonFactory
             System.Diagnostics.Process.Start(processStartInfo);
         }
     });
+
+    /// <summary>
+    /// Creates a frozen (immutable) BitmapImage from a pack URI.
+    /// </summary>
+    /// <param name="uri">The pack URI to the image resource.</param>
+    /// <returns>A frozen <see cref="BitmapImage"/>.</returns>
+    /// <remarks>
+    /// Freezing the bitmap improves performance and allows it to be used across multiple threads.
+    /// </remarks>
+    private static BitmapImage CreateFrozenBitmapImage(string uri)
+    {
+        var bitmap = new BitmapImage(new Uri(uri));
+        if (bitmap.CanFreeze)
+            bitmap.Freeze();
+
+        return bitmap;
+    }
 }

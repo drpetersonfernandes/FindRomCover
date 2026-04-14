@@ -1,8 +1,8 @@
-﻿<controls:MetroWindow x:Class="FindRomCover.AboutWindow"
+<controls:MetroWindow x:Class="FindRomCover.AboutWindow"
                       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                       xmlns:controls="http://metro.mahapps.com/winfx/xaml/controls"
-                      Title="About"
+                      Title="About Find ROM Cover"
                       Width="450"
                       Height="400"
                       ResizeMode="NoResize"
@@ -22,18 +22,28 @@
             <Image
                 Width="150"
                 Height="150"
-                Source="pack://application:,,,/images/logo.png" />
+                Source="pack://application:,,,/images/logo.png"
+                AutomationProperties.Name="Application Logo" />
         </StackPanel>
 
         <StackPanel Grid.Row="1" Margin="10">
-            <TextBlock FontWeight="Bold" Text="Find Rom Cover" />
-            <TextBlock Text="Organize your ROM images" />
-            <TextBlock Name="AppVersionTextBlock" Margin="0,10,0,0" Text="" />
+            <TextBlock FontWeight="Bold" Text="Find ROM Cover"
+                       AutomationProperties.HeadingLevel="Level1" />
+            <TextBlock Text="Organize your ROM images"
+                       AutomationProperties.HelpText="Application description" />
+            <TextBlock Name="AppVersionTextBlock" Margin="0,10,0,0" Text=""
+                       AutomationProperties.Name="Application Version" />
             <TextBlock Margin="0,10,0,0">
-                <Hyperlink NavigateUri="https://www.purelogiccode.com" RequestNavigate="Hyperlink_RequestNavigate">https://www.purelogiccode.com</Hyperlink>
+                <Hyperlink NavigateUri="https://www.purelogiccode.com" RequestNavigate="Hyperlink_RequestNavigate"
+                           AutomationProperties.Name="Pure Logic Code Website">
+                    https://www.purelogiccode.com
+                </Hyperlink>
             </TextBlock>
             <TextBlock Margin="0,10,0,10">
-                <Hyperlink NavigateUri="https://github.com/drpetersonfernandes/FindRomCover" RequestNavigate="Hyperlink_RequestNavigate">https://github.com/drpetersonfernandes/FindRomCover</Hyperlink>
+                <Hyperlink NavigateUri="https://github.com/drpetersonfernandes/FindRomCover" RequestNavigate="Hyperlink_RequestNavigate"
+                           AutomationProperties.Name="GitHub Repository">
+                    https://github.com/drpetersonfernandes/FindRomCover
+                </Hyperlink>
             </TextBlock>
         </StackPanel>
 
@@ -46,7 +56,11 @@
                 Width="120"
                 Margin="10,0,0,0"
                 Click="CloseButton_Click"
-                Content="Close" />
+                Content="Close"
+                IsCancel="True"
+                AutomationProperties.Name="Close"
+                AutomationProperties.HelpText="Close the about window"
+                TabIndex="1" />
         </StackPanel>
     </Grid>
 </controls:MetroWindow>

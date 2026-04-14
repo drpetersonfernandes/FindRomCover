@@ -5,12 +5,29 @@ using FindRomCover.Managers;
 using FindRomCover.Services;
 using ImageMagick;
 using MessageBox = System.Windows.MessageBox;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace FindRomCover;
 
 public partial class App
 {
-    public static readonly SettingsManager SettingsManager = new();
+    /// <summary>
+    /// The dependency injection service provider for the application.
+    /// </summary>
+    public static IServiceProvider? ServiceProvider { get; private set; }
+
+    /// <summary>
+    /// Gets the SettingsManager instance from the DI container.
+    /// </summary>
+    public static SettingsManager SettingsManager
+    {
+        get
+        {
+            if (ServiceProvider != null) return ServiceProvider.GetRequiredService<SettingsManager>();
+
+            throw new InvalidOperationException("ServiceProvider has not been initialized.");
+        }
+    }
 
     public static string? StartupImageFolderPath { get; private set; }
     public static string? StartupRomFolderPath { get; private set; }
@@ -28,6 +45,18 @@ public partial class App
     });
 
     public static IAudioService AudioService => AudioServiceLazy.Value;
+
+    /// <summary>
+    /// Configures the dependency injection container and registers application services.
+    /// </summary>
+    private static void ConfigureServices(IServiceCollection services)
+    {
+        // Register SettingsManager as a singleton
+        services.AddSingleton<SettingsManager>();
+
+        // Register MainWindow with constructor injection
+        services.AddTransient<MainWindow>();
+    }
 
     /// <summary>
     /// Safely executes an async task in a fire-and-forget manner with proper exception handling.
@@ -53,9 +82,14 @@ public partial class App
     {
         try
         {
+            // Initialize dependency injection container
+            var services = new ServiceCollection();
+            ConfigureServices(services);
+            ServiceProvider = services.BuildServiceProvider();
+
             // Magick.NET resource limits
-            ResourceLimits.Memory = 512 * 1024 * 1024; // 512MB
-            ResourceLimits.Thread = 4; // Limit threads
+            ResourceLimits.Memory = AppConstants.DefaultMemoryLimit;
+            ResourceLimits.Thread = AppConstants.DefaultThreadLimit;
 
             // Check for command-line arguments. e.Args is more robust than Environment.CommandLine.
             // Assumes the order is: <image_folder_path> <rom_folder_path>
@@ -97,12 +131,18 @@ public partial class App
             ApplyTheme(SettingsManager.BaseTheme, SettingsManager.AccentColor);
 
             // Create and show MainWindow manually (StartupUri removed from App.xaml)
-            var mainWindow = new MainWindow();
+            var mainWindow = ServiceProvider.GetRequiredService<MainWindow>();
             mainWindow.Show();
         }
         catch (Exception ex)
         {
             _ = ErrorLogger.LogAsync(ex, "Error in method 'OnStartup'");
+            MessageBox.Show(
+                "The application failed to start. Check the log for details.",
+                "Startup Error",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+            Shutdown(1);
         }
     }
 
@@ -115,6 +155,12 @@ public partial class App
 
         // Dispose the ErrorLogger's HttpClient to prevent resource leaks
         ErrorLogger.Dispose();
+
+        // Dispose the service provider
+        if (ServiceProvider is IDisposable disposableServiceProvider)
+        {
+            disposableServiceProvider.Dispose();
+        }
 
         base.OnExit(e);
     }
