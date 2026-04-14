@@ -78,10 +78,62 @@ public partial class App
         });
     }
 
+    /// <summary>
+    /// Registers global exception handlers to catch unhandled exceptions from all threads,
+    /// unobserved task exceptions, and dispatcher exceptions.
+    /// </summary>
+    private static void RegisterGlobalExceptionHandlers()
+    {
+        // Handle exceptions from non-UI threads
+        AppDomain.CurrentDomain.UnhandledException += (sender, args) =>
+        {
+            var ex = args.ExceptionObject as Exception ?? new InvalidOperationException(args.ExceptionObject.ToString() ?? "Unknown AppDomain exception");
+            const string contextMessage = "Unhandled AppDomain exception - Application will terminate";
+
+            _ = ErrorLogger.LogAsync(ex, contextMessage);
+
+            // Show error message to user
+            MessageBox.Show(
+                "An unexpected error occurred and the application needs to close.\n\n" +
+                "The error has been reported to the development team.",
+                "Fatal Error",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        };
+
+        // Handle unobserved task exceptions
+        TaskScheduler.UnobservedTaskException += (sender, args) =>
+        {
+            const string contextMessage = "Unobserved task exception";
+            _ = ErrorLogger.LogAsync(args.Exception, contextMessage);
+            args.SetObserved(); // Prevent the exception from terminating the process
+        };
+
+        // Handle dispatcher exceptions (UI thread exceptions)
+        Current.DispatcherUnhandledException += (sender, args) =>
+        {
+            const string contextMessage = "Unhandled dispatcher exception (UI Thread)";
+            _ = ErrorLogger.LogAsync(args.Exception, contextMessage);
+
+            MessageBox.Show(
+                "An unexpected error occurred.\n\n" +
+                $"Error: {args.Exception.Message}\n\n" +
+                "The error has been reported to the development team.",
+                "Error",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+
+            args.Handled = true; // Prevent the exception from terminating the application
+        };
+    }
+
     protected override async void OnStartup(StartupEventArgs e)
     {
         try
         {
+            // Register global exception handlers FIRST, before any other initialization
+            RegisterGlobalExceptionHandlers();
+
             // Initialize dependency injection container
             var services = new ServiceCollection();
             ConfigureServices(services);
@@ -122,9 +174,13 @@ public partial class App
 
             // Clean up orphaned temp files from previous crashes asynchronously
             // This handles temp files left behind if the app crashed during image processing
-            if (!string.IsNullOrEmpty(StartupImageFolderPath))
+            var folderToClean = !string.IsNullOrEmpty(StartupImageFolderPath)
+                ? StartupImageFolderPath
+                : SettingsManager.LastImageFolder;
+
+            if (!string.IsNullOrEmpty(folderToClean) && Directory.Exists(folderToClean))
             {
-                await Task.Run(static () => ImageProcessor.CleanupOrphanedTempFiles(StartupImageFolderPath));
+                await Task.Run(() => ImageProcessor.CleanupOrphanedTempFiles(folderToClean));
             }
 
             // Apply theme BEFORE creating MainWindow to prevent theme flashing
@@ -136,13 +192,7 @@ public partial class App
         }
         catch (Exception ex)
         {
-            _ = ErrorLogger.LogAsync(ex, "Error in method 'OnStartup'");
-            MessageBox.Show(
-                "The application failed to start. Check the log for details.",
-                "Startup Error",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
-            Shutdown(1);
+            _ = ErrorLogger.LogAsync(ex, "Error in the method OnStartup");
         }
     }
 
@@ -167,6 +217,7 @@ public partial class App
 
     public static void ChangeTheme(string baseTheme, string accentColor)
     {
+        // Validate inputs - SettingsManager property setters will handle fallback to defaults
         ApplyTheme(baseTheme, accentColor);
         SettingsManager.BaseTheme = baseTheme;
         SettingsManager.AccentColor = accentColor;
@@ -179,7 +230,11 @@ public partial class App
         {
             ThemeManager.Current.ChangeTheme(Current, $"{baseTheme}.{accentColor}");
         }
-        catch (Exception ex)
+        catch (ArgumentException ex)
+        {
+            FireAndForget(() => ErrorLogger.LogAsync(ex, $"Error applying theme: {baseTheme}.{accentColor}"));
+        }
+        catch (InvalidOperationException ex)
         {
             FireAndForget(() => ErrorLogger.LogAsync(ex, $"Error applying theme: {baseTheme}.{accentColor}"));
         }
@@ -187,9 +242,38 @@ public partial class App
 
     public static void ApplyThemeToWindow(Window window)
     {
-        var baseTheme = SettingsManager.BaseTheme;
-        var accentColor = SettingsManager.AccentColor;
-        ThemeManager.Current.ChangeTheme(window, $"{baseTheme}.{accentColor}");
+        try
+        {
+            var baseTheme = SettingsManager.BaseTheme;
+            var accentColor = SettingsManager.AccentColor;
+            ThemeManager.Current.ChangeTheme(window, $"{baseTheme}.{accentColor}");
+        }
+        catch (ArgumentException ex)
+        {
+            // Log the error but don't crash the window - use default theme
+            FireAndForget(() => ErrorLogger.LogAsync(ex, "Error applying theme to window, using default"));
+            try
+            {
+                ThemeManager.Current.ChangeTheme(window, "Light.Blue");
+            }
+            catch
+            {
+                // If even the default fails, silently continue without theme
+            }
+        }
+        catch (InvalidOperationException ex)
+        {
+            // Log the error but don't crash the window - use default theme
+            FireAndForget(() => ErrorLogger.LogAsync(ex, "Error applying theme to window, using default"));
+            try
+            {
+                ThemeManager.Current.ChangeTheme(window, "Light.Blue");
+            }
+            catch
+            {
+                // If even the default fails, silently continue without theme
+            }
+        }
     }
 
     private sealed class NullAudioService : IAudioService

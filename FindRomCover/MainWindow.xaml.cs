@@ -26,6 +26,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
     private Dictionary<string, string>? _mameLookup;
     private CancellationTokenSource? _findSimilarCts;
     private readonly SemaphoreSlim _findSimilarSemaphore = new(1, 1); // Semaphore to ensure only one search runs at a time
+    private bool _disposed;
 
     public event PropertyChangedEventHandler? PropertyChanged;
     public SettingsManager Settings { get; }
@@ -114,9 +115,6 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
         // Subscribe to SettingsManager PropertyChanged to update UI for non-binding properties (like menu checks)
         Settings.PropertyChanged += AppSettingsManagerPropertyChanged;
-
-        // Subscribe to Closed event to ensure cleanup happens even if OnClosed isn't called
-        Closed += MainWindow_Closed;
 
         // Load _machines and _mameLookup
         LoadMameData();
@@ -288,29 +286,51 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
     private void BtnBrowseRomFolder_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new OpenFolderDialog
+        try
         {
-            Title = "Select the folder where your ROM or ISO files are stored."
-        };
+            var dialog = new OpenFolderDialog
+            {
+                Title = "Select the folder where your ROM or ISO files are stored."
+            };
 
-        if (dialog.ShowDialog() == true)
+            if (dialog.ShowDialog() == true)
+            {
+                TxtRomFolder.Text = dialog.FolderName;
+                UpdateUiStateForFolderPaths(); // Update UI state after browsing
+            }
+        }
+        catch (Exception ex)
         {
-            TxtRomFolder.Text = dialog.FolderName;
-            UpdateUiStateForFolderPaths(); // Update UI state after browsing
+            _ = ErrorLogger.LogAsync(ex, "Error in BtnBrowseRomFolder_Click");
+            MessageBox.Show("An error occurred while selecting the ROM folder.", "Error",
+                MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
     private void BtnBrowseImageFolder_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new OpenFolderDialog
+        try
         {
-            Title = "Select the folder where your image files are stored."
-        };
+            var dialog = new OpenFolderDialog
+            {
+                Title = "Select the folder where your image files are stored."
+            };
 
-        if (dialog.ShowDialog() != true) return;
+            if (dialog.ShowDialog() != true) return;
 
-        TxtImageFolder.Text = dialog.FolderName;
-        UpdateUiStateForFolderPaths(); // Update UI state after browsing
+            TxtImageFolder.Text = dialog.FolderName;
+            UpdateUiStateForFolderPaths(); // Update UI state after browsing
+
+            // Save the image folder to settings for cleanup on next startup
+            Settings.LastImageFolder = dialog.FolderName;
+            Settings.SaveSettings();
+        }
+        catch (Exception ex)
+        {
+            _ = ErrorLogger.LogAsync(ex, "Error in BtnBrowseImageFolder_Click");
+            MessageBox.Show("An error occurred while selecting the Image folder.", "Error",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private async void BtnCheckForMissingImages_Click(object sender, RoutedEventArgs e)
@@ -729,26 +749,47 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
     private void UpdateMissingCount()
     {
-        LabelMissingRoms.Content = "MISSING COVERS: " + MissingImages.Count;
+        try
+        {
+            LabelMissingRoms.Content = "MISSING COVERS: " + MissingImages.Count;
+        }
+        catch (Exception ex)
+        {
+            _ = ErrorLogger.LogAsync(ex, "Error in UpdateMissingCount");
+        }
     }
 
     private void SetSimilarityAlgorithm_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is not MenuItem menuItem) return;
+        try
+        {
+            if (sender is not MenuItem menuItem) return;
 
-        var algorithm = menuItem.Header.ToString() ?? "Jaro-Winkler Distance";
-        Settings.SelectedSimilarityAlgorithm = algorithm; // Update App.Settings
-        Settings.SaveSettings(); // Save the settings
+            var algorithm = menuItem.Header.ToString() ?? "Jaro-Winkler Distance";
+            Settings.SelectedSimilarityAlgorithm = algorithm; // Update App.Settings
+            Settings.SaveSettings(); // Save the settings
+        }
+        catch (Exception ex)
+        {
+            _ = ErrorLogger.LogAsync(ex, "Error in SetSimilarityAlgorithm_Click");
+        }
     }
 
     private void UpdateSimilarityAlgorithmChecks()
     {
-        foreach (var item in MenuSimilarityAlgorithms.Items)
+        try
         {
-            if (item is MenuItem menuItem)
+            foreach (var item in MenuSimilarityAlgorithms.Items)
             {
-                menuItem.IsChecked = menuItem.Header.ToString() == Settings.SelectedSimilarityAlgorithm; // Use App.Settings
+                if (item is MenuItem menuItem)
+                {
+                    menuItem.IsChecked = menuItem.Header.ToString() == Settings.SelectedSimilarityAlgorithm; // Use App.Settings
+                }
             }
+        }
+        catch (Exception ex)
+        {
+            _ = ErrorLogger.LogAsync(ex, "Error in UpdateSimilarityAlgorithmChecks");
         }
     }
 
@@ -862,34 +903,56 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
     private void EditExtensions_Click(object sender, RoutedEventArgs e)
     {
-        var settingsWindow = new SettingsWindow(Settings) // Pass App.Settings
+        try
         {
-            Owner = this
-        };
-        settingsWindow.ShowDialog();
+            var settingsWindow = new SettingsWindow(Settings) // Pass App.Settings
+            {
+                Owner = this
+            };
+            settingsWindow.ShowDialog();
+        }
+        catch (Exception ex)
+        {
+            _ = ErrorLogger.LogAsync(ex, "Error in EditExtensions_Click");
+            MessageBox.Show("An error occurred while opening the Settings window.", "Error",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private void TxtImageFolder_TextChanged(object sender, TextChangedEventArgs e)
     {
-        // Only update button enabled state based on non-empty text,
-        // full Directory.Exists validation happens on LostFocus/Enter.
-        BtnCheckForMissingImages.IsEnabled = !string.IsNullOrEmpty(TxtRomFolder.Text.Trim()) && !string.IsNullOrEmpty(TxtImageFolder.Text.Trim());
-        LstMissingImages.IsEnabled = BtnCheckForMissingImages.IsEnabled; // Keep LstMissingImages enabled state in sync
-        if (!BtnCheckForMissingImages.IsEnabled)
+        try
         {
-            MissingImages.Clear();
-            SimilarImages.Clear();
-            LblSearchQuery.Content = null;
-            UpdateMissingCount();
+            // Only update button enabled state based on non-empty text,
+            // full Directory.Exists validation happens on LostFocus/Enter.
+            BtnCheckForMissingImages.IsEnabled = !string.IsNullOrEmpty(TxtRomFolder.Text.Trim()) && !string.IsNullOrEmpty(TxtImageFolder.Text.Trim());
+            LstMissingImages.IsEnabled = BtnCheckForMissingImages.IsEnabled; // Keep LstMissingImages enabled state in sync
+            if (!BtnCheckForMissingImages.IsEnabled)
+            {
+                MissingImages.Clear();
+                ResetSimilarSearchState();
+                UpdateMissingCount();
+            }
+        }
+        catch (Exception ex)
+        {
+            _ = ErrorLogger.LogAsync(ex, "Error in TxtImageFolder_TextChanged");
         }
     }
 
     private void LstMissingImages_KeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Delete)
+        try
         {
-            RemoveSelectedItem();
-            App.AudioService.PlayClickSound();
+            if (e.Key == Key.Delete)
+            {
+                RemoveSelectedItem();
+                App.AudioService.PlayClickSound();
+            }
+        }
+        catch (Exception ex)
+        {
+            _ = ErrorLogger.LogAsync(ex, "Error in LstMissingImages_KeyDown");
         }
     }
 
@@ -955,9 +1018,17 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
     private void TxtImageFolder_LostFocus(object sender, RoutedEventArgs e)
     {
-        if (sender is TextBox)
+        if (sender is TextBox textBox)
         {
             UpdateUiStateForFolderPaths();
+
+            // Save the image folder to settings for cleanup on next startup
+            var folderPath = textBox.Text.Trim();
+            if (!string.IsNullOrEmpty(folderPath) && Directory.Exists(folderPath))
+            {
+                Settings.LastImageFolder = folderPath;
+                Settings.SaveSettings();
+            }
         }
     }
 
@@ -1001,16 +1072,22 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
     private void TxtRomFolder_TextChanged(object sender, TextChangedEventArgs e)
     {
-        // Only update button enabled state based on non-empty text,
-        // full Directory.Exists validation happens on LostFocus/Enter.
-        BtnCheckForMissingImages.IsEnabled = !string.IsNullOrEmpty(TxtRomFolder.Text.Trim()) && !string.IsNullOrEmpty(TxtImageFolder.Text.Trim());
-        LstMissingImages.IsEnabled = BtnCheckForMissingImages.IsEnabled; // Keep LstMissingImages enabled state in sync
-        if (!BtnCheckForMissingImages.IsEnabled)
+        try
         {
-            MissingImages.Clear();
-            SimilarImages.Clear();
-            LblSearchQuery.Content = null;
-            UpdateMissingCount();
+            // Only update button enabled state based on non-empty text,
+            // full Directory.Exists validation happens on LostFocus/Enter.
+            BtnCheckForMissingImages.IsEnabled = !string.IsNullOrEmpty(TxtRomFolder.Text.Trim()) && !string.IsNullOrEmpty(TxtImageFolder.Text.Trim());
+            LstMissingImages.IsEnabled = BtnCheckForMissingImages.IsEnabled; // Keep LstMissingImages enabled state in sync
+            if (!BtnCheckForMissingImages.IsEnabled)
+            {
+                MissingImages.Clear();
+                ResetSimilarSearchState();
+                UpdateMissingCount();
+            }
+        }
+        catch (Exception ex)
+        {
+            _ = ErrorLogger.LogAsync(ex, "Error in TxtRomFolder_TextChanged");
         }
     }
 
@@ -1047,41 +1124,56 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
     private void UpdateUiStateForFolderPaths()
     {
-        var romPath = TxtRomFolder.Text.Trim();
-        var imagePath = TxtImageFolder.Text.Trim();
-
-        var romPathValid = !string.IsNullOrEmpty(romPath) && Directory.Exists(romPath);
-        var imagePathValid = !string.IsNullOrEmpty(imagePath) && Directory.Exists(imagePath);
-
-        BtnCheckForMissingImages.IsEnabled = romPathValid && imagePathValid;
-        LstMissingImages.IsEnabled = romPathValid && imagePathValid;
-
-        // Also clear suggestions if paths become invalid
-        if (!romPathValid || !imagePathValid)
+        try
         {
-            MissingImages.Clear();
-            SimilarImages.Clear();
-            LblSearchQuery.Content = null;
-            UpdateMissingCount();
-        }
+            var romPath = TxtRomFolder.Text.Trim();
+            var imagePath = TxtImageFolder.Text.Trim();
 
-        CommandManager.InvalidateRequerySuggested();
+            var romPathValid = !string.IsNullOrEmpty(romPath) && Directory.Exists(romPath);
+            var imagePathValid = !string.IsNullOrEmpty(imagePath) && Directory.Exists(imagePath);
+
+            BtnCheckForMissingImages.IsEnabled = romPathValid && imagePathValid;
+            LstMissingImages.IsEnabled = romPathValid && imagePathValid;
+
+            // Also clear suggestions if paths become invalid
+            if (!romPathValid || !imagePathValid)
+            {
+                MissingImages.Clear();
+                ResetSimilarSearchState();
+                UpdateMissingCount();
+            }
+
+            CommandManager.InvalidateRequerySuggested();
+        }
+        catch (Exception ex)
+        {
+            _ = ErrorLogger.LogAsync(ex, "Error in UpdateUiStateForFolderPaths");
+        }
     }
 
-    private void MainWindow_Closed(object? sender, EventArgs e)
+    private void ResetSimilarSearchState()
     {
-        Settings.PropertyChanged -= AppSettingsManagerPropertyChanged;
-        Dispose();
+        SimilarImages.Clear();
+        LblSearchQuery.Content = null;
+        HasSearchedSimilar = false;
     }
 
     protected override void OnClosed(EventArgs e)
     {
+        Settings.PropertyChanged -= AppSettingsManagerPropertyChanged;
         Dispose();
         base.OnClosed(e);
     }
 
     public void Dispose()
     {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+
         // Cancel any pending operations first
         _findSimilarCts?.Cancel();
         _loadMissingCts?.Cancel();

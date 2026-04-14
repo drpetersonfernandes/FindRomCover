@@ -31,7 +31,7 @@ Main window with dark theme:
 - **Manual Selection & Context Menu:** Browse through suggested images, view similarity scores, and use the right-click context menu for actions like using the image, copying its filename, or opening its folder location.
 - **Missing Image Finder:** Quickly identify which ROMs are missing cover images, helping you complete your collection. Includes an option to use MAME descriptions for ROM names.
 - **Theme Customization:** Switch between Light and Dark base themes and choose from a variety of accent colors.
-- **Simple Interface:** Designed for ease of use, with improved folder path validation and enhanced settings management for supported extensions.
+- **Simple Interface:** Designed for ease of use, with improved folder path validation and validated settings management for supported extensions and runtime limits.
 - **Audio Feedback:** Get audible confirmation for successful actions like copying images or removing items from the list.
 - **Automatic Error Reporting:** The application includes an automatic error reporting mechanism to help developers quickly identify and fix issues, ensuring a more stable experience. This includes detailed logging and internal error tracking.
 
@@ -97,7 +97,7 @@ The codebase has undergone a significant refactor to improve maintainability and
 - Switched to `System.Text.Json` for all JSON handling (removed Newtonsoft.Json dependency)
 - Updated dependencies: ControlzEx 7.0.3, MahApps.Metro 3.0.0-rc0529, MessagePack 3.1.4, Magick.NET 14.10.2
 - Enhanced error logging with multiple log files (API, User, Internal)
-- Improved image loading with retries for locked files and GDI+ error fallbacks
+- Improved image loading with retries for locked files and GDI+ error fallbacks, now driven by saved settings where applicable
 - Parallel processing for similarity calculations with cancellation support
 - Thread-safe lazy initialization for MAME data and broken image resources
 

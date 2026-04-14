@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.IO;
+using FindRomCover.Managers;
 using FindRomCover.Models;
 
 namespace FindRomCover.Services;
@@ -42,11 +43,16 @@ public static class SimilarityCalculator
         double similarityThreshold,
         string algorithm,
         CancellationToken cancellationToken,
-        int maxImagesToLoad = DefaultMaxImagesToLoad)
+        int maxImagesToLoad = 0)
     {
         var result = new SimilarityCalculationResult();
 
         if (string.IsNullOrEmpty(imageFolderPath)) return result;
+
+        if (maxImagesToLoad <= 0)
+        {
+            maxImagesToLoad = GetConfiguredMaxImagesToLoad();
+        }
 
         string[] imageExtensions = ["*.png", "*.jpg", "*.jpeg"];
 
@@ -161,7 +167,12 @@ public static class SimilarityCalculator
 
                 try
                 {
-                    var imageSource = await ImageLoader.LoadImageToMemoryAsync(candidate.FilePath, ct).ConfigureAwait(false);
+                    var (maxRetries, retryDelayMilliseconds) = GetConfiguredImageLoaderSettings();
+                    var imageSource = await ImageLoader.LoadImageToMemoryAsync(
+                        candidate.FilePath,
+                        ct,
+                        maxRetries,
+                        retryDelayMilliseconds).ConfigureAwait(false);
 
                     if (imageSource == null)
                     {
@@ -202,6 +213,33 @@ public static class SimilarityCalculator
         result.ProcessingErrors = processingErrors.ToList();
 
         return result;
+    }
+
+    private static int GetConfiguredMaxImagesToLoad()
+    {
+        try
+        {
+            return SettingsManager.CurrentInstance?.MaxImagesToLoad ?? DefaultMaxImagesToLoad;
+        }
+        catch
+        {
+            return DefaultMaxImagesToLoad;
+        }
+    }
+
+    private static (int MaxRetries, int RetryDelayMilliseconds) GetConfiguredImageLoaderSettings()
+    {
+        try
+        {
+            var settings = SettingsManager.CurrentInstance;
+            return settings != null
+                ? (settings.ImageLoaderMaxRetries, settings.ImageLoaderRetryDelayMilliseconds)
+                : (ImageLoader.DefaultMaxRetries, ImageLoader.DefaultRetryDelayMilliseconds);
+        }
+        catch
+        {
+            return (ImageLoader.DefaultMaxRetries, ImageLoader.DefaultRetryDelayMilliseconds);
+        }
     }
 
     /// <summary>

@@ -2,9 +2,9 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Net.Http;
-using System.Reflection;
 using System.Text;
 using System.Text.Json;
+using FindRomCover.Managers;
 using FindRomCover.Models;
 
 namespace FindRomCover.Services;
@@ -46,6 +46,12 @@ public static class ErrorLogger
 
     // Internal logging uses a simple in-process lock so it never contends with the main log semaphore.
     private static readonly object InternalLogSync = new();
+
+    private static readonly JsonSerializerOptions CachedJsonSerializerOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = false
+    };
 
     /// <summary>
     /// Default timeout for API calls in seconds.
@@ -100,70 +106,16 @@ public static class ErrorLogger
             return;
         }
 
-        var version = Assembly.GetEntryAssembly()?.GetName().Version?.ToString();
-        version ??= "Unknown";
+        apiTimeoutSeconds = ResolveApiTimeoutSeconds(apiTimeoutSeconds);
 
-        if (ex == null)
-        {
-            ex = new InvalidOperationException("No exception provided");
-        }
+        // Create a placeholder exception if none provided
+        ex ??= new InvalidOperationException("No exception provided");
 
-        // Get OS and environment details
-        var osVersion = System.Runtime.InteropServices.RuntimeInformation.OSDescription;
-        var osArchitecture = System.Runtime.InteropServices.RuntimeInformation.OSArchitecture.ToString();
-        var bitness = Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit";
-        string friendlyWindowsVersion;
-        var os = Environment.OSVersion;
-        if (os.Platform == PlatformID.Win32NT)
-        {
-            switch (os.Version.Major)
-            {
-                case >= 10:
-                    friendlyWindowsVersion = os.Version.Build >= 22000 ? "Windows 11" : "Windows 10";
-                    break;
-                case 6:
-                    switch (os.Version.Minor)
-                    {
-                        case 1: friendlyWindowsVersion = "Windows 7"; break;
-                        case 2: friendlyWindowsVersion = "Windows 8"; break;
-                        case 3: friendlyWindowsVersion = "Windows 8.1"; break;
-                        default: friendlyWindowsVersion = "Older Windows NT"; break;
-                    }
+        // Create the bug report model with all environment and exception details
+        var bugReport = BugReportModel.FromException(ex, contextMessage);
 
-                    break;
-                default:
-                    friendlyWindowsVersion = "Older Windows NT";
-                    break;
-            }
-        }
-        else
-        {
-            friendlyWindowsVersion = os.Platform.ToString();
-        }
-
-        // Construct the full error message for the current event
-        var currentErrorMessage = new StringBuilder();
-        currentErrorMessage.AppendLine(CultureInfo.InvariantCulture, $"Date: {DateTime.Now:dd/MM/yyyy HH:mm:ss}");
-        currentErrorMessage.AppendLine(CultureInfo.InvariantCulture, $"FindRomCover Version: {version}");
-        currentErrorMessage.AppendLine(CultureInfo.InvariantCulture, $"OS Version: {osVersion}");
-        currentErrorMessage.AppendLine(CultureInfo.InvariantCulture, $"Architecture: {osArchitecture}");
-        currentErrorMessage.AppendLine(CultureInfo.InvariantCulture, $"Bitness: {bitness}");
-        currentErrorMessage.AppendLine(CultureInfo.InvariantCulture, $"Windows Version: {friendlyWindowsVersion}");
-        currentErrorMessage.AppendLine();
-        if (!string.IsNullOrEmpty(contextMessage))
-        {
-            currentErrorMessage.AppendLine(contextMessage);
-            currentErrorMessage.AppendLine();
-        }
-
-        currentErrorMessage.AppendLine(CultureInfo.InvariantCulture, $"Exception Type: {ex.GetType().Name}");
-        currentErrorMessage.AppendLine(CultureInfo.InvariantCulture, $"Exception Message: {ex.Message}");
-        currentErrorMessage.AppendLine("Stack Trace:");
-        currentErrorMessage.AppendLine(string.IsNullOrWhiteSpace(ex.StackTrace) ? "Unavailable" : ex.StackTrace);
-        currentErrorMessage.AppendLine();
-        currentErrorMessage.AppendLine("--------------------------------------------------------------------------------------------------------------");
-        currentErrorMessage.AppendLine();
-        currentErrorMessage.AppendLine();
+        // Convert to formatted string for local logging
+        var currentErrorMessage = bugReport.ToString();
 
         // 1. Append the new error message to the user-specific log (this one persists)
         // 2. Append the new error message to the API-sending log (this one gets cleared)
@@ -176,9 +128,8 @@ public static class ErrorLogger
             await LogFileLock.WaitAsync(); // Acquire the lock once for all file operations
             lockAcquired = true;
 
-            var logText = currentErrorMessage.ToString();
-            await File.AppendAllTextAsync(UserLogFilePath, logText);
-            await File.AppendAllTextAsync(ApiLogFilePath, logText);
+            await File.AppendAllTextAsync(UserLogFilePath, currentErrorMessage);
+            await File.AppendAllTextAsync(ApiLogFilePath, currentErrorMessage);
 
             // Read the content while still holding the lock to ensure consistency
             contentToSend = await File.ReadAllTextAsync(ApiLogFilePath);
@@ -205,7 +156,7 @@ public static class ErrorLogger
             var sendSuccess = false;
             try
             {
-                sendSuccess = await SendLogToApiAsync(contentToSend, apiTimeoutSeconds);
+                sendSuccess = await SendLogToApiAsync(bugReport, contentToSend, apiTimeoutSeconds);
             }
             catch (Exception loggingEx)
             {
@@ -236,9 +187,27 @@ public static class ErrorLogger
         }
     }
 
+    private static int ResolveApiTimeoutSeconds(int apiTimeoutSeconds)
+    {
+        try
+        {
+            if (apiTimeoutSeconds > 0 && apiTimeoutSeconds != DefaultApiTimeoutSeconds)
+            {
+                return apiTimeoutSeconds;
+            }
+
+            return SettingsManager.CurrentInstance?.ApiTimeoutSeconds ?? DefaultApiTimeoutSeconds;
+        }
+        catch
+        {
+            return apiTimeoutSeconds > 0 ? apiTimeoutSeconds : DefaultApiTimeoutSeconds;
+        }
+    }
+
     /// <summary>
-    /// Sends the accumulated log content to the remote bug reporting API.
+    /// Sends the bug report to the remote bug reporting API.
     /// </summary>
+    /// <param name="bugReport">The structured bug report model.</param>
     /// <param name="logContent">The formatted log content to send.</param>
     /// <param name="apiTimeoutSeconds">Timeout for the API call in seconds.</param>
     /// <returns>True if the log was successfully sent and acknowledged; false otherwise.</returns>
@@ -252,7 +221,7 @@ public static class ErrorLogger
     ///
     /// All errors are logged to the internal log file for debugging.
     /// </remarks>
-    private static async Task<bool> SendLogToApiAsync(string logContent, int apiTimeoutSeconds)
+    private static async Task<bool> SendLogToApiAsync(BugReportModel bugReport, string logContent, int apiTimeoutSeconds)
     {
         if (_isDisposed)
         {
@@ -261,13 +230,33 @@ public static class ErrorLogger
 
         try
         {
+            // Create structured API payload with all required fields
             var bugReportPayload = new
             {
-                ApplicationName = "FindRomCover",
+                bugReport.ApplicationName,
+                bugReport.Date,
+                bugReport.ApplicationVersion,
+                bugReport.OsVersion,
+                bugReport.Architecture,
+                bugReport.Bitness,
+                bugReport.WindowsVersion,
+                bugReport.ProcessorCount,
+                bugReport.BaseDirectory,
+                bugReport.TempPath,
+                bugReport.ErrorMessage,
+                Exception = new
+                {
+                    bugReport.Exception.Type,
+                    bugReport.Exception.Message,
+                    bugReport.Exception.Source,
+                    bugReport.Exception.StackTrace,
+                    bugReport.Exception.InnerException
+                },
+                // Also include the formatted message for backwards compatibility
                 Message = logContent
             };
 
-            var jsonPayload = JsonSerializer.Serialize(bugReportPayload);
+            var jsonPayload = JsonSerializer.Serialize(bugReportPayload, CachedJsonSerializerOptions);
 
             using var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
             using var request = new HttpRequestMessage(HttpMethod.Post, BugReportApiUrl);

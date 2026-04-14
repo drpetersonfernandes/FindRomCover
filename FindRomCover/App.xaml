@@ -13,23 +13,6 @@
             <!-- Converters -->
             <services:ObjectToBoolConverter x:Key="IsNotNullConverter" />
 
-            <!-- Placeholder text color for light and dark themes -->
-            <SolidColorBrush x:Key="PlaceholderTextBrushLight" Color="Gray" />
-            <SolidColorBrush x:Key="PlaceholderTextBrushDark" Color="LightGray" />
-
-            <!-- Style for placeholder text -->
-            <Style x:Key="PlaceholderTextStyle" TargetType="TextBox">
-                <Setter Property="Foreground" Value="{DynamicResource PlaceholderTextBrushLight}" />
-                <Style.Triggers>
-                    <DataTrigger Binding="{Binding Source={x:Static SystemParameters.HighContrast}}" Value="True">
-                        <Setter Property="Foreground" Value="{DynamicResource PlaceholderTextBrushDark}" />
-                    </DataTrigger>
-                    <DataTrigger Binding="{Binding Source={x:Static SystemParameters.HighContrast}}" Value="False">
-                        <Setter Property="Foreground" Value="{DynamicResource PlaceholderTextBrushLight}" />
-                    </DataTrigger>
-                </Style.Triggers>
-            </Style>
-
             <!-- Style for image suggestion buttons -->
             <Style x:Key="ImageSuggestionButtonStyle" TargetType="Button">
                 <Setter Property="Margin" Value="10" />
@@ -95,6 +78,47 @@
                         </ControlTemplate>
                     </Setter.Value>
                 </Setter>
+            </Style>
+
+            <Style x:Key="LoadingOverlayGridStyle" TargetType="Grid">
+                <Setter Property="Visibility" Value="Collapsed" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsFindingSimilar}" Value="True">
+                        <Setter Property="Visibility" Value="Visible" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+
+            <Style x:Key="EmptyStateOverlayGridStyle" TargetType="Grid">
+                <Setter Property="Visibility" Value="Collapsed" />
+                <Style.Triggers>
+                    <MultiDataTrigger>
+                        <MultiDataTrigger.Conditions>
+                            <Condition Binding="{Binding SimilarImages.Count}" Value="0" />
+                            <Condition Binding="{Binding IsFindingSimilar}" Value="False" />
+                        </MultiDataTrigger.Conditions>
+                        <Setter Property="Visibility" Value="Visible" />
+                    </MultiDataTrigger>
+                </Style.Triggers>
+            </Style>
+
+            <Style x:Key="EmptyStateHintTextStyle" TargetType="TextBlock">
+                <Setter Property="Visibility" Value="Collapsed" />
+                <Setter Property="Foreground" Value="{DynamicResource MahApps.Brushes.Gray5}" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding HasSearchedSimilar}" Value="False">
+                        <Setter Property="Visibility" Value="Visible" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+
+            <Style x:Key="NoResultsStackPanelStyle" TargetType="StackPanel">
+                <Setter Property="Visibility" Value="Collapsed" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding HasSearchedSimilar}" Value="True">
+                        <Setter Property="Visibility" Value="Visible" />
+                    </DataTrigger>
+                </Style.Triggers>
             </Style>
         </ResourceDictionary>
     </Application.Resources>

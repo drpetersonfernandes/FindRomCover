@@ -1,5 +1,6 @@
 using System.IO;
 using System.Windows.Media.Imaging;
+using FindRomCover.Managers;
 using ImageMagick;
 
 namespace FindRomCover.Services;
@@ -47,10 +48,15 @@ public static class ImageLoader
     public static async Task<BitmapImage?> LoadImageToMemoryAsync(
         string? imagePath,
         CancellationToken cancellationToken,
-        int maxRetries = DefaultMaxRetries,
-        int retryDelayMilliseconds = DefaultRetryDelayMilliseconds)
+        int maxRetries = 0,
+        int retryDelayMilliseconds = 0)
     {
         if (string.IsNullOrEmpty(imagePath)) return null;
+
+        if (maxRetries <= 0 || retryDelayMilliseconds <= 0)
+        {
+            (maxRetries, retryDelayMilliseconds) = ResolveSettings(maxRetries, retryDelayMilliseconds);
+        }
 
         var fileInfo = new FileInfo(imagePath);
         if (!fileInfo.Exists || fileInfo.Length == 0)
@@ -98,6 +104,26 @@ public static class ImageLoader
         }
 
         return null;
+    }
+
+    private static (int MaxRetries, int RetryDelayMilliseconds) ResolveSettings(int maxRetries, int retryDelayMilliseconds)
+    {
+        try
+        {
+            var settings = SettingsManager.CurrentInstance;
+            var resolvedMaxRetries = maxRetries > 0 ? maxRetries : settings?.ImageLoaderMaxRetries ?? DefaultMaxRetries;
+            var resolvedRetryDelay = retryDelayMilliseconds > 0 ? retryDelayMilliseconds : settings?.ImageLoaderRetryDelayMilliseconds ?? DefaultRetryDelayMilliseconds;
+
+            return (
+                Math.Max(0, resolvedMaxRetries),
+                Math.Max(0, resolvedRetryDelay));
+        }
+        catch
+        {
+            return (
+                maxRetries > 0 ? maxRetries : DefaultMaxRetries,
+                retryDelayMilliseconds > 0 ? retryDelayMilliseconds : DefaultRetryDelayMilliseconds);
+        }
     }
 
     /// <summary>

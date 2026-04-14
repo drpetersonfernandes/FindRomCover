@@ -12,8 +12,10 @@ namespace FindRomCover.Services;
 /// <remarks>
 /// This service uses a thread-safe lazy initialization pattern to cache MAME data in memory
 /// after the first load, improving performance for subsequent data access operations.
-/// If the data file cannot be loaded, an empty list is cached and the application
-/// will continue to function without MAME descriptions until restarted.
+/// If the data file does not exist, a FileNotFoundException is thrown on the first load,
+/// allowing the caller to handle the missing file appropriately (e.g., disabling features).
+/// If the file exists but cannot be read due to corruption or permissions, an empty list
+/// is cached and the application will continue to function without MAME descriptions.
 /// </remarks>
 public static class MameDataService
 {
@@ -27,29 +29,30 @@ public static class MameDataService
     /// </summary>
     /// <returns>
     /// A list of <see cref="MameData"/> objects containing arcade game information.
-    /// Returns an empty list if the file does not exist or cannot be loaded.
+    /// Returns an empty list if the file cannot be loaded due to corruption or access errors.
     /// </returns>
+    /// <exception cref="FileNotFoundException">Thrown when the mame.dat file does not exist.</exception>
     /// <remarks>
     /// This method uses lazy initialization to cache the data after the first call.
     /// Subsequent calls return the cached data without re-reading the file.
+    /// If the file is not found, a FileNotFoundException is thrown on the first call.
     /// The application must be restarted to reload the data if the initial load failed.
     /// </remarks>
     public static List<MameData> LoadFromDat()
     {
         // Accessing .Value will trigger the LoadMameDataFromFile factory method once,
         // and subsequent calls will return the cached result.
-        // Note: If the file is not found, an empty list is cached and returned on all
-        // subsequent calls. The application must be restarted to reload the data.
         return MameDataCache.Value;
     }
 
     /// <summary>
     /// Loads MAME data from the DAT file.
     /// </summary>
-    /// <returns>A list of MameData objects or an empty list if loading fails.</returns>
+    /// <returns>A list of MameData objects.</returns>
+    /// <exception cref="FileNotFoundException">Thrown when the mame.dat file does not exist.</exception>
     /// <remarks>
-    /// This method handles various error conditions gracefully:
-    /// - Missing file: Returns empty list
+    /// This method handles various error conditions:
+    /// - Missing file: Throws FileNotFoundException to allow caller to handle appropriately
     /// - Corrupted/MessagePack format errors: Shows error message and returns empty list
     /// - File access/permission errors: Shows error message and returns empty list
     /// </remarks>
@@ -59,9 +62,7 @@ public static class MameDataService
 
         if (!File.Exists(datPath))
         {
-            // Return empty list instead of throwing to prevent Lazy<T> from caching an exception.
-            // Note: The empty list is cached permanently; application restart is required to reload.
-            return [];
+            throw new FileNotFoundException($"The file '{AppConstants.MameDatFileName}' could not be found.", datPath);
         }
 
         try

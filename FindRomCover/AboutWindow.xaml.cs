@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Diagnostics;
 using System.Windows.Navigation;
 using System.Reflection;
@@ -11,20 +11,29 @@ public partial class AboutWindow
 {
     public AboutWindow()
     {
-        InitializeComponent();
-
-        App.ApplyThemeToWindow(this);
-
-        // Set the data context for data binding
-        DataContext = this;
-
-        // Set the AppVersionTextBlock
-        AppVersionTextBlock.Text = ApplicationVersion;
+        try
+        {
+            InitializeComponent();
+            App.ApplyThemeToWindow(this);
+            AppVersionTextBlock.Text = ApplicationVersion;
+        }
+        catch (Exception ex)
+        {
+            _ = ErrorLogger.LogAsync(ex, "Error initializing AboutWindow");
+            throw; // Re-throw to prevent partial initialization
+        }
     }
 
     private void CloseButton_Click(object sender, RoutedEventArgs e)
     {
-        Close();
+        try
+        {
+            Close();
+        }
+        catch (Exception ex)
+        {
+            _ = ErrorLogger.LogAsync(ex, "Error in CloseButton_Click");
+        }
     }
 
     private void Hyperlink_RequestNavigate(object sender, RequestNavigateEventArgs e)
@@ -49,8 +58,16 @@ public partial class AboutWindow
     {
         get
         {
-            var version = Assembly.GetExecutingAssembly().GetName().Version;
-            return "Version: " + (version?.ToString() ?? "Unknown");
+            try
+            {
+                var version = Assembly.GetExecutingAssembly().GetName().Version;
+                return "Version: " + (version?.ToString() ?? "Unknown");
+            }
+            catch (Exception ex)
+            {
+                _ = ErrorLogger.LogAsync(ex, "Error getting ApplicationVersion");
+                return "Version: Unknown";
+            }
         }
     }
 }

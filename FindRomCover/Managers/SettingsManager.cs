@@ -20,6 +20,8 @@ namespace FindRomCover.Managers;
 /// </remarks>
 public class SettingsManager : INotifyPropertyChanged
 {
+    public static SettingsManager? CurrentInstance { get; private set; }
+
     /// <summary>
     /// Occurs when a property value changes.
     /// </summary>
@@ -178,6 +180,11 @@ public class SettingsManager : INotifyPropertyChanged
     private string _baseTheme = string.Empty;
 
     /// <summary>
+    /// Valid base theme values.
+    /// </summary>
+    private static readonly HashSet<string> ValidBaseThemes = new(StringComparer.OrdinalIgnoreCase) { "Light", "Dark" };
+
+    /// <summary>
     /// Gets or sets the base theme for the application appearance.
     /// </summary>
     /// <value>
@@ -188,6 +195,12 @@ public class SettingsManager : INotifyPropertyChanged
         get => _baseTheme;
         set
         {
+            // Validate theme value, fallback to "Light" if invalid
+            if (string.IsNullOrWhiteSpace(value) || !ValidBaseThemes.Contains(value))
+            {
+                value = "Light";
+            }
+
             if (_baseTheme == value) return;
 
             _baseTheme = value;
@@ -196,6 +209,16 @@ public class SettingsManager : INotifyPropertyChanged
     }
 
     private string _accentColor = string.Empty;
+
+    /// <summary>
+    /// Valid accent color values supported by MahApps.Metro/ControlzEx.
+    /// </summary>
+    private static readonly HashSet<string> ValidAccentColors = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Red", "Green", "Blue", "Orange", "Purple", "Pink", "Lime", "Emerald",
+        "Teal", "Cyan", "Cobalt", "Indigo", "Violet", "Magenta", "Crimson",
+        "Amber", "Yellow", "Brown", "Olive", "Steel", "Mauve", "Taupe", "Sienna"
+    };
 
     /// <summary>
     /// Gets or sets the accent color for the application theme.
@@ -209,6 +232,12 @@ public class SettingsManager : INotifyPropertyChanged
         get => _accentColor;
         set
         {
+            // Validate accent color, fallback to "Blue" if invalid
+            if (string.IsNullOrWhiteSpace(value) || !ValidAccentColors.Contains(value))
+            {
+                value = "Blue";
+            }
+
             if (_accentColor == value) return;
 
             _accentColor = value;
@@ -229,6 +258,7 @@ public class SettingsManager : INotifyPropertyChanged
         get => _maxImagesToLoad;
         set
         {
+            value = Math.Clamp(value, 1, 1000);
             if (_maxImagesToLoad == value) return;
 
             _maxImagesToLoad = value;
@@ -249,6 +279,7 @@ public class SettingsManager : INotifyPropertyChanged
         get => _imageLoaderMaxRetries;
         set
         {
+            value = Math.Clamp(value, 0, 20);
             if (_imageLoaderMaxRetries == value) return;
 
             _imageLoaderMaxRetries = value;
@@ -269,6 +300,7 @@ public class SettingsManager : INotifyPropertyChanged
         get => _imageLoaderRetryDelayMilliseconds;
         set
         {
+            value = Math.Clamp(value, 0, 10000);
             if (_imageLoaderRetryDelayMilliseconds == value) return;
 
             _imageLoaderRetryDelayMilliseconds = value;
@@ -289,10 +321,32 @@ public class SettingsManager : INotifyPropertyChanged
         get => _apiTimeoutSeconds;
         set
         {
+            value = Math.Clamp(value, 1, 300);
             if (_apiTimeoutSeconds == value) return;
 
             _apiTimeoutSeconds = value;
             OnPropertyChanged(nameof(ApiTimeoutSeconds));
+        }
+    }
+
+    private string _lastImageFolder = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the last used image folder path.
+    /// </summary>
+    /// <value>
+    /// The path to the last used image folder. Used for cleaning up orphaned temp files on startup.
+    /// Default is empty string.
+    /// </value>
+    public string LastImageFolder
+    {
+        get => _lastImageFolder;
+        set
+        {
+            if (_lastImageFolder == value) return;
+
+            _lastImageFolder = value;
+            OnPropertyChanged(nameof(LastImageFolder));
         }
     }
 
@@ -305,6 +359,7 @@ public class SettingsManager : INotifyPropertyChanged
     /// </remarks>
     public SettingsManager()
     {
+        CurrentInstance = this;
         LoadSettings();
     }
 
@@ -341,53 +396,55 @@ public class SettingsManager : INotifyPropertyChanged
                 return settingsElement.Element(elementName)?.Value ?? defaultValue;
             }
 
-            // Directly set backing fields to avoid PropertyChanged events during initial load
-            _similarityThreshold = double.Parse(GetValue("SimilarityThreshold", "70"), CultureInfo.InvariantCulture);
-            _selectedSimilarityAlgorithm = GetValue("SimilarityAlgorithm", "Jaro-Winkler Distance");
-            _baseTheme = GetValue("BaseTheme", "Light");
-            _accentColor = GetValue("AccentColor", "Blue");
+            // Use the public properties so validation/clamping stays consistent with runtime updates.
+            SimilarityThreshold = double.Parse(GetValue("SimilarityThreshold", "70"), CultureInfo.InvariantCulture);
+            SelectedSimilarityAlgorithm = GetValue("SimilarityAlgorithm", "Jaro-Winkler Distance");
+            BaseTheme = GetValue("BaseTheme", "Light");
+            AccentColor = GetValue("AccentColor", "Blue");
 
             var imageSizeElement = settingsElement.Element("ImageSize");
             if (imageSizeElement != null)
             {
-                _imageWidth = int.Parse(imageSizeElement.Element("Width")?.Value ?? "300", CultureInfo.InvariantCulture);
-                _imageHeight = int.Parse(imageSizeElement.Element("Height")?.Value ?? "300", CultureInfo.InvariantCulture);
+                ImageWidth = int.Parse(imageSizeElement.Element("Width")?.Value ?? "300", CultureInfo.InvariantCulture);
+                ImageHeight = int.Parse(imageSizeElement.Element("Height")?.Value ?? "300", CultureInfo.InvariantCulture);
             }
             else
             {
-                _imageWidth = 300;
-                _imageHeight = 300;
+                ImageWidth = 300;
+                ImageHeight = 300;
             }
 
-            _maxImagesToLoad = int.Parse(GetValue("MaxImagesToLoad", "30"), CultureInfo.InvariantCulture);
-            _imageLoaderMaxRetries = int.Parse(GetValue("ImageLoaderMaxRetries", "3"), CultureInfo.InvariantCulture);
-            _imageLoaderRetryDelayMilliseconds = int.Parse(GetValue("ImageLoaderRetryDelayMilliseconds", "200"), CultureInfo.InvariantCulture);
-            _apiTimeoutSeconds = int.Parse(GetValue("ApiTimeoutSeconds", "30"), CultureInfo.InvariantCulture);
+            MaxImagesToLoad = int.Parse(GetValue("MaxImagesToLoad", "30"), CultureInfo.InvariantCulture);
+            ImageLoaderMaxRetries = int.Parse(GetValue("ImageLoaderMaxRetries", "3"), CultureInfo.InvariantCulture);
+            ImageLoaderRetryDelayMilliseconds = int.Parse(GetValue("ImageLoaderRetryDelayMilliseconds", "200"), CultureInfo.InvariantCulture);
+            ApiTimeoutSeconds = int.Parse(GetValue("ApiTimeoutSeconds", "30"), CultureInfo.InvariantCulture);
 
             var extensionsElement = settingsElement.Element("SupportedExtensions");
             if (extensionsElement != null)
             {
-                _supportedExtensions = extensionsElement.Elements("Extension")
+                SupportedExtensions = extensionsElement.Elements("Extension")
                     .Select(static e => e.Value)
                     .Where(static e => !string.IsNullOrEmpty(e))
                     .ToArray();
             }
 
             // Check if supported extensions is null or empty (fixes issue #4)
-            if (_supportedExtensions.Length == 0)
+            if (SupportedExtensions.Length == 0)
             {
-                _supportedExtensions = GetDefaultExtensions();
+                SupportedExtensions = GetDefaultExtensions();
             }
 
             var useMameDescValue = GetValue("UseMameDescription", "false");
             if (string.IsNullOrEmpty(useMameDescValue))
             {
-                _useMameDescription = false;
+                UseMameDescription = false;
             }
             else
             {
-                _useMameDescription = string.Equals(useMameDescValue, "true", StringComparison.OrdinalIgnoreCase);
+                UseMameDescription = string.Equals(useMameDescValue, "true", StringComparison.OrdinalIgnoreCase);
             }
+
+            LastImageFolder = GetValue("LastImageFolder", string.Empty);
         }
         catch (Exception ex)
         {
@@ -444,7 +501,8 @@ public class SettingsManager : INotifyPropertyChanged
                     new XElement("ApiTimeoutSeconds", ApiTimeoutSeconds),
                     new XElement("BaseTheme", BaseTheme),
                     new XElement("AccentColor", AccentColor),
-                    new XElement("UseMameDescription", UseMameDescription.ToString().ToLowerInvariant())
+                    new XElement("UseMameDescription", UseMameDescription.ToString().ToLowerInvariant()),
+                    new XElement("LastImageFolder", LastImageFolder)
                 )
             );
         }
@@ -513,6 +571,7 @@ public class SettingsManager : INotifyPropertyChanged
         _baseTheme = AppConstants.Themes.Light;
         _accentColor = "Blue";
         _useMameDescription = false;
+        _lastImageFolder = string.Empty;
     }
 
     private static string[] GetDefaultExtensions()

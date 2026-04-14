@@ -76,8 +76,6 @@ public static class ButtonFactory
             var exception = new ArgumentException(errorMessage, nameof(imagePath));
             _ = ErrorLogger.LogAsync(exception, errorMessage); // Using fire-and-forget pattern to avoid blocking UI
 
-            _ = ErrorLogger.LogAsync(exception, "Error creating context menu.");
-
             return new ContextMenu(); // Return a fresh empty menu
         }
 
