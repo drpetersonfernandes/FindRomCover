@@ -254,7 +254,7 @@ public static class SimilarityCalculator
     /// This implementation uses a space-optimized dynamic programming approach that only stores
     /// two rows of the distance matrix at a time, reducing memory usage from O(n²) to O(n).
     /// </remarks>
-    private static double CalculateLevenshteinSimilarity(string a, string b)
+    internal static double CalculateLevenshteinSimilarity(string a, string b)
     {
         // Only store two rows rather than the full matrix
         var lengthA = a.Length;
@@ -304,7 +304,7 @@ public static class SimilarityCalculator
     /// Uses 1-grams (single characters) for very short strings and 2-grams (bigrams) otherwise
     /// to provide better results by preserving some order information.
     /// </remarks>
-    private static double CalculateJaccardIndex(string a, string b)
+    internal static double CalculateJaccardIndex(string a, string b)
     {
         // Use 1-grams for very short strings to avoid issues and provide better results.
         // Otherwise, use 2-grams (bigrams) to preserve some order information.
@@ -332,7 +332,7 @@ public static class SimilarityCalculator
     /// The string is padded with spaces at the beginning and end to ensure that
     /// boundary characters are included in n-grams.
     /// </remarks>
-    private static HashSet<string> GetNgrams(string input, int n)
+    internal static HashSet<string> GetNgrams(string input, int n)
     {
         if (string.IsNullOrEmpty(input) || n <= 0)
             return new HashSet<string>();
@@ -364,7 +364,7 @@ public static class SimilarityCalculator
     /// that gives more favorable ratings to strings that match from the beginning.
     /// It uses a standard scaling factor of 0.1 and caps the prefix bonus at 4 characters.
     /// </remarks>
-    private static double CalculateJaroWinklerDistance(string s1, string s2)
+    internal static double CalculateJaroWinklerDistance(string s1, string s2)
     {
         const double scalingFactor = 0.1; // Standard Jaro-Winkler scaling factor
 
