@@ -71,16 +71,14 @@ public static class ImageLoader
             {
                 return LoadWithMagickNetInternal(imagePath);
             }
-            catch (MagickException ex)
+            catch (MagickException)
             {
-                _ = ErrorLogger.LogAsync(ex, $"Image corruption detected, attempting recovery: {Path.GetFileName(imagePath)}");
                 try
                 {
                     return LoadWithMagickNetInternal(imagePath, true);
                 }
-                catch (Exception finalEx)
+                catch
                 {
-                    _ = ErrorLogger.LogAsync(finalEx, $"Permanent corruption in image: {Path.GetFileName(imagePath)}");
                     return null;
                 }
             }
