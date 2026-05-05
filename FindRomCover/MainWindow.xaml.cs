@@ -940,19 +940,26 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         }
     }
 
-    private void LstMissingImages_KeyDown(object sender, KeyEventArgs e)
+    private void LstMissingImages_PreviewKeyDown(object sender, KeyEventArgs e)
     {
         try
         {
             if (e.Key == Key.Delete)
             {
+                if (e.IsRepeat)
+                {
+                    e.Handled = true;
+                    return;
+                }
+
                 RemoveSelectedItem();
                 App.AudioService.PlayClickSound();
+                e.Handled = true;
             }
         }
         catch (Exception ex)
         {
-            _ = ErrorLogger.LogAsync(ex, "Error in LstMissingImages_KeyDown");
+            _ = ErrorLogger.LogAsync(ex, "Error in LstMissingImages_PreviewKeyDown");
         }
     }
 

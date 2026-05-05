@@ -35,7 +35,6 @@
     <Window.InputBindings>
         <!-- Keyboard shortcuts for common actions -->
         <KeyBinding Key="F5" Command="{Binding CheckForMissingImagesCommand}" />
-        <KeyBinding Key="Delete" Command="{Binding RemoveSelectedItemCommand}" />
         <KeyBinding Key="Escape" Command="{Binding ExitCommand}" />
     </Window.InputBindings>
 
@@ -228,7 +227,7 @@
                             <ListBox x:Name="LstMissingImages"
                                      ItemsSource="{Binding MissingImages}"
                                      SelectionChanged="LstMissingImages_SelectionChanged"
-                                     KeyDown="LstMissingImages_KeyDown"
+                                     PreviewKeyDown="LstMissingImages_PreviewKeyDown"
                                      DisplayMemberPath="RomName"
                                      BorderThickness="0"
                                      AutomationProperties.Name="Missing Images List"
