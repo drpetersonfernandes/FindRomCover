@@ -565,61 +565,75 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
                 // --- Core logic with robust progress indicator handling ---
                 IsFindingSimilar = true;
+
+                // Set up search header and clear previous results immediately on UI thread
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    if (cancellationToken.IsCancellationRequested) return;
+
+                    var textBlock = new TextBlock();
+                    textBlock.Inlines.Add(new Run("Search Query: "));
+                    textBlock.Inlines.Add(new Run($"{searchName} ") { FontWeight = FontWeights.Bold });
+                    textBlock.Inlines.Add(new Run("for ROM: "));
+                    textBlock.Inlines.Add(new Run($"{romName} ") { FontWeight = FontWeights.Bold });
+                    textBlock.Inlines.Add(new Run("with "));
+                    textBlock.Inlines.Add(new Run($"{Settings.SelectedSimilarityAlgorithm} ") { FontWeight = FontWeights.Bold });
+                    textBlock.Inlines.Add(new Run("algorithm"));
+                    LblSearchQuery.Content = textBlock;
+
+                    SimilarImages.Clear();
+                });
+
                 try
                 {
                     await _findSimilarSemaphore.WaitAsync(cancellationToken);
                     try
                     {
-                        var similarityResult = await ButtonFactory.CreateSimilarImagesCollection(
-                            searchName,
-                            imageFolderPath,
-                            Settings.SimilarityThreshold,
-                            Settings.SelectedSimilarityAlgorithm,
-                            cancellationToken
-                        );
+                        SimilarityCalculationResult similarityResult;
+                        try
+                        {
+                            similarityResult = await ButtonFactory.CreateSimilarImagesCollection(
+                                searchName,
+                                imageFolderPath,
+                                Settings.SimilarityThreshold,
+                                Settings.SelectedSimilarityAlgorithm,
+                                cancellationToken,
+                                imageData =>
+                                {
+                                    // Fire-and-forget: add image to UI as soon as it loads
+                                    _ = Application.Current.Dispatcher.InvokeAsync(() =>
+                                    {
+                                        if (!cancellationToken.IsCancellationRequested)
+                                        {
+                                            SimilarImages.Add(imageData);
+                                            HasSearchedSimilar = true;
+                                        }
+                                    });
+                                }
+                            );
+                        }
+                        finally
+                        {
+                            // Flush any pending dispatcher operations
+                            if (!cancellationToken.IsCancellationRequested)
+                            {
+                                await Application.Current.Dispatcher.InvokeAsync(static () => { });
+                            }
+                        }
 
-                        // Only update UI if operation wasn't cancelled
                         if (!cancellationToken.IsCancellationRequested)
                         {
-                            await Application.Current.Dispatcher.InvokeAsync(() =>
+                            if (similarityResult.ProcessingErrors.Count > 0)
                             {
-                                // Check cancellation again inside the dispatcher to avoid race condition
-                                if (cancellationToken.IsCancellationRequested)
-                                    return;
-
-                                var textBlock = new TextBlock();
-                                textBlock.Inlines.Add(new Run("Search Query: "));
-                                textBlock.Inlines.Add(new Run($"{searchName} ") { FontWeight = FontWeights.Bold });
-                                textBlock.Inlines.Add(new Run("for ROM: "));
-                                textBlock.Inlines.Add(new Run($"{romName} ") { FontWeight = FontWeights.Bold });
-                                textBlock.Inlines.Add(new Run("with "));
-                                textBlock.Inlines.Add(new Run($"{Settings.SelectedSimilarityAlgorithm} ") { FontWeight = FontWeights.Bold });
-                                textBlock.Inlines.Add(new Run("algorithm"));
-                                LblSearchQuery.Content = textBlock;
-
-                                SimilarImages.Clear();
-                                foreach (var imageData in similarityResult.SimilarImages) // Use SimilarImages from result
+                                var errorSummary = $"Encountered {similarityResult.ProcessingErrors.Count} issues while processing images:\n\n";
+                                errorSummary += string.Join("\n", similarityResult.ProcessingErrors.Take(5));
+                                if (similarityResult.ProcessingErrors.Count > 5)
                                 {
-                                    SimilarImages.Add(imageData);
+                                    errorSummary += $"\n...and {similarityResult.ProcessingErrors.Count - 5} more. Check the application log for full details.";
                                 }
 
-                                // Mark that a search has been performed
-                                HasSearchedSimilar = true;
-
-                                // --- NEW: Display processing errors to the user ---
-                                if (similarityResult.ProcessingErrors.Count > 0)
-                                {
-                                    var errorSummary = $"Encountered {similarityResult.ProcessingErrors.Count} issues while processing images:\n\n";
-                                    errorSummary += string.Join("\n", similarityResult.ProcessingErrors.Take(5)); // Show first 5 errors
-                                    if (similarityResult.ProcessingErrors.Count > 5)
-                                    {
-                                        errorSummary += $"\n...and {similarityResult.ProcessingErrors.Count - 5} more. Check the application log for full details.";
-                                    }
-
-                                    MessageBox.Show(errorSummary, "Image Processing Warnings", MessageBoxButton.OK, MessageBoxImage.Warning);
-                                }
-                                // --- END NEW ---
-                            });
+                                MessageBox.Show(errorSummary, "Image Processing Warnings", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            }
 
                             ImageScrollViewer.ScrollToTop();
                         }

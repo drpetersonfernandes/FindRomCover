@@ -30,6 +30,7 @@ public static class ButtonFactory
     /// <param name="similarityThreshold">The minimum similarity score (0-100) required for inclusion.</param>
     /// <param name="similarityAlgorithm">The algorithm to use for similarity calculation.</param>
     /// <param name="cancellationToken">A cancellation token to allow the operation to be cancelled.</param>
+    /// <param name="onImageLoaded"></param>
     /// <returns>
     /// A <see cref="Task{TResult}"/> containing a <see cref="SimilarityCalculationResult"/> with similar images and any processing errors.
     /// </returns>
@@ -39,14 +40,16 @@ public static class ButtonFactory
         string imageFolderPath,
         double similarityThreshold,
         string similarityAlgorithm,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Action<ImageData>? onImageLoaded = null)
     {
         return SimilarityCalculator.CalculateSimilarityAsync(
             selectedRomFileName,
             imageFolderPath,
             similarityThreshold,
             similarityAlgorithm,
-            cancellationToken);
+            cancellationToken,
+            onImageLoaded: onImageLoaded);
     }
 
     /// <summary>
