@@ -19,7 +19,7 @@ public class NgramIndex
         foreach (var filePath in imageFiles)
         {
             FileCount++;
-            var imageName = Path.GetFileNameWithoutExtension(filePath);
+            var imageName = Path.GetFileNameWithoutExtension(filePath).ToLowerInvariant();
             var padded = new string(' ', N - 1) + imageName + new string(' ', N - 1);
 
             for (var i = 0; i <= padded.Length - N; i++)
@@ -40,7 +40,7 @@ public class NgramIndex
     {
         if (FileCount == 0) return new List<string>();
 
-        var padded = new string(' ', N - 1) + query + new string(' ', N - 1);
+        var padded = new string(' ', N - 1) + query.ToLowerInvariant() + new string(' ', N - 1);
 
         var queryTrigrams = new HashSet<string>();
         for (var i = 0; i <= padded.Length - N; i++)

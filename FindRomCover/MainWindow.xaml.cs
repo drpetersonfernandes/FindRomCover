@@ -641,6 +641,8 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
                         if (!cancellationToken.IsCancellationRequested)
                         {
+                            HasSearchedSimilar = true;
+
                             if (similarityResult.ProcessingErrors.Count > 0)
                             {
                                 var errorSummary = $"Encountered {similarityResult.ProcessingErrors.Count} issues while processing images:\n\n";

@@ -157,14 +157,26 @@ public class NgramIndexTests
     }
 
     [Fact]
-    public void GetCandidatesCaseSensitiveMatchingWorks()
+    public void GetCandidatesCaseInsensitiveMatchingWorks()
     {
         var index = new NgramIndex();
         index.Build([@"C:\images\Mario.png"]);
 
-        var candidates = index.GetCandidates("Mario");
+        var candidates = index.GetCandidates("mario");
 
         candidates.Should().ContainSingle();
+    }
+
+    [Fact]
+    public void GetCandidatesDifferentCaseQueryFindsFile()
+    {
+        var index = new NgramIndex();
+        index.Build([@"C:\images\ZELDA.png"]);
+
+        var candidates = index.GetCandidates("zelda");
+
+        candidates.Should().ContainSingle()
+            .Which.Should().Be(@"C:\images\ZELDA.png");
     }
 
     [Fact]
