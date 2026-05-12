@@ -37,10 +37,9 @@ public class AudioService : IAudioService
             try
             {
                 // MediaPlayer requires STA thread apartment state.
-                // Use InvokeAsync to avoid potential deadlocks with synchronous Invoke.
                 if (Thread.CurrentThread.GetApartmentState() != ApartmentState.STA)
                 {
-                    System.Windows.Application.Current.Dispatcher.InvokeAsync(() => InitializeMediaPlayer(soundPath)).Wait();
+                    System.Windows.Application.Current.Dispatcher.Invoke(() => InitializeMediaPlayer(soundPath));
                 }
                 else
                 {
@@ -80,10 +79,10 @@ public class AudioService : IAudioService
             // Initialize on UI thread to avoid threading issues
             if (Thread.CurrentThread.GetApartmentState() != ApartmentState.STA)
             {
-                System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                System.Windows.Application.Current.Dispatcher.Invoke(() =>
                 {
                     _mediaPlayer = new MediaPlayer(); // Initialize to avoid null reference issues
-                }).Wait();
+                });
             }
             else
             {
@@ -166,7 +165,11 @@ public class AudioService : IAudioService
     {
         try
         {
-            _mediaPlayer?.Close();
+            if (_mediaPlayer != null)
+            {
+                _mediaPlayer.MediaFailed -= OnMediaFailed;
+                _mediaPlayer.Close();
+            }
         }
         catch (Exception ex)
         {

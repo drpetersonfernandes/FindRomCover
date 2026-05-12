@@ -28,9 +28,11 @@ public class ImageDataTests
     [Fact]
     public void DisplayImageWhenImageSourceIsNullReturnsBrokenImage()
     {
-        var imageData = new ImageData(@"C:\images\test.png", "test", 50.0);
+        var imageData1 = new ImageData(@"C:\images\test1.png", "test1", 50.0);
+        var imageData2 = new ImageData(@"C:\images\test2.png", "test2", 60.0);
 
-        imageData.DisplayImage.Should().NotBeNull();
+        imageData1.DisplayImage.Should().NotBeNull();
+        imageData1.DisplayImage.Should().BeSameAs(imageData2.DisplayImage);
     }
 
     [Fact]

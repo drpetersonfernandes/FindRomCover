@@ -32,5 +32,6 @@ public static class AppConstants
     public static class Messages
     {
         public const string DefaultSimilarityThreshold = "70";
+        public const string MissingCoversPrefix = "MISSING COVERS: ";
     }
 }

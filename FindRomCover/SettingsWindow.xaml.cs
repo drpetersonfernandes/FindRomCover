@@ -20,7 +20,7 @@ public partial class SettingsWindow
         _settingsManager = settingsManager ?? throw new ArgumentNullException(nameof(settingsManager));
 
         _supportedExtensions = new ObservableCollection<string>(_settingsManager.SupportedExtensions.OrderBy(static e => e, StringComparer.OrdinalIgnoreCase));
-        DataContext = new { SupportedExtensions = _supportedExtensions };
+        DataContext = new SettingsViewModel { SupportedExtensions = _supportedExtensions };
     }
 
     private async void BtnAdd_ClickAsync(object sender, RoutedEventArgs e)
@@ -167,5 +167,10 @@ public partial class SettingsWindow
     {
         DialogResult = false;
         Close();
+    }
+
+    private sealed class SettingsViewModel
+    {
+        public ObservableCollection<string> SupportedExtensions { get; init; } = new();
     }
 }

@@ -74,13 +74,13 @@ public class SimilarityCalculatorTests
     }
 
     [Fact]
-    public void CalculateJaccardIndexSomeOverlapReturnsReasonableScore()
+    public void CalculateJaccardIndexSomeOverlapReturnsExactScore()
     {
         const string a = "mario";
         const string b = "mario Bros";
         var setA = SimilarityCalculator.GetNgrams(a, 2);
         var result = SimilarityCalculator.CalculateJaccardIndex(setA, b, 2);
-        result.Should().BeGreaterThan(0).And.BeLessThan(100);
+        result.Should().BeApproximately(600.0 / 11.0, 0.01);
     }
 
     [Fact]
@@ -159,6 +159,13 @@ public class SimilarityCalculatorTests
     {
         var result = SimilarityCalculator.GetNgrams("abc", 1);
         result.Should().Contain(["a", "b", "c"]);
+    }
+
+    [Fact]
+    public void GetNgramsTrigramsReturnsCorrectSet()
+    {
+        var result = SimilarityCalculator.GetNgrams("abc", 3);
+        result.Should().Contain(["  a", " ab", "abc", "bc ", "c  "]);
     }
 
     #endregion

@@ -25,27 +25,26 @@ namespace FindRomCover.Services;
 public static class ErrorLogger
 {
     // Use IHttpClientFactory pattern with static instance that can be disposed on app exit
-    private static readonly HttpClient HttpClient = new();
-    private static bool _isDisposed;
-    private static readonly object DisposeLock = new();
+    internal static HttpClient HttpClient = new();
+    internal static bool IsDisposed;
+    internal static readonly object DisposeLock = new();
 
     private const string ApiKey = "hjh7yu6t56tyr540o9u8767676r5674534453235264c75b6t7ggghgg76trf564e";
     private const string BugReportApiUrl = "https://www.purelogiccode.com/bugreport/api/send-bug-report";
 
     // Log file for errors to be sent to the API (this one gets cleared)
-    private static readonly string ApiLogFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ApiLogError.txt");
+    internal static string ApiLogFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ApiLogError.txt");
 
     // Log file for user's reference (this one persists)
-    private static readonly string UserLogFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "UserLogError.txt");
+    internal static string UserLogFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "UserLogError.txt");
 
     // Log file for internal logging system errors (to debug logging itself)
-    private static readonly string InternalLogFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "InternalLog.txt");
+    internal static string InternalLogFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "InternalLog.txt");
 
     // Semaphore to ensure only one thread writes to/reads from the log files at a time
     private static readonly SemaphoreSlim LogFileLock = new(1, 1);
 
-    // Internal logging uses a simple in-process lock so it never contends with the main log semaphore.
-    private static readonly object InternalLogSync = new();
+    private static readonly SemaphoreSlim InternalLogSemaphore = new(1, 1);
 
     private static readonly JsonSerializerOptions CachedJsonSerializerOptions = new()
     {
@@ -70,10 +69,10 @@ public static class ErrorLogger
     {
         lock (DisposeLock)
         {
-            if (!_isDisposed)
+            if (!IsDisposed)
             {
                 HttpClient.Dispose();
-                _isDisposed = true;
+                IsDisposed = true;
             }
         }
     }
@@ -101,7 +100,7 @@ public static class ErrorLogger
     /// </remarks>
     public static async Task LogAsync(Exception? ex, string? contextMessage = null, int apiTimeoutSeconds = DefaultApiTimeoutSeconds)
     {
-        if (_isDisposed)
+        if (IsDisposed)
         {
             return;
         }
@@ -137,7 +136,7 @@ public static class ErrorLogger
         catch (Exception loggingEx)
         {
             // Log any exceptions that occur during the logging process itself to an internal log
-            WriteInternalLog("Failed to write/read log files.", loggingEx);
+            _ = WriteInternalLog("Failed to write/read log files.", loggingEx);
             return;
         }
         finally
@@ -161,7 +160,7 @@ public static class ErrorLogger
             catch (Exception loggingEx)
             {
                 // Log any exceptions that occur during the API sending process to an internal log
-                WriteInternalLog("Failed to send log to API.", loggingEx);
+                _ = WriteInternalLog("Failed to send log to API.", loggingEx);
             }
 
             // 5. If sending is successful, clear the API-sending log file
@@ -177,7 +176,7 @@ public static class ErrorLogger
                 }
                 catch (Exception loggingEx)
                 {
-                    WriteInternalLog("Failed to clear API log file.", loggingEx);
+                    _ = WriteInternalLog("Failed to clear API log file.", loggingEx);
                 }
                 finally
                 {
@@ -223,7 +222,7 @@ public static class ErrorLogger
     /// </remarks>
     private static async Task<bool> SendLogToApiAsync(BugReportModel bugReport, string logContent, int apiTimeoutSeconds)
     {
-        if (_isDisposed)
+        if (IsDisposed)
         {
             return false;
         }
@@ -257,23 +256,23 @@ public static class ErrorLogger
             else
             {
                 var errorContent = await response.Content.ReadAsStringAsync(cts.Token);
-                WriteInternalLog($"API returned non-success status code: {response.StatusCode}. Response: {errorContent}");
+                _ = WriteInternalLog($"API returned non-success status code: {response.StatusCode}. Response: {errorContent}");
                 return false;
             }
         }
         catch (HttpRequestException httpEx)
         {
-            WriteInternalLog("HTTP request failed when sending log to API.", httpEx);
+            _ = WriteInternalLog("HTTP request failed when sending log to API.", httpEx);
             return false;
         }
         catch (TaskCanceledException tcEx) when (tcEx.CancellationToken.IsCancellationRequested)
         {
-            WriteInternalLog("HTTP Request timed out when sending log to API.");
+            _ = WriteInternalLog("HTTP Request timed out when sending log to API.");
             return false;
         }
         catch (Exception ex)
         {
-            WriteInternalLog("An unexpected error occurred when sending log to API.", ex);
+            _ = WriteInternalLog("An unexpected error occurred when sending log to API.", ex);
             return false;
         }
     }
@@ -288,7 +287,7 @@ public static class ErrorLogger
     /// This method uses a simple lock (not SemaphoreSlim) to avoid deadlocks with the main LogFileLock.
     /// If writing fails, the error is output to Debug.Print as a last resort.
     /// </remarks>
-    private static void WriteInternalLog(string message, Exception? exception = null)
+    private static async Task WriteInternalLog(string message, Exception? exception = null)
     {
         try
         {
@@ -305,9 +304,14 @@ public static class ErrorLogger
                 }
             }
 
-            lock (InternalLogSync)
+            await InternalLogSemaphore.WaitAsync();
+            try
             {
-                File.AppendAllText(InternalLogFilePath, logMessage.ToString());
+                await File.AppendAllTextAsync(InternalLogFilePath, logMessage.ToString());
+            }
+            finally
+            {
+                InternalLogSemaphore.Release();
             }
         }
         catch

@@ -35,7 +35,7 @@ public class DelegateCommandTests
     public void ExecutePassesNullParameter()
     {
         var wasCalled = false;
-        var receivedParameter = new object();
+        object? receivedParameter = "sentinel";
         var command = new DelegateCommand(param =>
         {
             wasCalled = true;

@@ -234,12 +234,12 @@
                                      AutomationProperties.Name="ROM Folder Path"
                                      AutomationProperties.HelpText="Enter the path to your ROM files folder"
                                      ToolTip="Enter or browse to the folder containing your ROM files"
-                                     TabIndex="1" />
+                                      />
                             <Button Grid.Column="1" Content="Browse..." Margin="5,0,0,0"
                                     Click="BtnBrowseRomFolder_Click"
                                     AutomationProperties.Name="Browse ROM Folder"
                                     ToolTip="Browse for the ROM folder"
-                                    TabIndex="2" />
+                                     />
                         </Grid>
                         <Grid Margin="0,5,0,5">
                             <Grid.ColumnDefinitions>
@@ -253,12 +253,12 @@
                                      AutomationProperties.Name="Image Folder Path"
                                      AutomationProperties.HelpText="Enter the path to your cover images folder"
                                      ToolTip="Enter or browse to the folder containing your cover images"
-                                     TabIndex="3" />
+                                      />
                             <Button Grid.Column="1" Content="Browse..." Margin="5,0,0,0"
                                     Click="BtnBrowseImageFolder_Click"
                                     AutomationProperties.Name="Browse Image Folder"
                                     ToolTip="Browse for the image folder"
-                                    TabIndex="4" />
+                                     />
                         </Grid>
                     </StackPanel>
                 </GroupBox>
@@ -284,7 +284,7 @@
                                 AutomationProperties.HelpText="Press to scan for ROM files without cover images"
                                 ToolTip="Scan for ROM files that don't have matching cover images (F5)"
                                 IsDefault="True"
-                                TabIndex="5" />
+                                />
 
                         <Grid Grid.Row="1">
                             <ListBox x:Name="LstMissingImages"
@@ -296,7 +296,7 @@
                                      AutomationProperties.Name="Missing Images List"
                                      AutomationProperties.HelpText="List of ROM files without cover images. Press Delete to remove an item."
                                      ToolTip="Select a ROM to find similar cover images. Press Delete to remove an item."
-                                     TabIndex="6" />
+                                      />
                             <controls:ProgressRing IsActive="{Binding IsCheckingMissing}" HorizontalAlignment="Center"
                                                    VerticalAlignment="Center" />
                         </Grid>
@@ -307,7 +307,7 @@
                                 AutomationProperties.Name="Remove Selected Item"
                                 AutomationProperties.HelpText="Remove the selected ROM from the missing list"
                                 ToolTip="Remove the selected ROM from the missing covers list"
-                                TabIndex="7" />
+                                 />
                     </Grid>
                 </GroupBox>
             </Grid>

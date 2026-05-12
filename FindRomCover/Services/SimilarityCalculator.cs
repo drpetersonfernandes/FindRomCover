@@ -79,9 +79,9 @@ public static class SimilarityCalculator
 
         try
         {
-            Parallel.ForEach(filesToProcess, parallelOptions, (imageFile, state) =>
+            await Parallel.ForEachAsync(filesToProcess, parallelOptions, (imageFile, ct) =>
             {
-                cancellationToken.ThrowIfCancellationRequested();
+                ct.ThrowIfCancellationRequested();
 
                 try
                 {
@@ -106,8 +106,7 @@ public static class SimilarityCalculator
                             var ex = new NotImplementedException(errorMessage);
                             _ = ErrorLogger.LogAsync(ex, errorMessage);
                             processingErrors.Add(errorMessage);
-                            state.Stop();
-                            return;
+                            return ValueTask.CompletedTask;
                     }
 
                     if (similarityScore >= similarityThreshold)
@@ -120,7 +119,9 @@ public static class SimilarityCalculator
                     _ = ErrorLogger.LogAsync(ex, $"Error processing file for similarity: {imageFile}");
                     processingErrors.Add($"Could not process image '{Path.GetFileName(imageFile)}' for similarity: {ex.Message}");
                 }
-            });
+
+                return ValueTask.CompletedTask;
+            }).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -331,7 +332,7 @@ public static class SimilarityCalculator
             return 0.0;
         }
 
-        var matchDistance = Math.Max(s1Len, s2Len) / 2 - 1;
+        var matchDistance = Math.Max(0, Math.Max(s1Len, s2Len) / 2 - 1);
 
         var s1Matches = ArrayPool<bool>.Shared.Rent(s1Len);
         var s2Matches = ArrayPool<bool>.Shared.Rent(s2Len);

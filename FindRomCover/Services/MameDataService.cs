@@ -19,10 +19,10 @@ namespace FindRomCover.Services;
 /// </remarks>
 public static class MameDataService
 {
-    private static readonly string DefaultDatPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, AppConstants.MameDatFileName);
+    internal static string DefaultDatPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, AppConstants.MameDatFileName);
 
-    // Use Lazy<T> for thread-safe, one-time initialization of the MAME data cache.
-    private static readonly Lazy<List<MameData>> MameDataCache = new(LoadMameDataFromFile, true);
+    private static readonly object CacheLock = new();
+    private static List<MameData>? _cachedMameData;
 
     /// <summary>
     /// Loads MAME data from the default DAT file location.
@@ -33,16 +33,32 @@ public static class MameDataService
     /// </returns>
     /// <exception cref="FileNotFoundException">Thrown when the mame.dat file does not exist.</exception>
     /// <remarks>
-    /// This method uses lazy initialization to cache the data after the first call.
-    /// Subsequent calls return the cached data without re-reading the file.
-    /// If the file is not found, a FileNotFoundException is thrown on the first call.
-    /// The application must be restarted to reload the data if the initial load failed.
+    /// This method uses double-checked locking to cache the data after the first successful call.
+    /// If the file is not found, the result is not cached so subsequent calls will retry.
     /// </remarks>
     public static List<MameData> LoadFromDat()
     {
-        // Accessing .Value will trigger the LoadMameDataFromFile factory method once,
-        // and subsequent calls will return the cached result.
-        return MameDataCache.Value;
+        if (_cachedMameData is not null)
+            return _cachedMameData;
+
+        lock (CacheLock)
+        {
+            if (_cachedMameData is not null)
+                return _cachedMameData;
+
+            var result = LoadMameDataFromFile();
+            _cachedMameData = result;
+            return result;
+        }
+    }
+
+    private static void ShowDeferredErrorMessage(string message)
+    {
+        if (Application.Current?.Dispatcher is { } dispatcher)
+        {
+            dispatcher.BeginInvoke(() =>
+                MessageBox.Show(message, "Error", MessageBoxButton.OK, MessageBoxImage.Error));
+        }
     }
 
     /// <summary>
@@ -79,7 +95,7 @@ public static class MameDataService
             const string contextMessage = "The file mame.dat is corrupted or not in the correct MessagePack format.";
             _ = ErrorLogger.LogAsync(ex, contextMessage);
 
-            MessageBox.Show(contextMessage, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            ShowDeferredErrorMessage(contextMessage);
 
             return []; // return an empty list
         }
@@ -89,7 +105,7 @@ public static class MameDataService
             const string contextMessage = "Error reading the file mame.dat (possibly locked by another process).";
             _ = ErrorLogger.LogAsync(ex, contextMessage);
 
-            MessageBox.Show(contextMessage, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            ShowDeferredErrorMessage(contextMessage);
 
             return []; // return an empty list
         }
@@ -99,7 +115,7 @@ public static class MameDataService
             const string contextMessage = "Access denied to the file mame.dat.";
             _ = ErrorLogger.LogAsync(ex, contextMessage);
 
-            MessageBox.Show(contextMessage, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            ShowDeferredErrorMessage(contextMessage);
 
             return []; // return an empty list
         }
@@ -108,7 +124,7 @@ public static class MameDataService
             const string contextMessage = "An unexpected error occurred while loading mame.dat.";
             _ = ErrorLogger.LogAsync(ex, contextMessage);
 
-            MessageBox.Show(contextMessage, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            ShowDeferredErrorMessage(contextMessage);
 
             return []; // return an empty list
         }

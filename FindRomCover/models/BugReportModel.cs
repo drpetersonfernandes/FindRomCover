@@ -155,7 +155,7 @@ public class BugReportModel
     private static string GetFriendlyWindowsVersion()
     {
         var os = Environment.OSVersion;
-        if (os.Platform != PlatformID.Win32NT)
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             return os.Platform.ToString();
         }

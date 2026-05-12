@@ -25,7 +25,7 @@ internal sealed class FakeHttpMessageHandler : HttpMessageHandler
         _exception = exception;
     }
 
-    private FakeHttpMessageHandler(bool timeout)
+    private FakeHttpMessageHandler(bool timeout) : this(HttpStatusCode.OK, string.Empty)
     {
         _timeout = timeout;
     }

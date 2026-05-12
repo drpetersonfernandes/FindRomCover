@@ -84,9 +84,11 @@ public static class ImageProcessor
     /// 2. Sets PNG format with 90% quality
     /// 3. Uses retry logic for handling file locking issues
     /// </remarks>
-    public static Task<ImageSaveResult> ConvertAndSaveImageAsync(string sourcePath, string targetPath, CancellationToken cancellationToken)
+    public static Task<ImageSaveResult> ConvertAndSaveImageAsync(string sourcePath, string? targetPath, CancellationToken cancellationToken)
     {
-        return Task.Run(async () => await ConvertAndSaveImageCoreAsync(sourcePath, targetPath, cancellationToken), cancellationToken);
+        if (targetPath != null) return ConvertAndSaveImageCoreAsync(sourcePath, targetPath, cancellationToken);
+
+        return Task.FromResult(new ImageSaveResult(false, "Target path is null.", "Error", MessageBoxImage.Error));
     }
 
     /// <summary>

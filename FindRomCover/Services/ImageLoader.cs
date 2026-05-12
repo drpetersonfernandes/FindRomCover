@@ -83,7 +83,7 @@ public static class ImageLoader
                     return null;
                 }
             }
-            catch (IOException ex) when (ex.Message.Contains("being used by another process") || (uint)ex.HResult == 0x80070020)
+            catch (IOException ex) when ((uint)ex.HResult == 0x80070020)
             {
                 if (i < maxRetries - 1)
                 {
@@ -171,8 +171,11 @@ public static class ImageLoader
         var bitmapImage = new BitmapImage();
         bitmapImage.BeginInit();
         bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
-        bitmapImage.StreamSource = new MemoryStream(imageBytes);
-        bitmapImage.EndInit();
+        using (var sourceStream = new MemoryStream(imageBytes))
+        {
+            bitmapImage.StreamSource = sourceStream;
+            bitmapImage.EndInit();
+        }
 
         if (bitmapImage.CanFreeze)
             bitmapImage.Freeze();

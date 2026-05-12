@@ -88,7 +88,8 @@ public partial class App
     {
         try
         {
-            var service = new GitHubReleaseService(new HttpClient())
+            using var httpClient = new HttpClient();
+            var service = new GitHubReleaseService(httpClient)
             {
                 HttpClientTimeoutSeconds = 15
             };
@@ -141,13 +142,16 @@ public partial class App
 
             _ = ErrorLogger.LogAsync(ex, contextMessage);
 
-            // Show error message to user
-            MessageBox.Show(
-                "An unexpected error occurred and the application needs to close.\n\n" +
-                "The error has been reported to the development team.",
-                "Fatal Error",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
+            // Marshal to UI thread — UnhandledException fires on the faulting thread
+            Current?.Dispatcher.BeginInvoke(static () =>
+            {
+                MessageBox.Show(
+                    "An unexpected error occurred and the application needs to close.\n\n" +
+                    "Please report this issue to the development team.",
+                    "Fatal Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            });
         };
 
         // Handle unobserved task exceptions
@@ -288,11 +292,7 @@ public partial class App
         {
             ThemeManager.Current.ChangeTheme(Current, $"{baseTheme}.{accentColor}");
         }
-        catch (ArgumentException ex)
-        {
-            FireAndForget(() => ErrorLogger.LogAsync(ex, $"Error applying theme: {baseTheme}.{accentColor}"));
-        }
-        catch (InvalidOperationException ex)
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
             FireAndForget(() => ErrorLogger.LogAsync(ex, $"Error applying theme: {baseTheme}.{accentColor}"));
         }
@@ -306,19 +306,7 @@ public partial class App
             var accentColor = SettingsManager.AccentColor;
             ThemeManager.Current.ChangeTheme(window, $"{baseTheme}.{accentColor}");
         }
-        catch (ArgumentException ex)
-        {
-            FireAndForget(() => ErrorLogger.LogAsync(ex, "Error applying theme to window, using default"));
-            try
-            {
-                ThemeManager.Current.ChangeTheme(window, "Light.Blue");
-            }
-            catch (Exception fallbackEx)
-            {
-                _ = ErrorLogger.LogAsync(fallbackEx, "Failed to apply default theme 'Light.Blue' to window");
-            }
-        }
-        catch (InvalidOperationException ex)
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
             FireAndForget(() => ErrorLogger.LogAsync(ex, "Error applying theme to window, using default"));
             try

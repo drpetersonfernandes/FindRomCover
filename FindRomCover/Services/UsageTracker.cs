@@ -6,9 +6,9 @@ namespace FindRomCover.Services;
 
 public static class UsageTracker
 {
-    private static readonly HttpClient HttpClient = new();
-    private static bool _isDisposed;
-    private static readonly object DisposeLock = new();
+    internal static HttpClient HttpClient = new();
+    internal static bool IsDisposed;
+    internal static readonly object DisposeLock = new();
 
     private const string ApiKey = "hjh7yu6t56tyr540o9u8767676r5674534453235264c75b6t7ggghgg76trf564e";
     private const string StatsApiUrl = "https://www.purelogiccode.com/ApplicationStats/stats";
@@ -21,30 +21,32 @@ public static class UsageTracker
     {
         lock (DisposeLock)
         {
-            if (!_isDisposed)
+            if (!IsDisposed)
             {
                 HttpClient.Dispose();
-                _isDisposed = true;
+                IsDisposed = true;
             }
         }
     }
 
     public static async Task TrackUsageAsync()
     {
-        if (_isDisposed)
+        if (IsDisposed)
         {
             return;
         }
 
         try
         {
-            HttpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", ApiKey);
-
             var payload = new { applicationId = ApplicationId, version = ApplicationVersion };
 
+            using var request = new HttpRequestMessage(HttpMethod.Post, StatsApiUrl);
+            request.Content = JsonContent.Create(payload);
+            request.Headers.Authorization =
+                new AuthenticationHeaderValue("Bearer", ApiKey);
+
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-            using var response = await HttpClient.PostAsJsonAsync(StatsApiUrl, payload, cts.Token);
+            using var response = await HttpClient.SendAsync(request, cts.Token);
         }
         catch
         {

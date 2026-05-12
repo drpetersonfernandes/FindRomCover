@@ -76,7 +76,7 @@ public class NgramIndexTests
         var index = new NgramIndex();
         index.Build([@"C:\images\mario.png"]);
 
-        var candidates = index.GetCandidates("mario");
+        var candidates = index.GetCandidates("mario64");
 
         candidates.Should().ContainSingle()
             .Which.Should().Be(@"C:\images\mario.png");

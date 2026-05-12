@@ -450,9 +450,6 @@ public class SettingsManager : INotifyPropertyChanged
         {
             _ = ErrorLogger.LogAsync(ex, "Error loading settings from settings.xml");
 
-            MessageBox.Show($"Error loading settings from settings.xml: {ex.Message}\nUsing default settings.",
-                "Settings Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-
             SetDefaultSettings();
             try
             {

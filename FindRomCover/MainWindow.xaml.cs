@@ -22,7 +22,7 @@ namespace FindRomCover;
 public partial class MainWindow : INotifyPropertyChanged, IDisposable
 {
     private CancellationTokenSource? _loadMissingCts;
-    private List<MameManager>? _machines;
+    private List<MameData>? _machines;
     private Dictionary<string, string>? _mameLookup;
     private CancellationTokenSource? _findSimilarCts;
     private readonly SemaphoreSlim _findSimilarSemaphore = new(1, 1); // Semaphore to ensure only one search runs at a time
@@ -60,16 +60,14 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         }
     }
 
-    private bool _hasSearchedSimilar;
-
     public bool HasSearchedSimilar
     {
-        get => _hasSearchedSimilar;
+        get;
         set
         {
-            if (_hasSearchedSimilar == value) return;
+            if (field == value) return;
 
-            _hasSearchedSimilar = value;
+            field = value;
             OnPropertyChanged(nameof(HasSearchedSimilar));
         }
     }
@@ -129,7 +127,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
     {
         try
         {
-            _machines = MameManager.LoadFromDat();
+            _machines = MameDataService.LoadFromDat();
 
             // Only recreate the lookup dictionary if we have machines data
             // and it's different from what we already have (prevents unnecessary recreation)
@@ -248,7 +246,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         {
             if (item is not MenuItem { Header: not null } menuItem) continue;
 
-            menuItem.IsChecked = menuItem.Header.ToString()?.Replace("Accent", "") == currentAccent;
+            menuItem.IsChecked = menuItem.Name.Replace("Accent", "") == currentAccent;
         }
     }
 
@@ -283,8 +281,21 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
     private void OnWindowClosing(object? sender, CancelEventArgs e)
     {
-        _findSimilarCts?.Cancel();
-        _loadMissingCts?.Cancel();
+        try
+        {
+            _findSimilarCts?.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+
+        try
+        {
+            _loadMissingCts?.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+        }
     }
 
     private void Exit_Click(object sender, RoutedEventArgs e)
@@ -538,6 +549,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
                 // --- Start of method: setup and early exit conditions ---
                 _findSimilarCts?.Cancel();
                 _findSimilarCts?.Dispose();
+                _findSimilarCts = null;
 
                 if (LstMissingImages.SelectedItem == null)
                 {
@@ -545,7 +557,6 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
                     LblSearchQuery.Content = null;
                     IsFindingSimilar = false;
                     HasSearchedSimilar = false;
-                    _findSimilarCts = null;
                     return;
                 }
 
@@ -553,7 +564,6 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
                 if (string.IsNullOrEmpty(imageFolderPath))
                 {
                     IsFindingSimilar = false;
-                    _findSimilarCts = null;
                     return;
                 }
 
@@ -695,7 +705,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
     public async Task UseImageAsync(string? imagePath)
     {
-        var imageFolderPath = GetValidatedImageFolderPath();
+        var imageFolderPath = GetValidatedImageFolderPath(false);
 
         if (string.IsNullOrEmpty(_selectedRomFileName) ||
             string.IsNullOrEmpty(imagePath) ||
@@ -773,7 +783,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
     {
         try
         {
-            LabelMissingRoms.Content = "MISSING COVERS: " + MissingImages.Count;
+            LabelMissingRoms.Content = AppConstants.Messages.MissingCoversPrefix + MissingImages.Count;
         }
         catch (Exception ex)
         {
@@ -837,9 +847,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
                                 "The error was reported to the developer that will try to fix the issue.",
                     "Error", MessageBoxButton.OK, MessageBoxImage.Error);
 
-                const string formattedException = "Invalid similarity threshold selected.";
-                var ex = new ArgumentException(formattedException);
-                _ = ErrorLogger.LogAsync(ex, formattedException);
+                _ = ErrorLogger.LogAsync(null, "Invalid similarity threshold selected.");
             }
         }
         catch (Exception ex)
@@ -896,16 +904,16 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
     private void UpdateThumbnailSizeMenuChecks()
     {
-        var currentSize = Settings.ImageWidth;
+        var currentWidth = Settings.ImageWidth;
+        var currentHeight = Settings.ImageHeight;
 
         foreach (var item in ImageSizeMenu.Items)
         {
             if (item is not MenuItem menuItem) continue;
 
-            // Get size from Tag property instead of parsing header text
             if (menuItem.Tag is int size || int.TryParse(menuItem.Tag?.ToString(), out size))
             {
-                menuItem.IsChecked = size == currentSize;
+                menuItem.IsChecked = size == currentWidth && size == currentHeight;
             }
         }
     }
@@ -1077,7 +1085,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
     {
         if (keyEventArgs.Key == Key.Enter && sender is TextBox)
         {
-            TxtImageFolder_LostFocus(sender, new RoutedEventArgs(LostFocusEvent, sender));
+            TxtImageFolder_LostFocus(sender, keyEventArgs);
             keyEventArgs.Handled = true;
         }
     }
@@ -1189,7 +1197,6 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
     protected override void OnClosed(EventArgs e)
     {
-        Settings.PropertyChanged -= AppSettingsManagerPropertyChangedAsync;
         Dispose();
         base.OnClosed(e);
     }
@@ -1202,6 +1209,8 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         }
 
         _disposed = true;
+
+        Settings.PropertyChanged -= AppSettingsManagerPropertyChangedAsync;
 
         // Cancel any pending operations first
         _findSimilarCts?.Cancel();
