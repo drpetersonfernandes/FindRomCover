@@ -77,8 +77,9 @@ public static class ImageLoader
                 {
                     return LoadWithMagickNetInternal(imagePath, true);
                 }
-                catch
+                catch (Exception recoveryEx)
                 {
+                    _ = ErrorLogger.LogAsync(recoveryEx, $"Image corruption recovery failed: {imagePath}");
                     return null;
                 }
             }
@@ -116,8 +117,9 @@ public static class ImageLoader
                 Math.Max(0, resolvedMaxRetries),
                 Math.Max(0, resolvedRetryDelay));
         }
-        catch
+        catch (Exception ex)
         {
+            _ = ErrorLogger.LogAsync(ex, "Failed to resolve ImageLoader settings, using defaults");
             return (
                 maxRetries > 0 ? maxRetries : DefaultMaxRetries,
                 retryDelayMilliseconds > 0 ? retryDelayMilliseconds : DefaultRetryDelayMilliseconds);

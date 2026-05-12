@@ -18,7 +18,6 @@ public static class AppConstants
     {
         public const string Light = "Light";
         public const string Dark = "Dark";
-        public const string AccentPrefix = "Accent";
     }
 
     // Similarity algorithms
@@ -32,10 +31,6 @@ public static class AppConstants
     // UI Labels and Messages
     public static class Messages
     {
-        public const string MissingCoversLabel = "MISSING COVERS: ";
         public const string DefaultSimilarityThreshold = "70";
-        public const string MameDataNotFound = "MAME data (mame.dat) could not be found.";
-        public const string MameDataLoadError = "MAME data (mame.dat) could not be loaded or is corrupted.";
-        public const string InvalidThresholdError = "Invalid similarity threshold selected.";
     }
 }

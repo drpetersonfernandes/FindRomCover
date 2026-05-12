@@ -1,3 +1,4 @@
+using System.Windows.Media.Imaging;
 using FindRomCover.Models;
 using FluentAssertions;
 
@@ -33,11 +34,14 @@ public class ImageDataTests
     }
 
     [Fact]
-    public void ClearCachedContextMenuWhenNullDoesNotThrow()
+    public void DisplayImageWhenImageSourceIsSetReturnsImageSource()
     {
-        var imageData = new ImageData(@"C:\images\test.png", "test", 50.0);
+        var imageSource = new BitmapImage();
+        var imageData = new ImageData(@"C:\images\test.png", "test", 50.0)
+        {
+            ImageSource = imageSource
+        };
 
-        var act = imageData.ClearCachedContextMenu;
-        act.Should().NotThrow();
+        imageData.DisplayImage.Should().BeSameAs(imageSource);
     }
 }

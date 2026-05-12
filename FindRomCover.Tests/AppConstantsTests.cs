@@ -59,38 +59,8 @@ public class AppConstantsTests
     }
 
     [Fact]
-    public void ThemesAccentPrefixIsCorrect()
-    {
-        AppConstants.Themes.AccentPrefix.Should().Be("Accent");
-    }
-
-    [Fact]
-    public void MessagesMissingCoversLabelIsCorrect()
-    {
-        AppConstants.Messages.MissingCoversLabel.Should().Be("MISSING COVERS: ");
-    }
-
-    [Fact]
     public void MessagesDefaultSimilarityThresholdIsCorrect()
     {
         AppConstants.Messages.DefaultSimilarityThreshold.Should().Be("70");
-    }
-
-    [Fact]
-    public void MessagesMameDataNotFoundIsCorrect()
-    {
-        AppConstants.Messages.MameDataNotFound.Should().Be("MAME data (mame.dat) could not be found.");
-    }
-
-    [Fact]
-    public void MessagesMameDataLoadErrorIsCorrect()
-    {
-        AppConstants.Messages.MameDataLoadError.Should().Be("MAME data (mame.dat) could not be loaded or is corrupted.");
-    }
-
-    [Fact]
-    public void MessagesInvalidThresholdErrorIsCorrect()
-    {
-        AppConstants.Messages.InvalidThresholdError.Should().Be("Invalid similarity threshold selected.");
     }
 }

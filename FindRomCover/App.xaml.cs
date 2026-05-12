@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using System.IO;
+using System.Net.Http;
 using System.Windows;
 using ControlzEx.Theming;
 using FindRomCover.Managers;
@@ -38,8 +40,9 @@ public partial class App
         {
             return new AudioService();
         }
-        catch
+        catch (Exception ex)
         {
+            _ = ErrorLogger.LogAsync(ex, "Failed to initialize AudioService, using NullAudioService fallback");
             return new NullAudioService();
         }
     });
@@ -76,6 +79,52 @@ public partial class App
                 // This prevents unobserved task exceptions from propagating
             }
         });
+    }
+
+    /// <summary>
+    /// Checks GitHub for a new release and notifies the user if an update is available.
+    /// </summary>
+    private static async Task CheckForUpdatesAsync()
+    {
+        try
+        {
+            var service = new GitHubReleaseService(new HttpClient())
+            {
+                HttpClientTimeoutSeconds = 15
+            };
+
+            var result = await service.CheckForUpdatesAsync();
+
+            if (result is { UpdateAvailable: true, ReleaseUrl: not null })
+            {
+                Current.Dispatcher.Invoke(() =>
+                {
+                    var message = $"A new version of FindRomCover is available!\n\n" +
+                                  $"Current version: {result.CurrentVersion}\n" +
+                                  $"Latest version: {result.LatestVersion}\n\n" +
+                                  "Would you like to open the release page?";
+
+                    var choice = MessageBox.Show(
+                        message,
+                        "Update Available",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Information);
+
+                    if (choice == MessageBoxResult.Yes)
+                    {
+                        Process.Start(new ProcessStartInfo
+                        {
+                            FileName = result.ReleaseUrl,
+                            UseShellExecute = true
+                        });
+                    }
+                });
+            }
+        }
+        catch
+        {
+            // Update check failure should be silent - do not disrupt the user
+        }
     }
 
     /// <summary>
@@ -139,6 +188,9 @@ public partial class App
             ConfigureServices(services);
             ServiceProvider = services.BuildServiceProvider();
 
+            // Track application usage (fire-and-forget, non-blocking)
+            FireAndForget(static () => UsageTracker.TrackUsageAsync());
+
             // Magick.NET resource limits
             ResourceLimits.Memory = AppConstants.DefaultMemoryLimit;
             ResourceLimits.Thread = AppConstants.DefaultThreadLimit;
@@ -189,6 +241,9 @@ public partial class App
             // Create and show MainWindow manually (StartupUri removed from App.xaml)
             var mainWindow = ServiceProvider.GetRequiredService<MainWindow>();
             mainWindow.Show();
+
+            // Check for updates asynchronously (fire-and-forget, non-blocking)
+            FireAndForget(CheckForUpdatesAsync);
         }
         catch (Exception ex)
         {
@@ -205,6 +260,7 @@ public partial class App
 
         // Dispose the ErrorLogger's HttpClient to prevent resource leaks
         ErrorLogger.Dispose();
+        UsageTracker.Dispose();
 
         // Dispose the service provider
         if (ServiceProvider is IDisposable disposableServiceProvider)
@@ -213,6 +269,8 @@ public partial class App
         }
 
         base.OnExit(e);
+
+        Environment.Exit(e.ApplicationExitCode);
     }
 
     public static void ChangeTheme(string baseTheme, string accentColor)
@@ -250,28 +308,26 @@ public partial class App
         }
         catch (ArgumentException ex)
         {
-            // Log the error but don't crash the window - use default theme
             FireAndForget(() => ErrorLogger.LogAsync(ex, "Error applying theme to window, using default"));
             try
             {
                 ThemeManager.Current.ChangeTheme(window, "Light.Blue");
             }
-            catch
+            catch (Exception fallbackEx)
             {
-                // If even the default fails, silently continue without theme
+                _ = ErrorLogger.LogAsync(fallbackEx, "Failed to apply default theme 'Light.Blue' to window");
             }
         }
         catch (InvalidOperationException ex)
         {
-            // Log the error but don't crash the window - use default theme
             FireAndForget(() => ErrorLogger.LogAsync(ex, "Error applying theme to window, using default"));
             try
             {
                 ThemeManager.Current.ChangeTheme(window, "Light.Blue");
             }
-            catch
+            catch (Exception fallbackEx)
             {
-                // If even the default fails, silently continue without theme
+                _ = ErrorLogger.LogAsync(fallbackEx, "Failed to apply default theme 'Light.Blue' to window");
             }
         }
     }

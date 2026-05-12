@@ -23,25 +23,33 @@
                 Width="150"
                 Height="150"
                 Source="pack://application:,,,/images/logo.png"
-                AutomationProperties.Name="Application Logo" />
+                AutomationProperties.Name="Application Logo"
+                ToolTip="Find ROM Cover application logo" />
         </StackPanel>
 
         <StackPanel Grid.Row="1" Margin="10">
             <TextBlock FontWeight="Bold" Text="Find ROM Cover"
-                       AutomationProperties.HeadingLevel="Level1" />
+                       AutomationProperties.HeadingLevel="Level1"
+                       ToolTip="Application name" />
             <TextBlock Text="Organize your ROM images"
-                       AutomationProperties.HelpText="Application description" />
+                       AutomationProperties.HelpText="Application description"
+                       ToolTip="Application description" />
             <TextBlock Name="AppVersionTextBlock" Margin="0,10,0,0" Text=""
-                       AutomationProperties.Name="Application Version" />
-            <TextBlock Margin="0,10,0,0">
+                       AutomationProperties.Name="Application Version"
+                       ToolTip="Current application version" />
+            <TextBlock Margin="0,10,0,0"
+                       ToolTip="Visit the developer's website">
                 <Hyperlink NavigateUri="https://www.purelogiccode.com" RequestNavigate="Hyperlink_RequestNavigate"
-                           AutomationProperties.Name="Pure Logic Code Website">
+                           AutomationProperties.Name="Pure Logic Code Website"
+                           ToolTip="Open https://www.purelogiccode.com in your browser">
                     https://www.purelogiccode.com
                 </Hyperlink>
             </TextBlock>
-            <TextBlock Margin="0,10,0,10">
+            <TextBlock Margin="0,10,0,10"
+                       ToolTip="Visit the project's GitHub repository">
                 <Hyperlink NavigateUri="https://github.com/drpetersonfernandes/FindRomCover" RequestNavigate="Hyperlink_RequestNavigate"
-                           AutomationProperties.Name="GitHub Repository">
+                           AutomationProperties.Name="GitHub Repository"
+                           ToolTip="Open the GitHub repository in your browser">
                     https://github.com/drpetersonfernandes/FindRomCover
                 </Hyperlink>
             </TextBlock>
@@ -60,6 +68,7 @@
                 IsCancel="True"
                 AutomationProperties.Name="Close"
                 AutomationProperties.HelpText="Close the about window"
+                ToolTip="Close this window"
                 TabIndex="1" />
         </StackPanel>
     </Grid>

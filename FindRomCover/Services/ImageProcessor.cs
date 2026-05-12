@@ -50,15 +50,15 @@ public static class ImageProcessor
                 {
                     File.Delete(tempFile);
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // Ignore errors - file may be in use by another process
+                    _ = ErrorLogger.LogAsync(ex, $"Failed to delete orphaned temp file: {tempFile}");
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Ignore errors - directory may not be accessible
+            _ = ErrorLogger.LogAsync(ex, $"Failed to enumerate temp files in directory: {directoryPath}");
         }
     }
 
@@ -122,6 +122,7 @@ public static class ImageProcessor
         }
         catch (Exception ex)
         {
+            _ = ErrorLogger.LogAsync(ex, $"Cannot write to directory: {directory}");
             return new ImageSaveResult(
                 false,
                 $"Cannot write to directory: {directory}\n\nError: {ex.Message}\n\nTry running as administrator.",
@@ -141,6 +142,7 @@ public static class ImageProcessor
             }
             catch (IOException ex)
             {
+                _ = ErrorLogger.LogAsync(ex, $"File in use when trying to delete: {targetPath}");
                 return new ImageSaveResult(false,
                     $"The file '{Path.GetFileName(targetPath)}' is in use by another process.",
                     "File in Use",
@@ -150,6 +152,7 @@ public static class ImageProcessor
             }
             catch (UnauthorizedAccessException ex)
             {
+                _ = ErrorLogger.LogAsync(ex, $"Access denied when trying to delete: {targetPath}");
                 return new ImageSaveResult(false,
                     $"Access denied to file: {targetPath}\n\nTry running as administrator.",
                     "Permission Error",
@@ -159,6 +162,7 @@ public static class ImageProcessor
             }
             catch (Exception ex)
             {
+                _ = ErrorLogger.LogAsync(ex, $"Error deleting file: {targetPath}");
                 return new ImageSaveResult(false,
                     $"Error deleting file: {ex.Message}",
                     "Error",
@@ -206,6 +210,7 @@ public static class ImageProcessor
         }
         catch (MagickException ex)
         {
+            _ = ErrorLogger.LogAsync(ex, $"Magick.NET error processing image: {sourcePath}");
             return new ImageSaveResult(false,
                 $"Error processing image with Magick.NET: {ex.Message}",
                 "Image Processing Error",
@@ -254,9 +259,9 @@ public static class ImageProcessor
                         {
                             File.Delete(tempPath);
                         }
-                        catch
+                        catch (Exception tempDeleteEx)
                         {
-                            /* ignore - will retry or clean up at end */
+                            _ = ErrorLogger.LogAsync(tempDeleteEx, $"Failed to delete leftover temp file during retry: {tempPath}");
                         }
                     }
 

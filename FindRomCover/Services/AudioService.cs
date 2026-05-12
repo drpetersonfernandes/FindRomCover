@@ -55,9 +55,9 @@ public class AudioService : IAudioService
                 {
                     _mediaPlayer?.Close();
                 }
-                catch
+                catch (Exception cleanupEx)
                 {
-                    /* Ignore cleanup errors */
+                    _ = ErrorLogger.LogAsync(cleanupEx, "Failed to close MediaPlayer during initialization cleanup");
                 }
 
                 // If the error is due to a missing/incompatible Windows Media Player,
@@ -168,9 +168,9 @@ public class AudioService : IAudioService
         {
             _mediaPlayer?.Close();
         }
-        catch
+        catch (Exception ex)
         {
-            /* Ignore disposal errors */
+            _ = ErrorLogger.LogAsync(ex, "Failed to close MediaPlayer during disposal");
         }
 
         GC.SuppressFinalize(this);

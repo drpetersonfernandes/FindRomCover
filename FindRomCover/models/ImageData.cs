@@ -1,4 +1,5 @@
 using System.Windows.Media.Imaging;
+using FindRomCover.Services;
 
 namespace FindRomCover.Models;
 
@@ -21,9 +22,9 @@ public class ImageData
                 bitmap.Freeze();
             return bitmap;
         }
-        catch
+        catch (Exception ex)
         {
-            // If the broken image resource is not available, create a simple placeholder
+            _ = ErrorLogger.LogAsync(ex, "Failed to load broken image placeholder resource");
             var bitmap = new BitmapImage();
             if (bitmap.CanFreeze)
                 bitmap.Freeze();
@@ -83,18 +84,5 @@ public class ImageData
         ImagePath = imagePath;
         ImageName = imageName;
         SimilarityScore = similarityScore;
-    }
-
-    /// <summary>
-    /// Clears the cached context menu to free resources.
-    /// </summary>
-    public void ClearCachedContextMenu()
-    {
-        if (CachedContextMenu is { } contextMenu)
-        {
-            contextMenu.Items.Clear();
-        }
-
-        CachedContextMenu = null;
     }
 }

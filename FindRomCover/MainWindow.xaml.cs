@@ -87,7 +87,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
         // Initialize commands
         CheckForMissingImagesCommand = new DelegateCommand(
-            _ => BtnCheckForMissingImages_Click(this, new RoutedEventArgs()),
+            _ => BtnCheckForMissingImages_ClickAsync(this, new RoutedEventArgs()),
             _ => BtnCheckForMissingImages?.IsEnabled ?? false);
         RemoveSelectedItemCommand = new DelegateCommand(
             _ => BtnRemoveSelectedItem_Click(this, new RoutedEventArgs()),
@@ -114,7 +114,9 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         UpdateMameDescriptionCheck();
 
         // Subscribe to SettingsManager PropertyChanged to update UI for non-binding properties (like menu checks)
-        Settings.PropertyChanged += AppSettingsManagerPropertyChanged;
+        Settings.PropertyChanged += AppSettingsManagerPropertyChangedAsync;
+
+        Closing += OnWindowClosing;
 
         // Load _machines and _mameLookup
         LoadMameData();
@@ -179,7 +181,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         DarkTheme.IsChecked = Settings.BaseTheme == "Dark";
     }
 
-    private async void AppSettingsManagerPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    private async void AppSettingsManagerPropertyChangedAsync(object? sender, PropertyChangedEventArgs e)
     {
         try
         {
@@ -208,7 +210,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
                 case nameof(SettingsManager.UseMameDescription):
                     UpdateMameDescriptionCheck();
                     if (_mameLookup is { Count: > 0 })
-                        await RefreshMissingImagesList();
+                        await RefreshMissingImagesListAsync();
                     break;
             }
         }
@@ -279,9 +281,15 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         aboutWindow.ShowDialog();
     }
 
+    private void OnWindowClosing(object? sender, CancelEventArgs e)
+    {
+        _findSimilarCts?.Cancel();
+        _loadMissingCts?.Cancel();
+    }
+
     private void Exit_Click(object sender, RoutedEventArgs e)
     {
-        Close();
+        Application.Current.Shutdown();
     }
 
     private void BtnBrowseRomFolder_Click(object sender, RoutedEventArgs e)
@@ -333,11 +341,11 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         }
     }
 
-    private async void BtnCheckForMissingImages_Click(object sender, RoutedEventArgs e)
+    private async void BtnCheckForMissingImages_ClickAsync(object sender, RoutedEventArgs e)
     {
         try
         {
-            await RefreshMissingImagesList();
+            await RefreshMissingImagesListAsync();
         }
         catch (Exception ex)
         {
@@ -345,7 +353,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         }
     }
 
-    private async Task LoadMissingImagesList(CancellationToken cancellationToken = default)
+    private async Task LoadMissingImagesListAsync(CancellationToken cancellationToken = default)
     {
         if ((Settings.SupportedExtensions.Length == 0))
         {
@@ -518,7 +526,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         return null;
     }
 
-    private async void LstMissingImages_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private async void LstMissingImages_SelectionChangedAsync(object sender, SelectionChangedEventArgs e)
     {
         try
         {
@@ -977,7 +985,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         }
     }
 
-    private async void MenuUseMameDescription_Click(object sender, RoutedEventArgs e)
+    private async void MenuUseMameDescription_ClickAsync(object sender, RoutedEventArgs e)
     {
         try
         {
@@ -991,7 +999,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
                 // Refresh the list immediately after the setting changes
                 // Only refresh if MAME data is actually available, otherwise it's pointless
                 if (_mameLookup is { Count: > 0 })
-                    await RefreshMissingImagesList();
+                    await RefreshMissingImagesListAsync();
             }
         }
         catch (Exception ex)
@@ -1000,7 +1008,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         }
     }
 
-    private async Task RefreshMissingImagesList()
+    private async Task RefreshMissingImagesListAsync()
     {
         // Cancel any existing operation
         if (_loadMissingCts != null)
@@ -1014,7 +1022,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         _loadMissingCts = cts;
         try
         {
-            await LoadMissingImagesList(cts.Token);
+            await LoadMissingImagesListAsync(cts.Token);
         }
         catch (OperationCanceledException)
         {
@@ -1181,7 +1189,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
     protected override void OnClosed(EventArgs e)
     {
-        Settings.PropertyChanged -= AppSettingsManagerPropertyChanged;
+        Settings.PropertyChanged -= AppSettingsManagerPropertyChangedAsync;
         Dispose();
         base.OnClosed(e);
     }

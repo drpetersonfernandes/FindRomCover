@@ -58,28 +58,38 @@ public class SimilarityCalculatorTests
     [InlineData("", "", 100.0)]
     public void CalculateJaccardIndexReturnsExpectedScore(string a, string b, double expected)
     {
-        var result = SimilarityCalculator.CalculateJaccardIndex(a, b);
+        var ngramSize = Math.Min(a.Length, b.Length) < 2 ? 1 : 2;
+        var setA = SimilarityCalculator.GetNgrams(a, ngramSize);
+        var result = SimilarityCalculator.CalculateJaccardIndex(setA, b, ngramSize);
         result.Should().BeApproximately(expected, 0.01);
     }
 
     [Fact]
     public void CalculateJaccardIndexIdenticalStringsReturns100()
     {
-        var result = SimilarityCalculator.CalculateJaccardIndex("streetfighter", "streetfighter");
+        const string s = "streetfighter";
+        var setA = SimilarityCalculator.GetNgrams(s, 2);
+        var result = SimilarityCalculator.CalculateJaccardIndex(setA, s, 2);
         result.Should().Be(100.0);
     }
 
     [Fact]
     public void CalculateJaccardIndexSomeOverlapReturnsReasonableScore()
     {
-        var result = SimilarityCalculator.CalculateJaccardIndex("mario", "mario Bros");
+        const string a = "mario";
+        const string b = "mario Bros";
+        var setA = SimilarityCalculator.GetNgrams(a, 2);
+        var result = SimilarityCalculator.CalculateJaccardIndex(setA, b, 2);
         result.Should().BeGreaterThan(0).And.BeLessThan(100);
     }
 
     [Fact]
     public void CalculateJaccardIndexNoOverlapReturns0()
     {
-        var result = SimilarityCalculator.CalculateJaccardIndex("abc", "xyz");
+        const string a = "abc";
+        const string b = "xyz";
+        var setA = SimilarityCalculator.GetNgrams(a, 2);
+        var result = SimilarityCalculator.CalculateJaccardIndex(setA, b, 2);
         result.Should().Be(0.0);
     }
 

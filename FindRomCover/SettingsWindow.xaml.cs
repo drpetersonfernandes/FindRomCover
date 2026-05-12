@@ -23,7 +23,7 @@ public partial class SettingsWindow
         DataContext = new { SupportedExtensions = _supportedExtensions };
     }
 
-    private async void BtnAdd_Click(object sender, RoutedEventArgs e)
+    private async void BtnAdd_ClickAsync(object sender, RoutedEventArgs e)
     {
         try
         {

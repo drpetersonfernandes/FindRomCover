@@ -210,8 +210,9 @@ public static class SimilarityCalculator
         {
             return SettingsManager.CurrentInstance?.MaxImagesToLoad ?? DefaultMaxImagesToLoad;
         }
-        catch
+        catch (Exception ex)
         {
+            _ = ErrorLogger.LogAsync(ex, "Failed to get MaxImagesToLoad from settings, using default");
             return DefaultMaxImagesToLoad;
         }
     }
@@ -225,8 +226,9 @@ public static class SimilarityCalculator
                 ? (settings.ImageLoaderMaxRetries, settings.ImageLoaderRetryDelayMilliseconds)
                 : (ImageLoader.DefaultMaxRetries, ImageLoader.DefaultRetryDelayMilliseconds);
         }
-        catch
+        catch (Exception ex)
         {
+            _ = ErrorLogger.LogAsync(ex, "Failed to get ImageLoader settings, using defaults");
             return (ImageLoader.DefaultMaxRetries, ImageLoader.DefaultRetryDelayMilliseconds);
         }
     }
@@ -277,15 +279,6 @@ public static class SimilarityCalculator
         var levenshteinDistance = previousRow[lengthB];
         var similarity = (1.0 - levenshteinDistance / (double)Math.Max(a.Length, b.Length)) * 100;
         return Math.Round(similarity, 2);
-    }
-
-    internal static double CalculateJaccardIndex(string a, string b)
-    {
-        var ngramSize = Math.Min(a.Length, b.Length) < 2 ? 1 : 2;
-        var setA = GetNgrams(a, ngramSize);
-        var setB = GetNgrams(b, ngramSize);
-
-        return ComputeJaccardFromSets(setA, setB);
     }
 
     internal static double CalculateJaccardIndex(HashSet<string> setA, string b, int ngramSize)

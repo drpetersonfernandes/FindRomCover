@@ -234,25 +234,9 @@ public static class ErrorLogger
             var bugReportPayload = new
             {
                 bugReport.ApplicationName,
-                bugReport.Date,
-                bugReport.ApplicationVersion,
-                bugReport.OsVersion,
-                bugReport.Architecture,
-                bugReport.Bitness,
-                bugReport.WindowsVersion,
-                bugReport.ProcessorCount,
-                bugReport.BaseDirectory,
-                bugReport.TempPath,
-                bugReport.ErrorMessage,
-                Exception = new
-                {
-                    bugReport.Exception.Type,
-                    bugReport.Exception.Message,
-                    bugReport.Exception.Source,
-                    bugReport.Exception.StackTrace,
-                    bugReport.Exception.InnerException
-                },
-                // Also include the formatted message for backwards compatibility
+                Version = bugReport.ApplicationVersion,
+                Environment = $"OS: {bugReport.OsVersion} | Arch: {bugReport.Architecture} | Bitness: {bugReport.Bitness} | Windows: {bugReport.WindowsVersion} | CPUs: {bugReport.ProcessorCount} | BaseDir: {bugReport.BaseDirectory} | Temp: {bugReport.TempPath}",
+                bugReport.Exception.StackTrace,
                 Message = logContent
             };
 
@@ -268,34 +252,7 @@ public static class ErrorLogger
 
             if (response.IsSuccessStatusCode)
             {
-                var rawResponse = await response.Content.ReadAsStringAsync(cts.Token);
-                var contentType = response.Content.Headers.ContentType?.MediaType;
-
-                if (contentType != "application/json")
-                {
-                    WriteInternalLog($"API returned non-JSON content type ({contentType}): {rawResponse}");
-                    return false;
-                }
-
-                try
-                {
-                    var responseContent = JsonSerializer.Deserialize<Smtp2GoResponse>(rawResponse);
-                    if (responseContent?.Data?.Succeeded == 1)
-                    {
-                        return true;
-                    }
-                    else
-                    {
-                        var errors = responseContent?.Data?.Errors != null ? string.Join(", ", responseContent.Data.Errors) : "Unknown API reported error";
-                        WriteInternalLog($"API reported SMTP2GO failure: {errors}");
-                        return false;
-                    }
-                }
-                catch (JsonException jsonEx)
-                {
-                    WriteInternalLog("Failed to deserialize API response as JSON.", jsonEx);
-                    return false;
-                }
+                return true;
             }
             else
             {

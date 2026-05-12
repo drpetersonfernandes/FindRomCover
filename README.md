@@ -34,28 +34,38 @@ Main window with dark theme:
 - **Simple Interface:** Designed for ease of use, with improved folder path validation and validated settings management for supported extensions and runtime limits.
 - **Audio Feedback:** Get audible confirmation for successful actions like copying images or removing items from the list.
 - **Automatic Error Reporting:** The application includes an automatic error reporting mechanism to help developers quickly identify and fix issues, ensuring a more stable experience. This includes detailed logging and internal error tracking.
+- **Update Notifications:** Automatically checks for new releases on GitHub and notifies you when an update is available.
 
 ## Project Architecture
 
-The codebase follows a clean, modular architecture with clear separation of concerns:
+The codebase follows a clean, modular architecture with clear separation of concerns. A companion test project (`FindRomCover.Tests/`) provides unit test coverage using xUnit and FluentAssertions.
 
 ### Services (`FindRomCover/Services/`)
 - **[`AudioService`](FindRomCover/Services/AudioService.cs)** - Provides audio feedback using WPF MediaPlayer with STA thread handling
-- **[`ImageLoader`](FindRomCover/Services/ImageLoader.cs)** - Static utility for loading images with retry logic for locked files and corruption recovery via Magick.NET
+- **[`ImageLoader`](FindRomCover/Services/ImageLoader.cs)** - Progressive image loading with retry logic for locked files and corruption recovery via Magick.NET
 - **[`ImageProcessor`](FindRomCover/Services/ImageProcessor.cs)** - Handles image conversion and saving to PNG format, plus cleanup of orphaned temp files
 - **[`SimilarityCalculator`](FindRomCover/Services/SimilarityCalculator.cs)** - Implements multiple string similarity algorithms (Jaro-Winkler, Levenshtein, Jaccard) with parallel processing
+- **[`NgramIndex`](FindRomCover/Services/NgramIndex.cs)** - N-gram indexing for optimized similarity matching performance
 - **[`ButtonFactory`](FindRomCover/Services/ButtonFactory.cs)** - Factory for creating context menus and orchestrating similarity calculations
 - **[`ErrorLogger`](FindRomCover/Services/ErrorLogger.cs)** - Comprehensive error logging with automatic API reporting, file-based logs, and internal error tracking
+- **[`GitHubReleaseService`](FindRomCover/Services/GitHubReleaseService.cs)** - Checks GitHub releases for application updates
+- **[`MameDataService`](FindRomCover/Services/MameDataService.cs)** - MAME data lookup service for ROM description resolution
+- **[`DelegateCommand`](FindRomCover/Services/DelegateCommand.cs)** - ICommand implementation for WPF MVVM data binding
+- **[`ObjectToBoolConverter`](FindRomCover/Services/ObjectToBoolConverter.cs)** - WPF value converter for object-to-bool transformations
 - **[`IAudioService`](FindRomCover/Services/IAudioService.cs)** - Interface for audio service abstraction
 
 ### Managers (`FindRomCover/Managers/`)
 - **[`SettingsManager`](FindRomCover/Managers/SettingsManager.cs)** - Manages application settings with XML persistence and INotifyPropertyChanged support
-- **[`MameManager`](FindRomCover/Managers/MameManager.cs)** - Handles MAME DAT file parsing with MessagePack serialization and lazy caching
+- **[`MameManager`](FindRomCover/Managers/MameManager.cs)** - *(Deprecated)* Thin wrapper for backward compatibility; replaced by `MameDataService`
 
 ### Models (`FindRomCover/models/`)
 - **[`ImageData`](FindRomCover/models/ImageData.cs)** - Immutable record representing an image with similarity score and lazy-loaded broken image fallback
+- **[`MameData`](FindRomCover/models/MameData.cs)** - MAME machine data model with MessagePack serialization support
 - **[`MissingImageItem`](FindRomCover/models/MissingImageItem.cs)** - Represents a ROM missing its cover image
 - **[`SimilarityCalculationResult`](FindRomCover/models/SimilarityCalculationResult.cs)** - Container for similarity calculation results including processing errors
+- **[`GitHubReleaseResponse`](FindRomCover/models/GitHubReleaseResponse.cs)** - DTO for GitHub API release responses
+- **[`UpdateCheckResult`](FindRomCover/models/UpdateCheckResult.cs)** - Model for application update check results
+- **[`BugReportModel`](FindRomCover/models/BugReportModel.cs)** - Model for bug report submissions
 - **[`Smtp2GoData`](FindRomCover/models/Smtp2GoData.cs)** / **[`Smtp2GoResponse`](FindRomCover/models/Smtp2GoResponse.cs)** - Records for error reporting API responses
 
 ## Where can I find ROM Cover Images?
@@ -95,11 +105,14 @@ The codebase has undergone a significant refactor to improve maintainability and
 
 ### Technical Improvements
 - Switched to `System.Text.Json` for all JSON handling (removed Newtonsoft.Json dependency)
-- Updated dependencies: ControlzEx 7.0.3, MahApps.Metro 3.0.0-rc0529, MessagePack 3.1.4, Magick.NET 14.10.2
+- Dependency injection via `Microsoft.Extensions.DependencyInjection` for service registration and lifetime management
+- Updated dependencies: ControlzEx 7.0.4, Magick.NET-Q16-AnyCPU 14.13.0, MahApps.Metro 3.0.0-rc0529, MessagePack 3.1.4
 - Enhanced error logging with multiple log files (API, User, Internal)
-- Improved image loading with retries for locked files and GDI+ error fallbacks, now driven by saved settings where applicable
+- Improved image loading with progressive loading, retries for locked files, and GDI+ error fallbacks
+- N-gram indexing for optimized similarity calculation performance
 - Parallel processing for similarity calculations with cancellation support
 - Thread-safe lazy initialization for MAME data and broken image resources
+- GitHub release checking for application update notifications
 
 ## Support the Project
 

@@ -448,6 +448,8 @@ public class SettingsManager : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
+            _ = ErrorLogger.LogAsync(ex, "Error loading settings from settings.xml");
+
             MessageBox.Show($"Error loading settings from settings.xml: {ex.Message}\nUsing default settings.",
                 "Settings Error", MessageBoxButton.OK, MessageBoxImage.Warning);
 
@@ -458,7 +460,6 @@ public class SettingsManager : INotifyPropertyChanged
             }
             catch (Exception saveEx)
             {
-                // Log the error but continue with defaults
                 _ = ErrorLogger.LogAsync(saveEx, "Failed to save default settings after load error");
             }
         }
@@ -546,7 +547,6 @@ public class SettingsManager : INotifyPropertyChanged
         }
         finally
         {
-            // Clean up temp file if it exists
             try
             {
                 if (File.Exists(tempFilePath))
@@ -554,9 +554,9 @@ public class SettingsManager : INotifyPropertyChanged
                     File.Delete(tempFilePath);
                 }
             }
-            catch
+            catch (Exception cleanupEx)
             {
-                // Best effort cleanup - ignore errors
+                _ = ErrorLogger.LogAsync(cleanupEx, $"Failed to cleanup settings temp file: {tempFilePath}");
             }
         }
     }
