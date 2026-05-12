@@ -47,6 +47,11 @@ public class SettingsManager : INotifyPropertyChanged
     /// </summary>
     private readonly object _saveLock = new();
 
+    /// <summary>
+    /// Static lock for cross-instance file access synchronization.
+    /// </summary>
+    private static readonly object FileLock = new();
+
     private double _similarityThreshold;
 
     /// <summary>
@@ -505,56 +510,64 @@ public class SettingsManager : INotifyPropertyChanged
             );
         }
 
-        // Perform file I/O outside the lock to avoid blocking other threads
+        // Perform file I/O under a static lock to prevent cross-instance conflicts
         var tempFilePath = SettingsFilePath + ".tmp";
-        try
-        {
-            // Write to a temporary file first, then atomically replace the original
-            // This prevents corruption of settings.xml if the app crashes during write
-            doc.Save(tempFilePath);
-
-            // Use File.Copy + File.Delete instead of File.Move with overwrite
-            // This is more reliable on Windows when the target file is in use
-            File.Copy(tempFilePath, SettingsFilePath, true);
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            MessageBox.Show($"Access denied to settings.xml: {ex.Message}\n\n" +
-                            "Try running as administrator or checking file permissions.\n\n" +
-                            "Your settings will not be saved!",
-                "Settings Error", MessageBoxButton.OK, MessageBoxImage.Error);
-
-            _ = ErrorLogger.LogAsync(ex, "Failed to save settings");
-        }
-        catch (IOException ex)
-        {
-            MessageBox.Show($"Error saving settings to settings.xml: {ex.Message}\n\n" +
-                            "Your settings will not be saved!",
-                "Settings Error", MessageBoxButton.OK, MessageBoxImage.Error);
-
-            _ = ErrorLogger.LogAsync(ex, "Failed to save settings");
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"Error saving settings to settings.xml: {ex.Message}\n\n" +
-                            "Your settings will not be saved!",
-                "Settings Error", MessageBoxButton.OK, MessageBoxImage.Error);
-
-            _ = ErrorLogger.LogAsync(ex, "Failed to save settings");
-        }
-        finally
+        lock (FileLock)
         {
             try
             {
-                if (File.Exists(tempFilePath))
+                // Write to a temporary file first, then atomically replace the original
+                // This prevents corruption of settings.xml if the app crashes during write
+                doc.Save(tempFilePath);
+
+                // Use File.Copy + File.Delete instead of File.Move with overwrite
+                // This is more reliable on Windows when the target file is in use
+                File.Copy(tempFilePath, SettingsFilePath, true);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                ShowSaveError($"Access denied to settings.xml: {ex.Message}\n\n" +
+                              "Try running as administrator or checking file permissions.\n\n" +
+                              "Your settings will not be saved!");
+
+                _ = ErrorLogger.LogAsync(ex, "Failed to save settings");
+            }
+            catch (IOException ex)
+            {
+                ShowSaveError($"Error saving settings to settings.xml: {ex.Message}\n\n" +
+                              "Your settings will not be saved!");
+
+                _ = ErrorLogger.LogAsync(ex, "Failed to save settings");
+            }
+            catch (Exception ex)
+            {
+                ShowSaveError($"Error saving settings to settings.xml: {ex.Message}\n\n" +
+                              "Your settings will not be saved!");
+
+                _ = ErrorLogger.LogAsync(ex, "Failed to save settings");
+            }
+            finally
+            {
+                try
                 {
-                    File.Delete(tempFilePath);
+                    if (File.Exists(tempFilePath))
+                    {
+                        File.Delete(tempFilePath);
+                    }
+                }
+                catch (Exception cleanupEx)
+                {
+                    _ = ErrorLogger.LogAsync(cleanupEx, $"Failed to cleanup settings temp file: {tempFilePath}");
                 }
             }
-            catch (Exception cleanupEx)
-            {
-                _ = ErrorLogger.LogAsync(cleanupEx, $"Failed to cleanup settings temp file: {tempFilePath}");
-            }
+        }
+    }
+
+    private static void ShowSaveError(string message)
+    {
+        if (Application.Current != null)
+        {
+            MessageBox.Show(message, "Settings Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 

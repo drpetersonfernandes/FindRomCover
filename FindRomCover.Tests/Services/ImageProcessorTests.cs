@@ -146,7 +146,7 @@ public class ImageProcessorTests
 #pragma warning restore CS8604
 
             result.Success.Should().BeFalse();
-            result.ErrorMessage.Should().Contain("Invalid target path");
+            result.ErrorMessage.Should().Contain("Target path is null");
         }
         finally
         {
