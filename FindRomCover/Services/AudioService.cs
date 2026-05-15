@@ -61,8 +61,8 @@ public class AudioService : IAudioService
 
                 // If the error is due to a missing/incompatible Windows Media Player,
                 // silently disable the audio feedback without reporting an error.
-                // This can manifest as a COMException or InvalidOperationException.
-                if (ex is System.Runtime.InteropServices.COMException or InvalidOperationException)
+                // This can manifest as a COMException, InvalidOperationException, or InvalidWmpVersionException.
+                if (ex is System.Runtime.InteropServices.COMException or InvalidOperationException or InvalidWmpVersionException)
                 {
                     return; // Silently disable audio and exit.
                 }
@@ -125,7 +125,7 @@ public class AudioService : IAudioService
         // Silently handle known codec/media infrastructure errors (e.g. 0xC00D11BA)
         // that indicate missing codecs or incompatible Windows Media Foundation components.
         // These are environment issues, not application bugs.
-        if (e.ErrorException is System.Runtime.InteropServices.COMException or InvalidOperationException)
+        if (e.ErrorException is System.Runtime.InteropServices.COMException or InvalidOperationException or InvalidWmpVersionException)
         {
             return;
         }
