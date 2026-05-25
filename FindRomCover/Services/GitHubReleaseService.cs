@@ -5,7 +5,7 @@ using FindRomCover.Models;
 
 namespace FindRomCover.Services;
 
-public class GitHubReleaseService
+public partial class GitHubReleaseService
 {
     private readonly HttpClient _httpClient;
     private readonly string _repositoryOwner;
@@ -133,11 +133,13 @@ public class GitHubReleaseService
             return null;
         }
 
-        var versionString = tagName.StartsWith("v", StringComparison.OrdinalIgnoreCase)
-            ? tagName[1..]
-            : tagName;
+        var match = MyRegex().Match(tagName);
+        if (!match.Success)
+        {
+            return null;
+        }
 
-        return Version.TryParse(versionString, out var version) ? version : null;
+        return Version.TryParse(match.Groups[1].Value, out var version) ? version : null;
     }
 
     internal static Version? GetCurrentVersion()
@@ -151,4 +153,7 @@ public class GitHubReleaseService
             return null;
         }
     }
+
+    [System.Text.RegularExpressions.GeneratedRegex(@"(\d+\.\d+(?:\.\d+)?(?:\.\d+)?)")]
+    private static partial System.Text.RegularExpressions.Regex MyRegex();
 }

@@ -28,6 +28,12 @@ public class DelegateCommand : ICommand
     {
         _execute = execute ?? throw new ArgumentNullException(nameof(execute));
         _canExecute = canExecute;
+        CommandManager.RequerySuggested += OnRequerySuggested;
+    }
+
+    private void OnRequerySuggested(object? sender, EventArgs e)
+    {
+        CanExecuteChanged?.Invoke(this, e);
     }
 
     /// <summary>
