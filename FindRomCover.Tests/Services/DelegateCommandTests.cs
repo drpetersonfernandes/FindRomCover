@@ -94,40 +94,6 @@ public class DelegateCommandTests
     }
 
     [Fact]
-    public void RaiseCanExecuteChangedTriggersEvent()
-    {
-        var command = new DelegateCommand(static _ => { });
-        var wasRaised = false;
-        command.CanExecuteChanged += (_, _) => { wasRaised = true; };
-
-        command.RaiseCanExecuteChanged();
-
-        wasRaised.Should().BeTrue();
-    }
-
-    [Fact]
-    public void RaiseCanExecuteChangedWithNoSubscribersDoesNotThrow()
-    {
-        var command = new DelegateCommand(static _ => { });
-
-        var act = command.RaiseCanExecuteChanged;
-
-        act.Should().NotThrow();
-    }
-
-    [Fact]
-    public void CanExecuteChangedEventPassesCorrectSender()
-    {
-        var command = new DelegateCommand(static _ => { });
-        object? sender = null;
-        command.CanExecuteChanged += (s, _) => { sender = s; };
-
-        command.RaiseCanExecuteChanged();
-
-        sender.Should().BeSameAs(command);
-    }
-
-    [Fact]
     public void ImplementsICommandInterface()
     {
         var command = new DelegateCommand(static _ => { });

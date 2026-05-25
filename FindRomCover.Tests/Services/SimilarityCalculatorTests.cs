@@ -318,6 +318,145 @@ public class SimilarityCalculatorTests
         }
     }
 
+    #region Additional GetNgrams Tests
+
+    [Fact]
+    public void GetNgrams_WithNZero_ReturnsEmptySet()
+    {
+        var result = SimilarityCalculator.GetNgrams("hello", 0);
+
+        result.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void GetNgrams_NLargerThanStringLength_ReturnsNgramsWithPadding()
+    {
+        var result = SimilarityCalculator.GetNgrams("ab", 5);
+
+        result.Should().NotBeEmpty();
+        result.Should().HaveCount(6);
+    }
+
+    #endregion
+
+    #region Additional Levenshtein Tests
+
+    [Fact]
+    public void CalculateLevenshteinSimilarity_WithThresholdEarlyExit_ReturnsZero()
+    {
+        // Two long, very different strings with high threshold should trigger early exit
+        var result = SimilarityCalculator.CalculateLevenshteinSimilarity(
+            "super_mario_world_adventure_game",
+            "xxyyzzwwvvuuttssrrqqpp", 90.0);
+
+        result.Should().Be(0.0);
+    }
+
+    [Fact]
+    public void CalculateLevenshteinSimilarity_WithThresholdBelowActualSimularity_ReturnsCorrectScore()
+    {
+        // Similar strings with threshold below actual similarity
+        var result = SimilarityCalculator.CalculateLevenshteinSimilarity(
+            "mario", "mario", 50.0);
+
+        result.Should().Be(100.0);
+    }
+
+    [Fact]
+    public void CalculateLevenshteinSimilarity_VeryLongIdenticalStrings_Returns100()
+    {
+        var longString = new string('x', 1000);
+        var result = SimilarityCalculator.CalculateLevenshteinSimilarity(longString, longString);
+
+        result.Should().Be(100.0);
+    }
+
+    #endregion
+
+    #region Additional Jaro-Winkler Tests
+
+    [Fact]
+    public void CalculateJaroWinklerDistance_WithUnicodeCharacters_DoesNotThrow()
+    {
+        var act = static () => SimilarityCalculator.CalculateJaroWinklerDistance("pok\u00E9mon", "pokemon");
+
+        act.Should().NotThrow();
+    }
+
+    #endregion
+
+    #region Additional CalculateSimilarityAsync Tests
+
+    [Fact]
+    public async Task CalculateSimilarityAsync_OnImageLoadedCallback_FiresForEachLoadedImage()
+    {
+        var tempDir = Directory.CreateTempSubdirectory("frc_test_");
+        try
+        {
+            await CreateMinimalBmpAsync(Path.Combine(tempDir.FullName, "mario.png"));
+            await CreateMinimalBmpAsync(Path.Combine(tempDir.FullName, "mario_bros.png"));
+
+            var loadedImages = new System.Collections.Concurrent.ConcurrentBag<FindRomCover.Models.ImageData>();
+
+            await SimilarityCalculator.CalculateSimilarityAsync(
+                "mario", tempDir.FullName, 0, AppConstants.Algorithms.Levenshtein,
+                CancellationToken.None,
+                onImageLoaded: loadedImages.Add);
+
+            loadedImages.Should().NotBeEmpty();
+            loadedImages.Should().AllSatisfy(static img => img.ImageName.Should().Contain("mario"));
+        }
+        finally
+        {
+            Directory.Delete(tempDir.FullName, true);
+        }
+    }
+
+    [Fact]
+    public async Task CalculateSimilarityAsync_MaxImagesToLoadParameter_LimitsResults()
+    {
+        var tempDir = Directory.CreateTempSubdirectory("frc_test_");
+        try
+        {
+            // Create more images than maxImagesToLoad
+            for (var i = 1; i <= 5; i++)
+                await CreateMinimalBmpAsync(Path.Combine(tempDir.FullName, $"mario{i}.png"));
+
+            var result = await SimilarityCalculator.CalculateSimilarityAsync(
+                "mario", tempDir.FullName, 0, AppConstants.Algorithms.Levenshtein,
+                CancellationToken.None,
+                2);
+
+            result.SimilarImages.Should().HaveCountLessThanOrEqualTo(2);
+        }
+        finally
+        {
+            Directory.Delete(tempDir.FullName, true);
+        }
+    }
+
+    [Fact]
+    public async Task CalculateSimilarityAsync_WithMaxImagesToLoadZero_UsesDefault()
+    {
+        var tempDir = Directory.CreateTempSubdirectory("frc_test_");
+        try
+        {
+            await CreateMinimalBmpAsync(Path.Combine(tempDir.FullName, "game.png"));
+
+            var act = () => SimilarityCalculator.CalculateSimilarityAsync(
+                "game", tempDir.FullName, 0, AppConstants.Algorithms.Levenshtein,
+                CancellationToken.None);
+
+            await act.Should().NotThrowAsync();
+        }
+        finally
+        {
+            Directory.Delete(tempDir.FullName, true);
+        }
+    }
+
+    #endregion
+
     /// <summary>
     /// Creates a minimal valid 1x1 24bpp BMP file asynchronously.
     /// </summary>

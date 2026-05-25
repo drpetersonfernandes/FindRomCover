@@ -189,4 +189,114 @@ public class NgramIndexTests
 
         candidates.Should().ContainSingle();
     }
+
+    [Fact]
+    public void BuildWithLargeNumberOfFiles_HasCorrectFileCount()
+    {
+        var index = new NgramIndex();
+        var files = Enumerable.Range(1, 1000)
+            .Select(static i => $@"C:\images\game{i:D4}.png")
+            .ToList();
+
+        index.Build(files);
+
+        index.FileCount.Should().Be(1000);
+    }
+
+    [Fact]
+    public void GetCandidates_LargeQueryReturnsFiles()
+    {
+        var index = new NgramIndex();
+        index.Build(
+        [
+            @"C:\images\mario_kart_double_dash.png",
+            @"C:\images\zelda_breath_of_the_wild.png",
+            @"C:\images\unrelated.png"
+        ]);
+
+        var candidates = index.GetCandidates("mario_kart_double_dash");
+
+        candidates.Should().ContainSingle()
+            .Which.Should().Be(@"C:\images\mario_kart_double_dash.png");
+    }
+
+    [Fact]
+    public void GetCandidates_FilesWithSameNameInDifferentFolders_ReturnsBoth()
+    {
+        var index = new NgramIndex();
+        index.Build(
+        [
+            @"C:\images\covers\mario.png",
+            @"C:\images\screenshots\mario.png"
+        ]);
+
+        var candidates = index.GetCandidates("mario");
+
+        candidates.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public void GetCandidates_SingleCharQuery_ReturnsEmpty()
+    {
+        var index = new NgramIndex();
+        index.Build([@"C:\images\mario.png"]);
+
+        var candidates = index.GetCandidates("m");
+
+        candidates.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void GetCandidates_TwoCharQuery_ReturnsEmptyIfNoMatch()
+    {
+        var index = new NgramIndex();
+        index.Build([@"C:\images\xylophone.png"]);
+
+        var candidates = index.GetCandidates("ab");
+
+        candidates.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void GetCandidates_SpecialCharactersInFilename_FindsMatch()
+    {
+        var index = new NgramIndex();
+        index.Build([@"C:\images\super_maro_bros_3.png"]);
+
+        var candidates = index.GetCandidates("super_mario");
+
+        candidates.Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public void Build_EmptyAfterClearAndRebuild_ReturnsCorrectFileCount()
+    {
+        var index = new NgramIndex();
+        index.Build([@"C:\images\a.png", @"C:\images\b.png", @"C:\images\c.png"]);
+
+        index.Build([]);
+
+        index.FileCount.Should().Be(0);
+    }
+
+    [Fact]
+    public void GetCandidates_OnEmptyIndex_AlwaysReturnsEmpty()
+    {
+        var index = new NgramIndex();
+
+        var candidates = index.GetCandidates("anything");
+
+        candidates.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void GetCandidates_StringWithOnlySpaces_ReturnsEmpty()
+    {
+        var index = new NgramIndex();
+        index.Build([@"C:\images\any.png"]);
+
+        var candidates = index.GetCandidates("   ");
+
+        candidates.Should().BeEmpty();
+    }
 }

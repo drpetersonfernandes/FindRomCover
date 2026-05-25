@@ -17,7 +17,6 @@ public static class AppConstants
     public static class Themes
     {
         public const string Light = "Light";
-        public const string Dark = "Dark";
     }
 
     // Similarity algorithms

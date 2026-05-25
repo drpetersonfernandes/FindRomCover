@@ -27,6 +27,7 @@ public class GitHubReleaseService
         _httpClient = httpClient;
         _repositoryOwner = repositoryOwner;
         _repositoryName = repositoryName;
+        _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("FindRomCover-UpdateChecker");
     }
 
     public async Task<UpdateCheckResult> CheckForUpdatesAsync()
@@ -35,8 +36,6 @@ public class GitHubReleaseService
         {
             var currentVersion = GetCurrentVersion();
             var url = $"https://api.github.com/repos/{_repositoryOwner}/{_repositoryName}/releases/latest";
-
-            _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("FindRomCover-UpdateChecker");
 
             using var response = await _httpClient.GetAsync(url);
 
@@ -87,6 +86,7 @@ public class GitHubReleaseService
         }
         catch (HttpRequestException ex)
         {
+            _ = ErrorLogger.LogAsync(ex, "Network error checking for updates on GitHub");
             return new UpdateCheckResult
             {
                 UpdateAvailable = false,
@@ -96,6 +96,7 @@ public class GitHubReleaseService
         }
         catch (TaskCanceledException)
         {
+            _ = ErrorLogger.LogAsync(null, "GitHub update check request timed out");
             return new UpdateCheckResult
             {
                 UpdateAvailable = false,
@@ -105,6 +106,7 @@ public class GitHubReleaseService
         }
         catch (JsonException ex)
         {
+            _ = ErrorLogger.LogAsync(ex, "JSON parse error checking GitHub releases");
             return new UpdateCheckResult
             {
                 UpdateAvailable = false,
@@ -114,6 +116,7 @@ public class GitHubReleaseService
         }
         catch (Exception ex)
         {
+            _ = ErrorLogger.LogAsync(ex, "Unexpected error checking for updates on GitHub");
             return new UpdateCheckResult
             {
                 UpdateAvailable = false,

@@ -22,7 +22,7 @@ public static class MameDataService
     internal static string DefaultDatPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, AppConstants.MameDatFileName);
 
     private static readonly object CacheLock = new();
-    private static List<MameData>? _cachedMameData;
+    private static volatile List<MameData>? _cachedMameData;
 
     /// <summary>
     /// Loads MAME data from the default DAT file location.

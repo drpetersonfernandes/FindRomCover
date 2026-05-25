@@ -569,6 +569,10 @@ public class SettingsManager : INotifyPropertyChanged
         {
             MessageBox.Show(message, "Settings Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
+        else
+        {
+            _ = ErrorLogger.LogAsync(new InvalidOperationException(message), "Settings save error (no UI available)");
+        }
     }
 
     private void SetDefaultSettings()

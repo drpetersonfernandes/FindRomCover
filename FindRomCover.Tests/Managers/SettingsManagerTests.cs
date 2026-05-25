@@ -457,6 +457,103 @@ public class SettingsManagerTests : IDisposable
     }
 
     [Fact]
+    public void GetDefaultExtensions_ReturnsCorrectCount()
+    {
+        var extensions = InvokeGetDefaultExtensions();
+
+        extensions.Should().HaveCountGreaterThan(80);
+    }
+
+    [Fact]
+    public void GetDefaultExtensions_ContainsCommonFormats()
+    {
+        var extensions = InvokeGetDefaultExtensions();
+
+        extensions.Should().Contain("nes");
+        extensions.Should().Contain("sfc");
+        extensions.Should().Contain("zip");
+        extensions.Should().Contain("iso");
+        extensions.Should().Contain("chd");
+        extensions.Should().Contain("gb");
+        extensions.Should().Contain("nds");
+        extensions.Should().Contain("7z");
+        extensions.Should().Contain("rar");
+        extensions.Should().Contain("smc");
+        extensions.Should().Contain("cue");
+        extensions.Should().Contain("bin");
+    }
+
+    [Fact]
+    public void GetDefaultExtensions_HasNoDuplicates()
+    {
+        var extensions = InvokeGetDefaultExtensions();
+
+        extensions.Should().OnlyHaveUniqueItems();
+    }
+
+    [Fact]
+    public void GetDefaultExtensions_AllAreValid()
+    {
+        var extensions = InvokeGetDefaultExtensions();
+
+        extensions.Should().AllSatisfy(static ext =>
+        {
+            ext.Should().NotBeNullOrEmpty();
+            ext.Length.Should().BeLessThanOrEqualTo(10);
+            ext.All(static c => char.IsLetterOrDigit(c) || c == '-').Should().BeTrue();
+        });
+    }
+
+    private static string[] InvokeGetDefaultExtensions()
+    {
+        var method = typeof(SettingsManager).GetMethod(
+            "GetDefaultExtensions",
+            System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)!;
+
+        return (string[])method.Invoke(null, null)!;
+    }
+
+    [Fact]
+    public void LoadSettings_CorruptXml_FallsBackToDefaults()
+    {
+        File.WriteAllText(SettingsFilePath, "this is not valid xml <<<");
+
+        var loaded = new SettingsManager();
+
+        loaded.SimilarityThreshold.Should().Be(70);
+        loaded.BaseTheme.Should().Be("Light");
+    }
+
+    [Fact]
+    public void LoadSettings_NonNumericSimilarityThreshold_FallsBackToDefaults()
+    {
+        const string xml = """
+                           <?xml version="1.0"?>
+                           <Settings>
+                             <SimilarityThreshold>not-a-number</SimilarityThreshold>
+                           </Settings>
+                           """;
+        File.WriteAllText(SettingsFilePath, xml);
+
+        var loaded = new SettingsManager();
+
+        loaded.SimilarityThreshold.Should().Be(70);
+        loaded.BaseTheme.Should().Be("Light");
+    }
+
+    [Fact]
+    public void SettingsFile_HasBomEncoding_CanStillLoad()
+    {
+        // Write XML with UTF-8 BOM
+        const string xml = """<?xml version="1.0" encoding="utf-8"?><Settings><BaseTheme>Dark</BaseTheme></Settings>""";
+        File.WriteAllText(SettingsFilePath, xml, new System.Text.UTF8Encoding(true));
+
+        var loaded = new SettingsManager();
+
+        loaded.BaseTheme.Should().Be("Dark");
+    }
+
+    [Fact]
     public async Task SaveSettingsIsThreadSafe()
     {
         var exceptions = new List<Exception>();
@@ -489,4 +586,4 @@ public class SettingsManagerTests : IDisposable
 }
 
 [CollectionDefinition("SettingsManager")]
-public class SettingsManagerTestCollection;
+public class SettingsManagerTestGroup;

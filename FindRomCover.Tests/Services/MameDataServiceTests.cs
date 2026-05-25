@@ -166,6 +166,107 @@ public class MameDataServiceTests : IDisposable
     }
 
     [Fact]
+    public void LoadFromDatLockedFileReturnsEmptyList()
+    {
+        ClearCache();
+
+        var tempFile = Path.GetTempFileName();
+        _tempDatPath = tempFile;
+
+        // Write some content so the file exists and has data
+        File.WriteAllBytes(tempFile, new byte[] { 0x01, 0x02, 0x03 });
+
+        _originalDatPath = MameDataService.DefaultDatPath;
+        MameDataService.DefaultDatPath = tempFile;
+
+        try
+        {
+            // Lock the file to trigger IOException
+            using var lockedStream = File.Open(tempFile, FileMode.Open, FileAccess.Read, FileShare.None);
+
+            var result = MameDataService.LoadFromDat();
+
+            result.Should().NotBeNull();
+            result.Should().BeEmpty();
+        }
+        finally
+        {
+            ClearCache();
+        }
+    }
+
+    [Fact]
+    public void LoadFromDatCorruptFileCachesEmptyList()
+    {
+        ClearCache();
+
+        var tempFile = Path.GetTempFileName();
+        _tempDatPath = tempFile;
+
+        File.WriteAllBytes(tempFile, new byte[] { 0xFF, 0xFF, 0xFF, 0xFF });
+
+        _originalDatPath = MameDataService.DefaultDatPath;
+        MameDataService.DefaultDatPath = tempFile;
+
+        try
+        {
+            var firstCall = MameDataService.LoadFromDat();
+            firstCall.Should().BeEmpty();
+
+            // Second call should return the cached empty list
+            var secondCall = MameDataService.LoadFromDat();
+            secondCall.Should().BeSameAs(firstCall);
+        }
+        finally
+        {
+            ClearCache();
+        }
+    }
+
+    [Fact]
+    public void LoadFromDatFileNotFoundDoesNotCacheResult()
+    {
+        ClearCache();
+
+        var nonExistentPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".dat");
+        _originalDatPath = MameDataService.DefaultDatPath;
+        MameDataService.DefaultDatPath = nonExistentPath;
+
+        try
+        {
+            var act = static () => MameDataService.LoadFromDat();
+            act.Should().Throw<FileNotFoundException>();
+        }
+        finally
+        {
+            ClearCache();
+        }
+
+        // Create the file now to verify cache was not set
+        var tempFile = Path.GetTempFileName();
+        _tempDatPath = tempFile;
+
+        var testData = new List<FindRomCover.Models.MameData>
+        {
+            new() { MachineName = "late", Description = "Late Game" }
+        };
+        File.WriteAllBytes(tempFile, MessagePackSerializer.Serialize(testData));
+
+        MameDataService.DefaultDatPath = tempFile;
+
+        try
+        {
+            var result = MameDataService.LoadFromDat();
+            result.Should().HaveCount(1);
+            result[0].MachineName.Should().Be("late");
+        }
+        finally
+        {
+            ClearCache();
+        }
+    }
+
+    [Fact]
     public void LoadFromDatThreadSafetyReturnsConsistentData()
     {
         ClearCache();

@@ -111,27 +111,35 @@ public static class ImageProcessor
             return new ImageSaveResult(false, "Source and target paths are the same.\n\nPlease choose another target path.", "Error", MessageBoxImage.Error);
         }
 
-        try
+        const int maxAttempts = 3;
+        for (var attempt = 0;; attempt++)
         {
-            // Test if we can write to the directory
-            var testFile = Path.Combine(directory, $"{Guid.NewGuid()}.tmp");
-            await File.WriteAllTextAsync(testFile, string.Empty, cancellationToken).ConfigureAwait(false);
-            File.Delete(testFile);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _ = ErrorLogger.LogAsync(ex, $"Cannot write to directory: {directory}");
-            return new ImageSaveResult(
-                false,
-                $"Cannot write to directory: {directory}\n\nError: {ex.Message}\n\nTry running as administrator.",
-                "Permission Error",
-                MessageBoxImage.Error,
-                ex,
-                $"Cannot write to directory: {directory}");
+            try
+            {
+                // Test if we can write to the directory
+                var testFile = Path.Combine(directory, $"{Guid.NewGuid()}.tmp");
+                await File.WriteAllTextAsync(testFile, string.Empty, cancellationToken).ConfigureAwait(false);
+                File.Delete(testFile);
+                break;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                if (attempt >= maxAttempts - 1)
+                {
+                    _ = ErrorLogger.LogAsync(ex, $"Cannot write to directory: {directory}");
+                    return new ImageSaveResult(
+                        false,
+                        $"Cannot write to directory: {directory}\n\nError: {ex.Message}\n\nTry running as administrator.",
+                        "Permission Error",
+                        MessageBoxImage.Error,
+                        ex,
+                        $"Cannot write to directory: {directory}");
+                }
+            }
         }
 
         cancellationToken.ThrowIfCancellationRequested();

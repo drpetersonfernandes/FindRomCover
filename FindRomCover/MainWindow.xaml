@@ -11,7 +11,6 @@
                       WindowStartupLocation="CenterScreen">
 
     <Window.Resources>
-        <!-- DataTemplate for image cells -->
         <DataTemplate x:Key="ImageCellTemplate">
             <Button Style="{StaticResource ImageSuggestionButtonStyle}"
                     Click="ImageCell_Click"
@@ -20,7 +19,7 @@
                     AutomationProperties.HelpText="{Binding SimilarityScore, StringFormat='Similarity: {0:F2}%'}"
                     ToolTip="{Binding ImageName, StringFormat='Click to assign: {0}'}">
                 <StackPanel>
-                        <Image
+                    <Image
                         Width="{Binding Path=Settings.ImageWidth, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=200}"
                         Height="{Binding Path=Settings.ImageHeight, RelativeSource={RelativeSource AncestorType=Window}, FallbackValue=200}"
                         Source="{Binding DisplayImage, FallbackValue={x:Null}}" />
@@ -264,11 +263,11 @@
                 </GroupBox>
 
                 <!-- Step 2: Missing Covers -->
-                <GroupBox Grid.Row="1" Margin="0,0,0,0">
+                <GroupBox Grid.Row="1" Margin="0,0,0,0"
+                          ToolTip="List of ROMs that do not have a matching cover image">
                     <GroupBox.Header>
                         <StackPanel Orientation="Horizontal">
-                            <Label x:Name="LabelMissingRoms" Content="LIST OF MISSING COVERS" Padding="0,0,5,0" 
-                                   Foreground="{DynamicResource MahApps.Brushes.IdealForeground}"
+                            <Label x:Name="LabelMissingRoms" Content="LIST OF MISSING COVERS" Style="{StaticResource MissingCoversLabelStyle}"
                                    ToolTip="ROMs that do not have a matching cover image" />
                         </StackPanel>
                     </GroupBox.Header>
@@ -298,7 +297,8 @@
                                      ToolTip="Select a ROM to find similar cover images. Press Delete to remove an item."
                                       />
                             <controls:ProgressRing IsActive="{Binding IsCheckingMissing}" HorizontalAlignment="Center"
-                                                   VerticalAlignment="Center" />
+                                                   VerticalAlignment="Center"
+                                                   ToolTip="Checking for missing covers. Please wait..." />
                         </Grid>
 
                         <Button Grid.Row="2" x:Name="BtnRemoveSelectedItem" Content="Remove Selected Item from List"
@@ -331,9 +331,10 @@
                         <ScrollViewer x:Name="ImageScrollViewer" VerticalScrollBarVisibility="Auto"
                                       AutomationProperties.Name="Similar Images Scroll Area"
                                       ToolTip="Browse suggested cover images for the selected ROM">
-                            <ItemsControl ItemsSource="{Binding SimilarImages}"
-                                          AutomationProperties.Name="Similar Images"
-                                          AutomationProperties.HelpText="Images that match the selected ROM name">
+                             <ItemsControl ItemsSource="{Binding SimilarImages}"
+                                           AutomationProperties.Name="Similar Images"
+                                           AutomationProperties.HelpText="Images that match the selected ROM name"
+                                           ToolTip="List of suggested cover images that match the selected ROM">
                                 <ItemsControl.ItemTemplate>
                                     <StaticResource ResourceKey="ImageCellTemplate" />
                                 </ItemsControl.ItemTemplate>
@@ -346,7 +347,8 @@
                         </ScrollViewer>
 
                         <!-- Loading Overlay -->
-                        <Grid Style="{StaticResource LoadingOverlayGridStyle}">
+                        <Grid Style="{StaticResource LoadingOverlayGridStyle}"
+                              ToolTip="Searching for similar cover images. Please wait...">
                             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                                 <controls:ProgressRing IsActive="{Binding IsFindingSimilar}" 
                                                        Width="60" Height="60"
@@ -359,7 +361,8 @@
                         </Grid>
 
                         <!-- Empty State Overlay -->
-                        <Grid Style="{StaticResource EmptyStateOverlayGridStyle}">
+                        <Grid Style="{StaticResource EmptyStateOverlayGridStyle}"
+                              ToolTip="Select a missing cover from the list to see matching suggestions">
                             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="20">
                                 <!-- Message when no item is selected (no search has been performed) -->
                                 <TextBlock Text="Select a missing cover from the list to see suggestions."

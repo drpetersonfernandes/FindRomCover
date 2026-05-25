@@ -107,9 +107,6 @@ public static class ErrorLogger
 
         apiTimeoutSeconds = ResolveApiTimeoutSeconds(apiTimeoutSeconds);
 
-        // Create a placeholder exception if none provided
-        ex ??= new InvalidOperationException("No exception provided");
-
         // Create the bug report model with all environment and exception details
         var bugReport = BugReportModel.FromException(ex, contextMessage);
 
@@ -136,7 +133,7 @@ public static class ErrorLogger
         catch (Exception loggingEx)
         {
             // Log any exceptions that occur during the logging process itself to an internal log
-            _ = WriteInternalLog("Failed to write/read log files.", loggingEx);
+            _ = WriteInternalLogAsync("Failed to write/read log files.", loggingEx);
             return;
         }
         finally
@@ -160,7 +157,7 @@ public static class ErrorLogger
             catch (Exception loggingEx)
             {
                 // Log any exceptions that occur during the API sending process to an internal log
-                _ = WriteInternalLog("Failed to send log to API.", loggingEx);
+                _ = WriteInternalLogAsync("Failed to send log to API.", loggingEx);
             }
 
             // 5. If sending is successful, clear the API-sending log file
@@ -176,7 +173,7 @@ public static class ErrorLogger
                 }
                 catch (Exception loggingEx)
                 {
-                    _ = WriteInternalLog("Failed to clear API log file.", loggingEx);
+                    _ = WriteInternalLogAsync("Failed to clear API log file.", loggingEx);
                 }
                 finally
                 {
@@ -232,11 +229,12 @@ public static class ErrorLogger
             // Create structured API payload with all required fields
             var bugReportPayload = new
             {
+                message = logContent,
                 bugReport.ApplicationName,
-                Version = bugReport.ApplicationVersion,
-                Environment = $"OS: {bugReport.OsVersion} | Arch: {bugReport.Architecture} | Bitness: {bugReport.Bitness} | Windows: {bugReport.WindowsVersion} | CPUs: {bugReport.ProcessorCount} | BaseDir: {bugReport.BaseDirectory} | Temp: {bugReport.TempPath}",
-                bugReport.Exception.StackTrace,
-                Message = logContent
+                version = bugReport.ApplicationVersion,
+                environment = bugReport.OsVersion,
+                stackTrace = bugReport.Exception.StackTrace,
+                userInfo = $"Arch: {bugReport.Architecture}, {bugReport.Bitness}"
             };
 
             var jsonPayload = JsonSerializer.Serialize(bugReportPayload, CachedJsonSerializerOptions);
@@ -256,23 +254,23 @@ public static class ErrorLogger
             else
             {
                 var errorContent = await response.Content.ReadAsStringAsync(cts.Token);
-                _ = WriteInternalLog($"API returned non-success status code: {response.StatusCode}. Response: {errorContent}");
+                _ = WriteInternalLogAsync($"API returned non-success status code: {response.StatusCode}. Response: {errorContent}");
                 return false;
             }
         }
         catch (HttpRequestException httpEx)
         {
-            _ = WriteInternalLog("HTTP request failed when sending log to API.", httpEx);
+            _ = WriteInternalLogAsync("HTTP request failed when sending log to API.", httpEx);
             return false;
         }
         catch (TaskCanceledException tcEx) when (tcEx.CancellationToken.IsCancellationRequested)
         {
-            _ = WriteInternalLog("HTTP Request timed out when sending log to API.");
+            _ = WriteInternalLogAsync("HTTP Request timed out when sending log to API.");
             return false;
         }
         catch (Exception ex)
         {
-            _ = WriteInternalLog("An unexpected error occurred when sending log to API.", ex);
+            _ = WriteInternalLogAsync("An unexpected error occurred when sending log to API.", ex);
             return false;
         }
     }
@@ -287,7 +285,7 @@ public static class ErrorLogger
     /// This method uses a simple lock (not SemaphoreSlim) to avoid deadlocks with the main LogFileLock.
     /// If writing fails, the error is output to Debug.Print as a last resort.
     /// </remarks>
-    private static async Task WriteInternalLog(string message, Exception? exception = null)
+    private static async Task WriteInternalLogAsync(string message, Exception? exception = null)
     {
         try
         {

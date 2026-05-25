@@ -610,7 +610,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
                         SimilarityCalculationResult similarityResult;
                         try
                         {
-                            similarityResult = await ButtonFactory.CreateSimilarImagesCollection(
+                            similarityResult = await ButtonFactory.CreateSimilarImagesCollectionAsync(
                                 searchName,
                                 imageFolderPath,
                                 Settings.SimilarityThreshold,
@@ -688,12 +688,12 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
             }
             catch (Exception ex)
             {
-                _ = ErrorLogger.LogAsync(ex, "Error in LstMissingImages_SelectionChanged");
+                _ = ErrorLogger.LogAsync(ex, "Error in LstMissingImages_SelectionChangedAsync");
             }
         }
         catch (Exception ex)
         {
-            _ = ErrorLogger.LogAsync(ex, "Error in LstMissingImages_SelectionChanged");
+            _ = ErrorLogger.LogAsync(ex, "Error in LstMissingImages_SelectionChangedAsync");
         }
     }
 

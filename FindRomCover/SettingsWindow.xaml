@@ -3,17 +3,11 @@
                       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-                      xmlns:controls="http://metro.mahapps.com/winfx/xaml/controls"
-                      xmlns:componentModel="clr-namespace:System.ComponentModel;assembly=WindowsBase"
-                      mc:Ignorable="d"
+      xmlns:controls="http://metro.mahapps.com/winfx/xaml/controls"
+                       mc:Ignorable="d"
                       Title="Edit Supported Extensions" Height="450" Width="400"
                       WindowStartupLocation="CenterScreen">
     <controls:MetroWindow.Resources>
-        <CollectionViewSource x:Key="SortedExtensions" Source="{Binding SupportedExtensions}" >
-            <CollectionViewSource.SortDescriptions>
-                <componentModel:SortDescription PropertyName="." Direction="Ascending"/>
-            </CollectionViewSource.SortDescriptions>
-        </CollectionViewSource>
     </controls:MetroWindow.Resources>
     <Grid Margin="15">
         <Grid.RowDefinitions>
@@ -32,9 +26,8 @@
 
         <ListBox Grid.Row="1"
                  x:Name="LstSupportedExtensions"
-                 BorderBrush="Gray"
-                 BorderThickness="1"
-                 ItemsSource="{Binding Source={StaticResource SortedExtensions}}"
+                 Style="{StaticResource ExtensionsListBoxStyle}"
+                 ItemsSource="{Binding SupportedExtensions}"
                  AutomationProperties.Name="Supported Extensions List"
                  AutomationProperties.HelpText="List of file extensions that will be recognized as ROM files"
                  ToolTip="List of file extensions recognized as ROM files"

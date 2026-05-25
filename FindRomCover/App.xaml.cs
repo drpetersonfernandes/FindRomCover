@@ -73,10 +73,11 @@ public partial class App
             {
                 await asyncAction().ConfigureAwait(false);
             }
-            catch
+            catch (Exception ex)
             {
                 // Exceptions are already logged by ErrorLogger.LogAsync
                 // This prevents unobserved task exceptions from propagating
+                Debug.WriteLine($"FireAndForget caught unhandled exception: {ex}");
             }
         });
     }
@@ -89,24 +90,20 @@ public partial class App
         try
         {
             using var httpClient = new HttpClient();
-            var service = new GitHubReleaseService(httpClient)
+            var releaseService = new GitHubReleaseService(httpClient)
             {
                 HttpClientTimeoutSeconds = 15
             };
+            var orchestrator = new UpdateCheckOrchestrator(releaseService);
 
-            var result = await service.CheckForUpdatesAsync();
+            var notification = await orchestrator.CheckAsync();
 
-            if (result is { UpdateAvailable: true, ReleaseUrl: not null })
+            if (notification.ShouldNotify)
             {
                 Current.Dispatcher.Invoke(() =>
                 {
-                    var message = $"A new version of FindRomCover is available!\n\n" +
-                                  $"Current version: {result.CurrentVersion}\n" +
-                                  $"Latest version: {result.LatestVersion}\n\n" +
-                                  "Would you like to open the release page?";
-
                     var choice = MessageBox.Show(
-                        message,
+                        notification.Message,
                         "Update Available",
                         MessageBoxButton.YesNo,
                         MessageBoxImage.Information);
@@ -115,16 +112,16 @@ public partial class App
                     {
                         Process.Start(new ProcessStartInfo
                         {
-                            FileName = result.ReleaseUrl,
+                            FileName = notification.ReleaseUrl,
                             UseShellExecute = true
                         });
                     }
                 });
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Update check failure should be silent - do not disrupt the user
+            _ = ErrorLogger.LogAsync(ex, "Error checking for updates on GitHub");
         }
     }
 
@@ -252,29 +249,67 @@ public partial class App
         catch (Exception ex)
         {
             _ = ErrorLogger.LogAsync(ex, "Error in the method OnStartup");
+            MessageBox.Show(
+                $"A fatal error occurred during application startup:\n\n{ex.Message}\n\nThe application will now close.",
+                "Fatal Startup Error",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+            Shutdown();
         }
     }
 
     protected override void OnExit(ExitEventArgs e)
     {
-        if (AudioService is IDisposable disposableAudioService)
+        try
         {
-            disposableAudioService.Dispose();
+            if (AudioService is IDisposable disposableAudioService)
+            {
+                disposableAudioService.Dispose();
+            }
+        }
+        catch
+        {
+            // ignored
         }
 
-        // Dispose the ErrorLogger's HttpClient to prevent resource leaks
-        ErrorLogger.Dispose();
-        UsageTracker.Dispose();
-
-        // Dispose the service provider
-        if (ServiceProvider is IDisposable disposableServiceProvider)
+        try
         {
-            disposableServiceProvider.Dispose();
+            ErrorLogger.Dispose();
+        }
+        catch
+        {
+            // ignored
         }
 
-        base.OnExit(e);
+        try
+        {
+            UsageTracker.Dispose();
+        }
+        catch
+        {
+            // ignored
+        }
 
-        Environment.Exit(e.ApplicationExitCode);
+        try
+        {
+            if (ServiceProvider is IDisposable disposableServiceProvider)
+            {
+                disposableServiceProvider.Dispose();
+            }
+        }
+        catch
+        {
+            // ignored
+        }
+
+        try
+        {
+            base.OnExit(e);
+        }
+        catch
+        {
+            // ignored
+        }
     }
 
     public static void ChangeTheme(string baseTheme, string accentColor)
@@ -294,7 +329,7 @@ public partial class App
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
-            FireAndForget(() => ErrorLogger.LogAsync(ex, $"Error applying theme: {baseTheme}.{accentColor}"));
+            _ = ErrorLogger.LogAsync(ex, $"Error applying theme: {baseTheme}.{accentColor}");
         }
     }
 
@@ -308,7 +343,7 @@ public partial class App
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
-            FireAndForget(() => ErrorLogger.LogAsync(ex, "Error applying theme to window, using default"));
+            _ = ErrorLogger.LogAsync(ex, "Error applying theme to window, using default");
             try
             {
                 ThemeManager.Current.ChangeTheme(window, "Light.Blue");

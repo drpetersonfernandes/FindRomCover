@@ -83,7 +83,7 @@ public static class ImageLoader
                     return null;
                 }
             }
-            catch (IOException ex) when ((uint)ex.HResult == 0x80070020)
+            catch (IOException ex) when ((uint)ex.HResult is 0x80070020 or 0x80070021)
             {
                 if (i < maxRetries - 1)
                 {

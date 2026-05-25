@@ -239,6 +239,9 @@ public static class SimilarityCalculator
         var lengthA = a.Length;
         var lengthB = b.Length;
 
+        if (lengthA == 0 && lengthB == 0)
+            return 100;
+
         var maxLength = Math.Max(lengthA, lengthB);
 
         var maxAllowedDistance = similarityThreshold > 0
@@ -326,6 +329,11 @@ public static class SimilarityCalculator
 
         var s1Len = s1.Length;
         var s2Len = s2.Length;
+
+        if (s1Len == 0 && s2Len == 0)
+        {
+            return 100.0;
+        }
 
         if (s1Len == 0 || s2Len == 0)
         {

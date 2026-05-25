@@ -35,7 +35,7 @@ public static class ButtonFactory
     /// A <see cref="Task{TResult}"/> containing a <see cref="SimilarityCalculationResult"/> with similar images and any processing errors.
     /// </returns>
     /// <exception cref="OperationCanceledException">Thrown when the operation is cancelled via the cancellationToken.</exception>
-    public static Task<SimilarityCalculationResult> CreateSimilarImagesCollection(
+    public static Task<SimilarityCalculationResult> CreateSimilarImagesCollectionAsync(
         string selectedRomFileName,
         string imageFolderPath,
         double similarityThreshold,
@@ -100,23 +100,21 @@ public static class ButtonFactory
         var contextMenu = existingMenu ?? new ContextMenu();
 
         // Only add "Use This Image" menu item if the action is provided
+        var useThisImageIcon = new Image
         {
-            var useThisImageIcon = new Image
-            {
-                Source = CreateFrozenBitmapImage("pack://application:,,,/images/usethis.png"),
-                Width = 16,
-                Height = 16,
-                Margin = new Thickness(2)
-            };
-            var useThisImageMenuItem = new MenuItem
-            {
-                Header = "Use This Image",
-                Command = new DelegateCommand(p => useImageAction.Invoke(p as string)),
-                CommandParameter = imagePath,
-                Icon = useThisImageIcon
-            };
-            contextMenu.Items.Add(useThisImageMenuItem);
-        }
+            Source = CreateFrozenBitmapImage("pack://application:,,,/images/usethis.png"),
+            Width = 16,
+            Height = 16,
+            Margin = new Thickness(2)
+        };
+        var useThisImageMenuItem = new MenuItem
+        {
+            Header = "Use This Image",
+            Command = new DelegateCommand(p => useImageAction.Invoke(p as string)),
+            CommandParameter = imagePath,
+            Icon = useThisImageIcon
+        };
+        contextMenu.Items.Add(useThisImageMenuItem);
 
         // "Copy Image Filename" menu item
         var copyIcon = new Image
@@ -195,7 +193,11 @@ public static class ButtonFactory
     {
         if (param is not string imagePath || string.IsNullOrEmpty(imagePath))
         {
-            MessageBox.Show("Image path is null or empty.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            if (Application.Current != null)
+            {
+                MessageBox.Show("Image path is null or empty.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+
             return;
         }
 

@@ -77,7 +77,7 @@ public class BugReportModel
     /// <param name="ex">The exception that occurred.</param>
     /// <param name="contextMessage">Optional context message describing where/why the error occurred.</param>
     /// <returns>A fully populated BugReportModel.</returns>
-    public static BugReportModel FromException(Exception ex, string? contextMessage = null)
+    public static BugReportModel FromException(Exception? ex, string? contextMessage = null)
     {
         var model = new BugReportModel
         {
@@ -91,7 +91,7 @@ public class BugReportModel
             BaseDirectory = AppDomain.CurrentDomain.BaseDirectory,
             TempPath = Path.GetTempPath(),
             ErrorMessage = contextMessage ?? "",
-            Exception = ExceptionDetails.FromException(ex)
+            Exception = ex != null ? ExceptionDetails.FromException(ex) : new ExceptionDetails()
         };
 
         return model;
@@ -130,8 +130,11 @@ public class BugReportModel
             sb.AppendLine();
         }
 
-        sb.AppendLine("=== Exception Details ===");
-        sb.AppendLine(Exception.ToString());
+        if (!string.IsNullOrWhiteSpace(Exception.Type))
+        {
+            sb.AppendLine("=== Exception Details ===");
+            sb.AppendLine(Exception.ToString());
+        }
 
         sb.AppendLine();
         sb.AppendLine("================================================================================");

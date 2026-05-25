@@ -52,18 +52,5 @@ public class DelegateCommand : ICommand
     /// <summary>
     /// Occurs when changes occur that affect whether the command should execute.
     /// </summary>
-    /// <remarks>
-    /// Call <see cref="RaiseCanExecuteChanged"/> to trigger this event and force
-    /// WPF to re-query the CanExecute state.
-    /// </remarks>
     public event EventHandler? CanExecuteChanged;
-
-    /// <summary>
-    /// Raises the <see cref="CanExecuteChanged"/> event to signal that the command's
-    /// executable state may have changed.
-    /// </summary>
-    public void RaiseCanExecuteChanged()
-    {
-        CanExecuteChanged?.Invoke(this, EventArgs.Empty);
-    }
 }

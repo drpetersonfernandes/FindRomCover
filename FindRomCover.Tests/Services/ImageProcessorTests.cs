@@ -246,6 +246,104 @@ public class ImageProcessorTests
 
     #endregion
 
+    #region Temp File Cleanup
+
+    [Fact]
+    public async Task ConvertAndSaveImageAsync_CleansUpTempFileAfterSuccess()
+    {
+        var tempDir = Directory.CreateTempSubdirectory("frc_test_");
+        var sourcePath = Path.Combine(tempDir.FullName, "source.bmp");
+        var targetPath = Path.Combine(tempDir.FullName, "output.png");
+        await CreateMinimalBmpAsync(sourcePath);
+
+        try
+        {
+            var result = await ImageProcessor.ConvertAndSaveImageAsync(
+                sourcePath, targetPath, CancellationToken.None);
+
+            result.Success.Should().BeTrue();
+
+            // Verify no orphaned .tmp files remain
+            var tmpFiles = Directory.GetFiles(tempDir.FullName, "*.tmp");
+            tmpFiles.Should().BeEmpty();
+        }
+        finally
+        {
+            Directory.Delete(tempDir.FullName, true);
+        }
+    }
+
+    [Fact]
+    public async Task ConvertAndSaveImageAsync_SourceWithInvalidFormat_ReturnsFailure()
+    {
+        var tempDir = Directory.CreateTempSubdirectory("frc_test_");
+        var sourcePath = Path.Combine(tempDir.FullName, "invalid.bmp");
+        var targetPath = Path.Combine(tempDir.FullName, "output.png");
+
+        // Create a file with BMP header but invalid data
+        await File.WriteAllBytesAsync(sourcePath, "BM\0\0"u8.ToArray());
+
+        try
+        {
+            var result = await ImageProcessor.ConvertAndSaveImageAsync(
+                sourcePath, targetPath, CancellationToken.None);
+
+            result.Success.Should().BeFalse();
+            result.ErrorMessage.Should().NotBeNullOrEmpty();
+        }
+        finally
+        {
+            Directory.Delete(tempDir.FullName, true);
+        }
+    }
+
+    [Fact]
+    public async Task ConvertAndSaveImageAsync_WritableTargetDirectory_Succeeds()
+    {
+        var tempDir = Directory.CreateTempSubdirectory("frc_test_");
+        var subDir = Directory.CreateDirectory(Path.Combine(tempDir.FullName, "sub"));
+        var sourcePath = Path.Combine(tempDir.FullName, "source.bmp");
+        var targetPath = Path.Combine(subDir.FullName, "output.png");
+        await CreateMinimalBmpAsync(sourcePath);
+
+        try
+        {
+            var result = await ImageProcessor.ConvertAndSaveImageAsync(
+                sourcePath, targetPath, CancellationToken.None);
+
+            result.Success.Should().BeTrue();
+            File.Exists(targetPath).Should().BeTrue();
+        }
+        finally
+        {
+            Directory.Delete(tempDir.FullName, true);
+        }
+    }
+
+    [Fact]
+    public async Task ConvertAndSaveImageAsync_SourceWithWrongExtension_StillConverts()
+    {
+        var tempDir = Directory.CreateTempSubdirectory("frc_test_");
+        var sourcePath = Path.Combine(tempDir.FullName, "source.txt");
+        var targetPath = Path.Combine(tempDir.FullName, "output.png");
+        await CreateMinimalBmpAsync(sourcePath);
+
+        try
+        {
+            var result = await ImageProcessor.ConvertAndSaveImageAsync(
+                sourcePath, targetPath, CancellationToken.None);
+
+            // Magick.NET can auto-detect BMP format regardless of extension
+            result.Success.Should().BeTrue();
+        }
+        finally
+        {
+            Directory.Delete(tempDir.FullName, true);
+        }
+    }
+
+    #endregion
+
     #region Helpers
 
     private static Task CreateMinimalBmpAsync(string path)

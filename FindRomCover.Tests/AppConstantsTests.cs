@@ -53,12 +53,6 @@ public class AppConstantsTests
     }
 
     [Fact]
-    public void ThemesDarkIsCorrect()
-    {
-        AppConstants.Themes.Dark.Should().Be("Dark");
-    }
-
-    [Fact]
     public void MessagesDefaultSimilarityThresholdIsCorrect()
     {
         AppConstants.Messages.DefaultSimilarityThreshold.Should().Be("70");

@@ -127,4 +127,63 @@ public class ImageLoaderTests
             }
         }
     }
+
+    [Fact]
+    public async Task LoadImageToMemoryAsync_WithNonExistentFile_ReturnsNull()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.png");
+        // Both parameters > 0 so ResolveSettings is not called; file doesn't exist -> null
+        var result = await ImageLoader.LoadImageToMemoryAsync(
+            path, CancellationToken.None, 1, 100);
+
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task LoadImageToMemoryAsync_WithOnlyMaxRetriesZero_StillResolvesAndDoesNotThrow()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.png");
+
+        var act = () => ImageLoader.LoadImageToMemoryAsync(
+            path, CancellationToken.None, 0, 100);
+
+        await act.Should().NotThrowAsync();
+    }
+
+    [Fact]
+    public async Task LoadImageToMemoryAsync_WithOnlyRetryDelayZero_StillResolvesAndDoesNotThrow()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.png");
+
+        var act = () => ImageLoader.LoadImageToMemoryAsync(
+            path, CancellationToken.None, 1);
+
+        await act.Should().NotThrowAsync();
+    }
+
+    [Fact]
+    public async Task LoadImageToMemoryAsync_EmptyFileWithExplicitRetries_ReturnsNull()
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(path, string.Empty);
+
+            var result = await ImageLoader.LoadImageToMemoryAsync(
+                path, CancellationToken.None, 1, 50);
+
+            result.Should().BeNull();
+        }
+        finally
+        {
+            try
+            {
+                File.Delete(path);
+            }
+            catch
+            {
+                // ignored
+            }
+        }
+    }
 }

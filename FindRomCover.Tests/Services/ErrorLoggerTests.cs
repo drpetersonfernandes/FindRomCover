@@ -148,7 +148,7 @@ public class ErrorLoggerTests : IDisposable
     {
         ResetIsDisposed();
 
-        await ErrorLogger.LogAsync(new Exception("Environment test"));
+        await ErrorLogger.LogAsync(new InvalidOperationException("Environment test"));
 
         var userLogContent = await File.ReadAllTextAsync(Path.Combine(_tempDir, "UserLogError.txt"));
 
@@ -165,7 +165,7 @@ public class ErrorLoggerTests : IDisposable
 
         try
         {
-            await ErrorLogger.LogAsync(new Exception("API send test"));
+            await ErrorLogger.LogAsync(new InvalidOperationException("API send test"));
 
             var apiLogContent = await File.ReadAllTextAsync(Path.Combine(_tempDir, "ApiLogError.txt"));
             apiLogContent.Should().BeEmpty("successful API send should clear the API log file");
@@ -186,7 +186,7 @@ public class ErrorLoggerTests : IDisposable
 
         try
         {
-            await ErrorLogger.LogAsync(new Exception("API fail test"));
+            await ErrorLogger.LogAsync(new InvalidOperationException("API fail test"));
 
             var apiLogContent = await File.ReadAllTextAsync(Path.Combine(_tempDir, "ApiLogError.txt"));
             apiLogContent.Should().NotBeEmpty("failed API send should preserve the API log file");
@@ -207,7 +207,7 @@ public class ErrorLoggerTests : IDisposable
 
         try
         {
-            var act = static () => ErrorLogger.LogAsync(new Exception("Network error test"));
+            var act = static () => ErrorLogger.LogAsync(new InvalidOperationException("Network error test"));
 
             await act.Should().NotThrowAsync();
         }
@@ -228,7 +228,7 @@ public class ErrorLoggerTests : IDisposable
 
         try
         {
-            var act = static () => ErrorLogger.LogAsync(new Exception("Timeout test"), apiTimeoutSeconds: 1);
+            var act = static () => ErrorLogger.LogAsync(new TimeoutException("Timeout test"), apiTimeoutSeconds: 1);
 
             await act.Should().NotThrowAsync();
 
@@ -250,7 +250,7 @@ public class ErrorLoggerTests : IDisposable
 
         try
         {
-            var act = static () => ErrorLogger.LogAsync(new Exception("File failure test"));
+            var act = static () => ErrorLogger.LogAsync(new InvalidOperationException("File failure test"));
 
             await act.Should().NotThrowAsync();
         }
@@ -277,7 +277,7 @@ public class ErrorLoggerTests : IDisposable
         ResetIsDisposed();
 
         var tasks = Enumerable.Range(0, 10).Select(static i =>
-            ErrorLogger.LogAsync(new Exception($"Concurrent test {i}"), $"Context {i}"));
+            ErrorLogger.LogAsync(new InvalidOperationException($"Concurrent test {i}"), $"Context {i}"));
 
         var act = () => Task.WhenAll(tasks);
 
@@ -286,5 +286,118 @@ public class ErrorLoggerTests : IDisposable
         var userLogContent = await File.ReadAllTextAsync(Path.Combine(_tempDir, "UserLogError.txt"));
         userLogContent.Should().Contain("Concurrent test 0");
         userLogContent.Should().Contain("Concurrent test 9");
+    }
+
+    [Fact]
+    public async Task LogAsync_SendsApiKeyInRequestHeaders()
+    {
+        ResetIsDisposed();
+
+        string? capturedApiKey = null;
+        var handler = new RequestCapturingHttpMessageHandler((_, request) =>
+        {
+            if (request.Headers.TryGetValues("X-API-KEY", out var values))
+            {
+                capturedApiKey = values.FirstOrDefault();
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{\"success\":true}") };
+        });
+        ErrorLogger.HttpClient = new HttpClient(handler);
+
+        try
+        {
+            await ErrorLogger.LogAsync(new InvalidOperationException("API key header test"), "Test");
+
+            capturedApiKey.Should().NotBeNull();
+            capturedApiKey.Should().NotBeEmpty();
+        }
+        finally
+        {
+            ErrorLogger.HttpClient = _originalHttpClient;
+        }
+    }
+
+    [Fact]
+    public async Task LogAsync_WithCustomTimeout_DoesNotThrow()
+    {
+        ResetIsDisposed();
+
+        var handler = new FakeHttpMessageHandler(HttpStatusCode.OK, "{\"success\":true}");
+        ErrorLogger.HttpClient = new HttpClient(handler);
+
+        try
+        {
+            var act = static () => ErrorLogger.LogAsync(
+                new InvalidOperationException("Custom timeout test"),
+                apiTimeoutSeconds: 15);
+
+            await act.Should().NotThrowAsync();
+        }
+        finally
+        {
+            ErrorLogger.HttpClient = _originalHttpClient;
+        }
+    }
+
+    [Fact]
+    public async Task LogAsync_WithDefaultTimeout_ResolvesFromSettings()
+    {
+        ResetIsDisposed();
+
+        var handler = new FakeHttpMessageHandler(HttpStatusCode.OK, "{\"success\":true}");
+        ErrorLogger.HttpClient = new HttpClient(handler);
+
+        try
+        {
+            var act = static () => ErrorLogger.LogAsync(
+                new InvalidOperationException("Default timeout test"),
+                apiTimeoutSeconds: ErrorLogger.DefaultApiTimeoutSeconds);
+
+            await act.Should().NotThrowAsync();
+        }
+        finally
+        {
+            ErrorLogger.HttpClient = _originalHttpClient;
+        }
+    }
+
+    [Fact]
+    public async Task LogAsync_WithZeroTimeout_ResolvesToDefault()
+    {
+        ResetIsDisposed();
+
+        var handler = new FakeHttpMessageHandler(HttpStatusCode.OK, "{\"success\":true}");
+        ErrorLogger.HttpClient = new HttpClient(handler);
+
+        try
+        {
+            var act = static () => ErrorLogger.LogAsync(
+                new InvalidOperationException("Zero timeout test"),
+                apiTimeoutSeconds: 0);
+
+            await act.Should().NotThrowAsync();
+        }
+        finally
+        {
+            ErrorLogger.HttpClient = _originalHttpClient;
+        }
+    }
+}
+
+internal sealed class RequestCapturingHttpMessageHandler : HttpMessageHandler
+{
+    private readonly Func<HttpMessageHandler, HttpRequestMessage, HttpResponseMessage> _onSend;
+
+    public RequestCapturingHttpMessageHandler(
+        Func<HttpMessageHandler, HttpRequestMessage, HttpResponseMessage> onSend)
+    {
+        _onSend = onSend;
+    }
+
+    protected override Task<HttpResponseMessage> SendAsync(
+        HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        return Task.FromResult(_onSend(this, request));
     }
 }

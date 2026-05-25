@@ -50,13 +50,13 @@ The codebase follows a clean, modular architecture with clear separation of conc
 - **[`ErrorLogger`](FindRomCover/Services/ErrorLogger.cs)** - Comprehensive error logging with automatic API reporting, file-based logs, and internal error tracking
 - **[`GitHubReleaseService`](FindRomCover/Services/GitHubReleaseService.cs)** - Checks GitHub releases for application updates
 - **[`MameDataService`](FindRomCover/Services/MameDataService.cs)** - MAME data lookup service for ROM description resolution
+- **[`UpdateCheckOrchestrator`](FindRomCover/Services/UpdateCheckOrchestrator.cs)** - Orchestrates update checking workflow with debounce and notification management
 - **[`DelegateCommand`](FindRomCover/Services/DelegateCommand.cs)** - ICommand implementation for WPF MVVM data binding
 - **[`ObjectToBoolConverter`](FindRomCover/Services/ObjectToBoolConverter.cs)** - WPF value converter for object-to-bool transformations
 - **[`IAudioService`](FindRomCover/Services/IAudioService.cs)** - Interface for audio service abstraction
 
 ### Managers (`FindRomCover/Managers/`)
-- **[`SettingsManager`](FindRomCover/Managers/SettingsManager.cs)** - Manages application settings with XML persistence and INotifyPropertyChanged support
-- **[`MameManager`](FindRomCover/Managers/MameManager.cs)** - *(Deprecated)* Thin wrapper for backward compatibility; replaced by `MameDataService`
+- **[`SettingsManager`](FindRomCover/Managers/SettingsManager.cs)** - Manages application settings with XML persistence, INotifyPropertyChanged support, and cross-instance static synchronization
 
 ### Models (`FindRomCover/models/`)
 - **[`ImageData`](FindRomCover/models/ImageData.cs)** - Immutable record representing an image with similarity score and lazy-loaded broken image fallback
@@ -66,7 +66,7 @@ The codebase follows a clean, modular architecture with clear separation of conc
 - **[`GitHubReleaseResponse`](FindRomCover/models/GitHubReleaseResponse.cs)** - DTO for GitHub API release responses
 - **[`UpdateCheckResult`](FindRomCover/models/UpdateCheckResult.cs)** - Model for application update check results
 - **[`BugReportModel`](FindRomCover/models/BugReportModel.cs)** - Model for bug report submissions
-- **[`Smtp2GoData`](FindRomCover/models/Smtp2GoData.cs)** / **[`Smtp2GoResponse`](FindRomCover/models/Smtp2GoResponse.cs)** - Records for error reporting API responses
+- **[`UpdateNotificationInfo`](FindRomCover/models/UpdateNotificationInfo.cs)** - Model for update notification display data
 
 ## Where can I find ROM Cover Images?
 
@@ -95,8 +95,7 @@ The codebase has undergone a significant refactor to improve maintainability and
 - **ButtonFactory** - Factory pattern for UI element creation and similarity search orchestration
 
 ### Manager Layer
-- **SettingsManager** - Comprehensive settings management with XML serialization and data binding support
-- **MameManager** - Lazy-loaded MAME data cache with MessagePack binary serialization
+- **SettingsManager** - Comprehensive settings management with XML serialization, data binding support, and cross-instance static synchronization
 
 ### Model Layer
 - Immutable records and classes for data representation
@@ -106,7 +105,7 @@ The codebase has undergone a significant refactor to improve maintainability and
 ### Technical Improvements
 - Switched to `System.Text.Json` for all JSON handling (removed Newtonsoft.Json dependency)
 - Dependency injection via `Microsoft.Extensions.DependencyInjection` for service registration and lifetime management
-- Updated dependencies: ControlzEx 7.0.4, Magick.NET-Q16-AnyCPU 14.13.0, MahApps.Metro 3.0.0-rc0529, MessagePack 3.1.4
+- Updated dependencies: ControlzEx 7.0.4, Magick.NET-Q16-AnyCPU 14.13.1, MahApps.Metro 3.0.0-rc0529, MessagePack 3.1.6, Microsoft.Extensions.DependencyInjection 10.0.8
 - Enhanced error logging with multiple log files (API, User, Internal)
 - Improved image loading with progressive loading, retries for locked files, and GDI+ error fallbacks
 - N-gram indexing for optimized similarity calculation performance
