@@ -95,7 +95,7 @@ public static class ButtonFactory
 
         var contextMenu = existingMenu ?? new ContextMenu();
 
-        // Only add "Use This Image" menu item if the action is provided
+        // Add "Use This Image" menu item
         var useThisImageIcon = new Image
         {
             Source = CreateFrozenBitmapImage("pack://application:,,,/images/usethis.png"),

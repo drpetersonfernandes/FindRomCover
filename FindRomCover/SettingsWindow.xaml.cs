@@ -66,6 +66,8 @@ public partial class SettingsWindow
 
             _supportedExtensions.Add(newExtension);
 
+            ReSortExtensions();
+
             LstSupportedExtensions.SelectedItem = newExtension;
         }
         catch (Exception ex)
@@ -83,6 +85,16 @@ public partial class SettingsWindow
             return false;
 
         return extension.All(static c => char.IsLetterOrDigit(c) || c == '-');
+    }
+
+    private void ReSortExtensions()
+    {
+        var sorted = _supportedExtensions.OrderBy(static e => e, StringComparer.OrdinalIgnoreCase).ToList();
+        _supportedExtensions.Clear();
+        foreach (var ext in sorted)
+        {
+            _supportedExtensions.Add(ext);
+        }
     }
 
     private void BtnRemove_Click(object sender, RoutedEventArgs e)

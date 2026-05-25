@@ -310,6 +310,8 @@ public partial class App
         {
             // ignored
         }
+
+        Environment.Exit(e.ApplicationExitCode);
     }
 
     public static void ChangeTheme(string baseTheme, string accentColor)
@@ -329,7 +331,7 @@ public partial class App
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
-            _ = ErrorLogger.LogAsync(ex, $"Error applying theme: {baseTheme}.{accentColor}");
+            FireAndForget(() => ErrorLogger.LogAsync(ex, $"Error applying theme: {baseTheme}.{accentColor}"));
         }
     }
 
@@ -343,14 +345,14 @@ public partial class App
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
-            _ = ErrorLogger.LogAsync(ex, "Error applying theme to window, using default");
+            FireAndForget(() => ErrorLogger.LogAsync(ex, "Error applying theme to window, using default"));
             try
             {
                 ThemeManager.Current.ChangeTheme(window, "Light.Blue");
             }
             catch (Exception fallbackEx)
             {
-                _ = ErrorLogger.LogAsync(fallbackEx, "Failed to apply default theme 'Light.Blue' to window");
+                FireAndForget(() => ErrorLogger.LogAsync(fallbackEx, "Failed to apply default theme 'Light.Blue' to window"));
             }
         }
     }

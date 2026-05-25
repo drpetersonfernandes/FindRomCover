@@ -21,11 +21,10 @@ public class SimilarityCalculatorTests
     }
 
     [Fact]
-    public void CalculateLevenshteinSimilarityBothEmptyReturnsNaN()
+    public void CalculateLevenshteinSimilarityBothEmptyReturns100()
     {
-        // Division by zero in the existing implementation when both strings are empty
         var result = SimilarityCalculator.CalculateLevenshteinSimilarity("", "");
-        result.Should().Be(double.NaN);
+        result.Should().Be(100.0);
     }
 
     [Fact]
@@ -99,7 +98,7 @@ public class SimilarityCalculatorTests
 
     [Theory]
     [InlineData("mario", "mario", 100.0)]
-    [InlineData("", "", 0.0)]
+    [InlineData("", "", 100.0)]
     [InlineData("abc", "", 0.0)]
     public void CalculateJaroWinklerDistanceReturnsExpectedScore(string s1, string s2, double expected)
     {
