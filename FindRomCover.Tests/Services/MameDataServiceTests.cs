@@ -1,10 +1,12 @@
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using FindRomCover.Services;
 using FluentAssertions;
 using MessagePack;
 
 namespace FindRomCover.Tests.Services;
 
+[SuppressMessage("ReSharper", "NullableWarningSuppressionIsUsed")]
 public class MameDataServiceTests : IDisposable
 {
     private string? _tempDatPath;

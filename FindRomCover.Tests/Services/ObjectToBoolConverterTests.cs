@@ -1,9 +1,11 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using FindRomCover.Services;
 using FluentAssertions;
 
 namespace FindRomCover.Tests.Services;
 
+[SuppressMessage("ReSharper", "NullableWarningSuppressionIsUsed")]
 public class ObjectToBoolConverterTests
 {
     private readonly ObjectToBoolConverter _converter = new();

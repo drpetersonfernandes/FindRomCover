@@ -1,11 +1,13 @@
 using System.Buffers;
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using FindRomCover.Managers;
 using FindRomCover.Models;
 
 namespace FindRomCover.Services;
 
+[SuppressMessage("ReSharper", "NullableWarningSuppressionIsUsed")]
 public static class SimilarityCalculator
 {
     public const int DefaultMaxImagesToLoad = 30;

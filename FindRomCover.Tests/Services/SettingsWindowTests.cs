@@ -1,8 +1,10 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using FluentAssertions;
 
 namespace FindRomCover.Tests.Services;
 
+[SuppressMessage("ReSharper", "NullableWarningSuppressionIsUsed")]
 public class SettingsWindowTests
 {
     private static readonly MethodInfo IsValidExtensionMethod = typeof(SettingsWindow)

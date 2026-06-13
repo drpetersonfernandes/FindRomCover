@@ -1,9 +1,11 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using FindRomCover.Services;
 using FluentAssertions;
 
 namespace FindRomCover.Tests;
 
+[SuppressMessage("ReSharper", "NullableWarningSuppressionIsUsed")]
 public class AppTests
 {
     #region NullAudioService

@@ -1,9 +1,11 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Windows.Input;
 using FindRomCover.Services;
 using FluentAssertions;
 
 namespace FindRomCover.Tests.Services;
 
+[SuppressMessage("ReSharper", "NullableWarningSuppressionIsUsed")]
 public class DelegateCommandTests
 {
     [Fact]

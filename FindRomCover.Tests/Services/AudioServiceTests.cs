@@ -1,8 +1,10 @@
+using System.Diagnostics.CodeAnalysis;
 using FindRomCover.Services;
 using FluentAssertions;
 
 namespace FindRomCover.Tests.Services;
 
+[SuppressMessage("ReSharper", "NullableWarningSuppressionIsUsed")]
 public class AudioServiceTests : IDisposable
 {
     private AudioService? _service;

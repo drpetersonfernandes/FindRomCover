@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Xml.Linq;
 using FindRomCover.Managers;
 using FluentAssertions;
@@ -6,6 +7,7 @@ using FluentAssertions;
 namespace FindRomCover.Tests.Managers;
 
 [Collection("SettingsManager")]
+[SuppressMessage("ReSharper", "NullableWarningSuppressionIsUsed")]
 public class SettingsManagerTests : IDisposable
 {
     private readonly SettingsManager _settings;

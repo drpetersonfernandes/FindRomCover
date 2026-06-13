@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -7,6 +8,7 @@ using FluentAssertions;
 
 namespace FindRomCover.Tests.Services;
 
+[SuppressMessage("ReSharper", "NullableWarningSuppressionIsUsed")]
 internal sealed class FakeHttpMessageHandler : HttpMessageHandler
 {
     private readonly HttpStatusCode _statusCode;
@@ -56,6 +58,7 @@ internal sealed class FakeHttpMessageHandler : HttpMessageHandler
     }
 }
 
+[SuppressMessage("ReSharper", "NullableWarningSuppressionIsUsed")]
 public class GitHubReleaseServiceTests
 {
     private static readonly JsonSerializerOptions JsonOptions = new()

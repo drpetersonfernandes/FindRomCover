@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Windows.Input;
 using FindRomCover.Models;
@@ -8,6 +9,7 @@ using MenuItem = System.Windows.Controls.MenuItem;
 
 namespace FindRomCover.Tests.Services;
 
+[SuppressMessage("ReSharper", "NullableWarningSuppressionIsUsed")]
 public class ButtonFactoryTests : IDisposable
 {
     private Thread? _staThread;
