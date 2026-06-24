@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.IO;
 using System.Windows.Media.Imaging;
 using FindRomCover.Managers;
@@ -15,14 +16,9 @@ namespace FindRomCover.Services;
 /// </remarks>
 public static class ImageLoader
 {
-    /// <summary>
-    /// Default maximum number of retry attempts when loading an image.
-    /// </summary>
-    public const int DefaultMaxRetries = 3;
+    private static readonly ConcurrentDictionary<string, byte> PermanentlyFailedImages = new(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>
-    /// Default delay between retry attempts in milliseconds.
-    /// </summary>
+    public const int DefaultMaxRetries = 3;
     public const int DefaultRetryDelayMilliseconds = 200;
 
     /// <summary>
@@ -64,6 +60,11 @@ public static class ImageLoader
             return null;
         }
 
+        if (PermanentlyFailedImages.ContainsKey(imagePath))
+        {
+            return null;
+        }
+
         for (var i = 0; i < maxRetries; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -79,6 +80,7 @@ public static class ImageLoader
                 }
                 catch (Exception recoveryEx)
                 {
+                    PermanentlyFailedImages.TryAdd(imagePath, 0);
                     _ = ErrorLogger.LogAsync(recoveryEx, $"Image corruption recovery failed: {imagePath}");
                     return null;
                 }
@@ -97,6 +99,7 @@ public static class ImageLoader
             }
             catch (Exception ex)
             {
+                PermanentlyFailedImages.TryAdd(imagePath, 0);
                 _ = ErrorLogger.LogAsync(ex, $"Error loading image: {imagePath}");
                 return null;
             }
