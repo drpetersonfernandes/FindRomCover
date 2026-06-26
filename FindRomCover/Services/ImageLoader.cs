@@ -72,6 +72,18 @@ public static class ImageLoader
             {
                 return LoadWithMagickNetInternal(imagePath);
             }
+            catch (MagickCorruptImageErrorException)
+            {
+                try
+                {
+                    return LoadWithMagickNetInternal(imagePath, true);
+                }
+                catch (MagickCorruptImageErrorException)
+                {
+                    PermanentlyFailedImages.TryAdd(imagePath, 0);
+                    return null;
+                }
+            }
             catch (MagickException)
             {
                 try
@@ -153,6 +165,8 @@ public static class ImageLoader
         if (ignoreErrors)
         {
             settings.SetDefine(MagickFormat.Png, "ignore-crc", true);
+            settings.SetDefine(MagickFormat.Png, "chunk-ignore-chunk-crc", true);
+            settings.SetDefine(MagickFormat.Png, "check-signature", false);
         }
 
         using var magickImage = new MagickImage(imagePath, settings);
