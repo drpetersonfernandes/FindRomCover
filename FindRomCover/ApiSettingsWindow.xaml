@@ -1,0 +1,59 @@
+<controls:MetroWindow x:Class="FindRomCover.ApiSettingsWindow"
+                      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                      xmlns:controls="http://metro.mahapps.com/winfx/xaml/controls"
+                      Title="API Settings" Height="400" Width="600"
+                      WindowStartupLocation="CenterScreen"
+                      ToolTip="Configure API keys for image search services">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <!-- Adjusted row definitions -->
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Original Title Text -->
+        <TextBlock Grid.Row="0" Text="Configure your API keys for image search services"
+                   Margin="0,0,0,5" TextWrapping="Wrap"
+                   ToolTip="Enter your API credentials below to enable image search functionality" />
+
+        <!-- New, More Detailed Header with Link -->
+        <StackPanel Grid.Row="1" Margin="0,0,0,15">
+            <TextBlock TextWrapping="Wrap" Margin="0,0,0,5"
+                       ToolTip="Instructions for obtaining API keys">
+                <Run>You need an API key for each service you want to use. Sign up on their websites to get your keys.</Run>
+            </TextBlock>
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="2" ToolTip="Scroll to view all API configuration options"> <!-- ScrollViewer now in Row 2 -->
+            <StackPanel>
+
+                <!-- Google API -->
+                <GroupBox Header="Google Custom Search API" Margin="0,0,0,15"
+                          ToolTip="Configuration for Google Custom Search API">
+                    <StackPanel>
+                        <TextBox x:Name="TxtGoogleKey"
+                                 controls:TextBoxHelper.Watermark="Enter your Google API key"
+                                 ToolTip="Your unique key for accessing the Google Custom Search API."
+                                 Margin="0,5"/>
+                        <TextBlock Margin="0,5,0,0"
+                                   ToolTip="Open the Google API key registration page in your browser">
+                            <Hyperlink NavigateUri="https://developers.google.com/custom-search/v1/overview" RequestNavigate="Hyperlink_RequestNavigate">
+                                Get Google API Key
+                            </Hyperlink>
+                        </TextBlock>
+                    </StackPanel>
+                </GroupBox>
+            </StackPanel>
+        </ScrollViewer>
+
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0"> <!-- Buttons in Row 3 -->
+            <Button x:Name="BtnSave" Content="Save" Width="100" Margin="0,0,10,0" Click="BtnSave_Click"
+                    ToolTip="Save the entered API keys to the configuration" />
+            <Button x:Name="BtnCancel" Content="Cancel" Width="100" Click="BtnCancel_Click"
+                    ToolTip="Discard changes and close this window" />
+        </StackPanel>
+    </Grid>
+</controls:MetroWindow>

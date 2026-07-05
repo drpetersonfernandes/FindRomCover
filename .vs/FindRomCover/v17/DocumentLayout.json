@@ -1,0 +1,36 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\Peterson\\Documents\\Sincronizar\\source\\repos\\CSharp_FindRomCover\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{89C1F955-78D0-4BAD-B703-3C3ED7CF650D}|FindRomCover\\FindRomCover.csproj|c:\\users\\peterson\\documents\\sincronizar\\source\\repos\\csharp_findromcover\\findromcover\\mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
+      "RelativeMoniker": "D:0:0:{89C1F955-78D0-4BAD-B703-3C3ED7CF650D}|FindRomCover\\FindRomCover.csproj|solutionrelative:findromcover\\mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "MainWindow.xaml",
+              "DocumentMoniker": "C:\\Users\\Peterson\\Documents\\Sincronizar\\source\\repos\\CSharp_FindRomCover\\FindRomCover\\MainWindow.xaml",
+              "RelativeDocumentMoniker": "FindRomCover\\MainWindow.xaml",
+              "ToolTip": "C:\\Users\\Peterson\\Documents\\Sincronizar\\source\\repos\\CSharp_FindRomCover\\FindRomCover\\MainWindow.xaml",
+              "RelativeToolTip": "FindRomCover\\MainWindow.xaml",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003549|",
+              "WhenOpened": "2024-11-26T19:35:51.935Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
