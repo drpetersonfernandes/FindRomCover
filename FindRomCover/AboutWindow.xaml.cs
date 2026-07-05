@@ -1,9 +1,8 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Diagnostics;
 using System.Windows.Navigation;
 using System.Reflection;
 using FindRomCover.Services;
-using MessageBox = System.Windows.MessageBox;
 
 namespace FindRomCover;
 
@@ -11,29 +10,15 @@ public partial class AboutWindow
 {
     public AboutWindow()
     {
-        try
-        {
-            InitializeComponent();
-            App.ApplyThemeToWindow(this);
-            AppVersionTextBlock.Text = ApplicationVersion;
-        }
-        catch (Exception ex)
-        {
-            _ = ErrorLogger.LogAsync(ex, "Error initializing AboutWindow");
-            throw; // Re-throw to prevent partial initialization
-        }
+        InitializeComponent();
+        DataContext = this;
+        AppVersionTextBlock.Text = ApplicationVersion;
     }
 
     private void CloseButton_Click(object sender, RoutedEventArgs e)
     {
-        try
-        {
-            Close();
-        }
-        catch (Exception ex)
-        {
-            _ = ErrorLogger.LogAsync(ex, "Error in CloseButton_Click");
-        }
+        try { Close(); }
+        catch (Exception ex) { LogService.Error(ex, "Error in CloseButton_Click"); }
     }
 
     private void Hyperlink_RequestNavigate(object sender, RequestNavigateEventArgs e)
@@ -50,7 +35,7 @@ public partial class AboutWindow
         catch (Exception ex)
         {
             MessageBox.Show("Unable to open the link.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            _ = ErrorLogger.LogAsync(ex, "Error in Hyperlink_RequestNavigate");
+            LogService.Error(ex, "Error in Hyperlink_RequestNavigate");
         }
     }
 
@@ -58,16 +43,8 @@ public partial class AboutWindow
     {
         get
         {
-            try
-            {
-                var version = Assembly.GetExecutingAssembly().GetName().Version;
-                return "Version: " + (version?.ToString() ?? "Unknown");
-            }
-            catch (Exception ex)
-            {
-                _ = ErrorLogger.LogAsync(ex, "Error getting ApplicationVersion");
-                return "Version: Unknown";
-            }
+            var version = Assembly.GetExecutingAssembly().GetName().Version;
+            return "Version: " + (version?.ToString() ?? "Unknown");
         }
     }
 }

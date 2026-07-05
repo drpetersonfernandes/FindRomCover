@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.IO;
 using System.Windows.Media.Imaging;
 using FindRomCover.Managers;
@@ -6,41 +5,11 @@ using ImageMagick;
 
 namespace FindRomCover.Services;
 
-/// <summary>
-/// Provides asynchronous image loading functionality with retry logic for handling file locking issues.
-/// </summary>
-/// <remarks>
-/// This service uses Magick.NET for robust image loading with automatic corruption recovery.
-/// It implements retry logic for handling transient file locking issues and can attempt
-/// to recover from corrupted images by ignoring CRC errors.
-/// </remarks>
 public static class ImageLoader
 {
-    private static readonly ConcurrentDictionary<string, byte> PermanentlyFailedImages = new(StringComparer.OrdinalIgnoreCase);
-
     public const int DefaultMaxRetries = 3;
     public const int DefaultRetryDelayMilliseconds = 200;
 
-    /// <summary>
-    /// Loads an image from the specified path asynchronously with retry logic.
-    /// </summary>
-    /// <param name="imagePath">The full path to the image file to load.</param>
-    /// <param name="cancellationToken">A cancellation token to allow the operation to be cancelled.</param>
-    /// <param name="maxRetries">Maximum number of retry attempts when file is locked. Defaults to 3.</param>
-    /// <param name="retryDelayMilliseconds">Delay between retry attempts in milliseconds. Defaults to 200.</param>
-    /// <returns>
-    /// A <see cref="BitmapImage"/> containing the loaded image data, or <c>null</c> if the image could not be loaded.
-    /// </returns>
-    /// <exception cref="OperationCanceledException">Thrown when the operation is cancelled via the cancellationToken.</exception>
-    /// <remarks>
-    /// This method implements the following loading strategy:
-    /// 1. Validates the file exists and is not empty
-    /// 2. Attempts to load the image using Magick.NET with normal settings
-    /// 3. If a MagickException occurs (corruption), attempts recovery by ignoring CRC errors
-    /// 4. If IOException occurs (file locked), retries up to MaxRetries times with delays
-    ///
-    /// The loaded image is fully decoded into memory (CacheOption.OnLoad) and frozen for thread safety.
-    /// </remarks>
     public static async Task<BitmapImage?> LoadImageToMemoryAsync(
         string? imagePath,
         CancellationToken cancellationToken,
@@ -60,11 +29,6 @@ public static class ImageLoader
             return null;
         }
 
-        if (PermanentlyFailedImages.ContainsKey(imagePath))
-        {
-            return null;
-        }
-
         for (var i = 0; i < maxRetries; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -72,29 +36,22 @@ public static class ImageLoader
             {
                 return LoadWithMagickNetInternal(imagePath);
             }
-            catch (MagickCorruptImageErrorException)
-            {
-                try
-                {
-                    return LoadWithMagickNetInternal(imagePath, true);
-                }
-                catch (MagickCorruptImageErrorException)
-                {
-                    PermanentlyFailedImages.TryAdd(imagePath, 0);
-                    return null;
-                }
-            }
             catch (MagickException)
             {
                 try
                 {
                     return LoadWithMagickNetInternal(imagePath, true);
                 }
-                catch (Exception recoveryEx)
+                catch
                 {
-                    PermanentlyFailedImages.TryAdd(imagePath, 0);
-                    _ = ErrorLogger.LogAsync(recoveryEx, $"Image corruption recovery failed: {imagePath}");
-                    return null;
+                    if (i < maxRetries - 1)
+                    {
+                        await Task.Delay(retryDelayMilliseconds, cancellationToken);
+                    }
+                    else
+                    {
+                        return null;
+                    }
                 }
             }
             catch (IOException ex) when ((uint)ex.HResult is 0x80070020 or 0x80070021)
@@ -105,14 +62,11 @@ public static class ImageLoader
                 }
                 else
                 {
-                    _ = ErrorLogger.LogAsync(ex, $"Image file is locked after {maxRetries} retries: {imagePath}");
                     return null;
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                PermanentlyFailedImages.TryAdd(imagePath, 0);
-                _ = ErrorLogger.LogAsync(ex, $"Error loading image: {imagePath}");
                 return null;
             }
         }
@@ -132,32 +86,14 @@ public static class ImageLoader
                 Math.Max(0, resolvedMaxRetries),
                 Math.Max(0, resolvedRetryDelay));
         }
-        catch (Exception ex)
+        catch
         {
-            _ = ErrorLogger.LogAsync(ex, "Failed to resolve ImageLoader settings, using defaults");
             return (
                 maxRetries > 0 ? maxRetries : DefaultMaxRetries,
                 retryDelayMilliseconds > 0 ? retryDelayMilliseconds : DefaultRetryDelayMilliseconds);
         }
     }
 
-    /// <summary>
-    /// Internal method for loading an image using Magick.NET.
-    /// </summary>
-    /// <param name="imagePath">The path to the image file.</param>
-    /// <param name="ignoreErrors">If true, ignores CRC and format errors during loading (for recovery).</param>
-    /// <returns>A <see cref="BitmapImage"/> containing the loaded image.</returns>
-    /// <exception cref="MagickException">Thrown when the image cannot be loaded due to corruption or format issues.</exception>
-    /// <exception cref="InvalidOperationException">Thrown when the image has zero dimensions.</exception>
-    /// <remarks>
-    /// This method performs the following operations:
-    /// 1. Loads the image with Magick.NET with optional error ignoring
-    /// 2. Validates image dimensions
-    /// 3. Auto-orients based on EXIF data
-    /// 4. Converts to PNG format in memory
-    /// 5. Creates a BitmapImage with the decoded data
-    /// 6. Freezes the bitmap for thread safety and performance
-    /// </remarks>
     private static BitmapImage LoadWithMagickNetInternal(string imagePath, bool ignoreErrors = false)
     {
         var settings = new MagickReadSettings { FrameIndex = 0, FrameCount = 1 };
@@ -165,8 +101,6 @@ public static class ImageLoader
         if (ignoreErrors)
         {
             settings.SetDefine(MagickFormat.Png, "ignore-crc", true);
-            settings.SetDefine(MagickFormat.Png, "chunk-ignore-chunk-crc", true);
-            settings.SetDefine(MagickFormat.Png, "check-signature", false);
         }
 
         using var magickImage = new MagickImage(imagePath, settings);
@@ -176,23 +110,15 @@ public static class ImageLoader
 
         magickImage.AutoOrient();
 
-        // Write image to memory stream and copy to byte array
-        // This ensures the bitmap has its own copy of the data
         using var memoryStream = new MemoryStream();
         magickImage.Write(memoryStream, MagickFormat.Png);
         memoryStream.Position = 0;
 
-        // Copy stream data to byte array so BitmapImage owns the data
-        var imageBytes = memoryStream.ToArray();
-
         var bitmapImage = new BitmapImage();
         bitmapImage.BeginInit();
         bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
-        using (var sourceStream = new MemoryStream(imageBytes))
-        {
-            bitmapImage.StreamSource = sourceStream;
-            bitmapImage.EndInit();
-        }
+        bitmapImage.StreamSource = memoryStream;
+        bitmapImage.EndInit();
 
         if (bitmapImage.CanFreeze)
             bitmapImage.Freeze();

@@ -25,14 +25,14 @@ public static class SimilarityCalculator
     {
         var result = new SimilarityCalculationResult();
 
-        if (string.IsNullOrEmpty(imageFolderPath)) return result;
+        if (string.IsNullOrEmpty(imageFolderPath) || !Directory.Exists(imageFolderPath)) return result;
 
         if (maxImagesToLoad <= 0)
         {
             maxImagesToLoad = GetConfiguredMaxImagesToLoad();
         }
 
-        string[] imageExtensions = ["*.png", "*.jpg", "*.jpeg"];
+        string[] imageExtensions = ["*.png", "*.jpg", "*.jpeg", "*.avif", "*.bmp", "*.gif", "*.webp", "*.tiff", "*.tif", "*.ico", "*.svg", "*.jxl", "*.jp2"];
 
         var allImageFiles = imageExtensions
             .SelectMany(ext => Directory.EnumerateFiles(imageFolderPath, ext))
@@ -40,16 +40,9 @@ public static class SimilarityCalculator
 
         if (allImageFiles.Count == 0) return result;
 
-        // Pre-compute Jaccard query n-grams once, outside the hot loop
         HashSet<string>? jaccardQueryUnigrams = null;
         HashSet<string>? jaccardQueryBigrams = null;
-        if (algorithm == AppConstants.Algorithms.Jaccard)
-        {
-            jaccardQueryUnigrams = GetNgrams(selectedFileName, 1);
-            jaccardQueryBigrams = GetNgrams(selectedFileName, 2);
-        }
 
-        // Build n-gram index to pre-filter candidates for large folders
         var filesToProcess = allImageFiles;
         if (allImageFiles.Count > NgramIndexMinFileCount)
         {
@@ -97,7 +90,9 @@ public static class SimilarityCalculator
                             break;
                         case AppConstants.Algorithms.Jaccard:
                             var ngramSize = Math.Min(selectedFileName.Length, imageName.Length) < 2 ? 1 : 2;
-                            var queryNgrams = ngramSize == 1 ? jaccardQueryUnigrams! : jaccardQueryBigrams!;
+                            var queryNgrams = ngramSize == 1
+                                ? (jaccardQueryUnigrams ??= GetNgrams(selectedFileName.ToLowerInvariant(), 1))
+                                : (jaccardQueryBigrams ??= GetNgrams(selectedFileName.ToLowerInvariant(), 2));
                             similarityScore = CalculateJaccardIndex(queryNgrams, imageName, ngramSize);
                             break;
                         case AppConstants.Algorithms.JaroWinkler:
@@ -105,8 +100,6 @@ public static class SimilarityCalculator
                             break;
                         default:
                             var errorMessage = $"Algorithm '{algorithm}' is not implemented.";
-                            var ex = new NotImplementedException(errorMessage);
-                            _ = ErrorLogger.LogAsync(ex, errorMessage);
                             processingErrors.Add(errorMessage);
                             return ValueTask.CompletedTask;
                     }
@@ -118,12 +111,11 @@ public static class SimilarityCalculator
                 }
                 catch (Exception ex)
                 {
-                    _ = ErrorLogger.LogAsync(ex, $"Error processing file for similarity: {imageFile}");
                     processingErrors.Add($"Could not process image '{Path.GetFileName(imageFile)}' for similarity: {ex.Message}");
                 }
 
                 return ValueTask.CompletedTask;
-            }).ConfigureAwait(false);
+            });
         }
         catch (OperationCanceledException)
         {
@@ -131,7 +123,6 @@ public static class SimilarityCalculator
         }
         catch (Exception ex)
         {
-            _ = ErrorLogger.LogAsync(ex, "Error in parallel processing of image files.");
             processingErrors.Add($"An unexpected error occurred during image file scanning: {ex.Message}");
         }
 
@@ -163,7 +154,7 @@ public static class SimilarityCalculator
                         candidate.FilePath,
                         ct,
                         maxRetries,
-                        retryDelayMilliseconds).ConfigureAwait(false);
+                        retryDelayMilliseconds);
 
                     if (imageSource == null)
                     {
@@ -184,10 +175,9 @@ public static class SimilarityCalculator
                 }
                 catch (Exception ex)
                 {
-                    _ = ErrorLogger.LogAsync(ex, $"Error loading image for display: {candidate.FilePath}");
                     processingErrors.Add($"Could not load image '{Path.GetFileName(candidate.FilePath)}' for display: {ex.Message}");
                 }
-            }).ConfigureAwait(false);
+            });
         }
         catch (OperationCanceledException)
         {
@@ -195,7 +185,6 @@ public static class SimilarityCalculator
         }
         catch (Exception ex)
         {
-            _ = ErrorLogger.LogAsync(ex, "Error in parallel image loading for display.");
             processingErrors.Add($"An unexpected error occurred during image loading for display: {ex.Message}");
         }
 
@@ -213,9 +202,8 @@ public static class SimilarityCalculator
         {
             return SettingsManager.CurrentInstance?.MaxImagesToLoad ?? DefaultMaxImagesToLoad;
         }
-        catch (Exception ex)
+        catch
         {
-            _ = ErrorLogger.LogAsync(ex, "Failed to get MaxImagesToLoad from settings, using default");
             return DefaultMaxImagesToLoad;
         }
     }
@@ -229,15 +217,17 @@ public static class SimilarityCalculator
                 ? (settings.ImageLoaderMaxRetries, settings.ImageLoaderRetryDelayMilliseconds)
                 : (ImageLoader.DefaultMaxRetries, ImageLoader.DefaultRetryDelayMilliseconds);
         }
-        catch (Exception ex)
+        catch
         {
-            _ = ErrorLogger.LogAsync(ex, "Failed to get ImageLoader settings, using defaults");
             return (ImageLoader.DefaultMaxRetries, ImageLoader.DefaultRetryDelayMilliseconds);
         }
     }
 
     internal static double CalculateLevenshteinSimilarity(string a, string b, double similarityThreshold = 0)
     {
+        a = a.ToLowerInvariant();
+        b = b.ToLowerInvariant();
+
         var lengthA = a.Length;
         var lengthB = b.Length;
 
@@ -246,6 +236,8 @@ public static class SimilarityCalculator
 
         var maxLength = Math.Max(lengthA, lengthB);
 
+        // similarityThreshold is 0-100 (percentage). Convert to max allowed edit distance.
+        // e.g., threshold=70 means allow up to 30% of the string length as edits.
         var maxAllowedDistance = similarityThreshold > 0
             ? (int)((1.0 - similarityThreshold / 100.0) * maxLength)
             : int.MaxValue;
@@ -289,7 +281,7 @@ public static class SimilarityCalculator
 
     internal static double CalculateJaccardIndex(HashSet<string> setA, string b, int ngramSize)
     {
-        var setB = GetNgrams(b, ngramSize);
+        var setB = GetNgrams(b.ToLowerInvariant(), ngramSize);
         return ComputeJaccardFromSets(setA, setB);
     }
 
@@ -328,6 +320,9 @@ public static class SimilarityCalculator
     internal static double CalculateJaroWinklerDistance(string s1, string s2)
     {
         const double scalingFactor = 0.1;
+
+        s1 = s1.ToLowerInvariant();
+        s2 = s2.ToLowerInvariant();
 
         var s1Len = s1.Length;
         var s2Len = s2.Length;

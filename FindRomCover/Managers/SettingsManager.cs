@@ -1,72 +1,68 @@
 using System.ComponentModel;
 using System.Globalization;
 using System.IO;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using System.Windows;
-using System.Xml.Linq;
+using FindRomCover.Models;
 using FindRomCover.Services;
 using MessageBox = System.Windows.MessageBox;
 
 namespace FindRomCover.Managers;
 
-/// <summary>
-/// Manages application settings persistence and provides data binding support for UI updates.
-/// </summary>
-/// <remarks>
-/// This class handles loading and saving of application settings to an XML file (settings.xml).
-/// It implements <see cref="INotifyPropertyChanged"/> to support WPF data binding and automatic UI updates.
-/// 
-/// All property setters include validation and clamping to ensure values remain within valid ranges.
-/// Settings are automatically saved when properties change through the UI.
-/// </remarks>
 public class SettingsManager : INotifyPropertyChanged
 {
-    public static SettingsManager? CurrentInstance { get; private set; }
+    private static SettingsManager? _currentInstance;
+    private static readonly object InstanceLock = new();
 
-    /// <summary>
-    /// Occurs when a property value changes.
-    /// </summary>
+    public static SettingsManager? CurrentInstance
+    {
+        get { lock (InstanceLock) { return _currentInstance; } }
+        private set { lock (InstanceLock) { _currentInstance = value; } }
+    }
+
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    /// <summary>
-    /// Raises the PropertyChanged event for the specified property.
-    /// </summary>
-    /// <param name="propertyName">The name of the property that changed.</param>
     private void OnPropertyChanged(string propertyName)
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 
-    /// <summary>
-    /// The path to the settings XML file in the application directory.
-    /// </summary>
     private static readonly string SettingsFilePath =
         Path.Combine(AppDomain.CurrentDomain.BaseDirectory, AppConstants.SettingsFileName);
 
-    /// <summary>
-    /// Lock object for thread-safe save operations.
-    /// </summary>
-    private readonly object _saveLock = new();
+    private static readonly string UserDataSettingsFilePath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "FindRomCover", AppConstants.SettingsFileName);
 
-    /// <summary>
-    /// Static lock for cross-instance file access synchronization.
-    /// </summary>
-    private static readonly object FileLock = new();
+    private readonly object _ioLock = new();
+
+    private static readonly byte[] EncryptionKey = DeriveEncryptionKey();
+
+    private static byte[] DeriveEncryptionKey()
+    {
+        var machineName = Environment.MachineName;
+        const string appName = "FindRomCover";
+        var salt = Encoding.UTF8.GetBytes($"{machineName}_{appName}_settings");
+
+        return Rfc2898DeriveBytes.Pbkdf2(
+            "G4m3C0v3rScr4p3r_S3tt1ngs_K3y_2024"u8.ToArray(),
+            salt,
+            10000,
+            HashAlgorithmName.SHA256,
+            32);
+    }
+
+    // --- Similarity settings (from FindRomCover) ---
 
     private double _similarityThreshold;
 
-    /// <summary>
-    /// Gets or sets the minimum similarity threshold (0-100) for image matching.
-    /// </summary>
-    /// <value>
-    /// A value between 0 and 100 representing the percentage similarity required
-    /// for an image to be considered a match. Default is 70.
-    /// </value>
     public double SimilarityThreshold
     {
         get => _similarityThreshold;
         set
         {
-            // Clamp value between 0 and 100
             value = Math.Clamp(value, 0, 100);
             if (Math.Abs(_similarityThreshold - value) < 0.01) return;
 
@@ -75,101 +71,8 @@ public class SettingsManager : INotifyPropertyChanged
         }
     }
 
-    private bool _useMameDescription;
-
-    /// <summary>
-    /// Gets or sets whether to use MAME game descriptions for searching.
-    /// </summary>
-    /// <value>
-    /// <c>true</c> to search using MAME game descriptions instead of ROM filenames;
-    /// <c>false</c> to use ROM filenames directly. Default is false.
-    /// </value>
-    public bool UseMameDescription
-    {
-        get => _useMameDescription;
-        set
-        {
-            if (_useMameDescription == value) return;
-
-            _useMameDescription = value;
-            OnPropertyChanged(nameof(UseMameDescription));
-        }
-    }
-
-    private string[] _supportedExtensions = Array.Empty<string>();
-
-    /// <summary>
-    /// Gets or sets the array of supported ROM file extensions.
-    /// </summary>
-    /// <value>
-    /// An array of file extensions (without dots) that should be scanned when looking for ROM files.
-    /// Default includes common arcade and console ROM extensions.
-    /// </value>
-    public string[] SupportedExtensions
-    {
-        get => _supportedExtensions;
-        set
-        {
-            if (_supportedExtensions.SequenceEqual(value)) return;
-
-            _supportedExtensions = value;
-            OnPropertyChanged(nameof(SupportedExtensions));
-        }
-    }
-
-    private int _imageWidth;
-
-    /// <summary>
-    /// Gets or sets the width of image thumbnails in pixels.
-    /// </summary>
-    /// <value>
-    /// A value between 50 and 2000. Default is 300.
-    /// </value>
-    public int ImageWidth
-    {
-        get => _imageWidth;
-        set
-        {
-            // Ensure positive value, clamp between 50 and 2000
-            value = Math.Clamp(value, 50, 2000);
-            if (_imageWidth == value) return;
-
-            _imageWidth = value;
-            OnPropertyChanged(nameof(ImageWidth));
-        }
-    }
-
-    private int _imageHeight;
-
-    /// <summary>
-    /// Gets or sets the height of image thumbnails in pixels.
-    /// </summary>
-    /// <value>
-    /// A value between 50 and 2000. Default is 300.
-    /// </value>
-    public int ImageHeight
-    {
-        get => _imageHeight;
-        set
-        {
-            // Ensure positive value, clamp between 50 and 2000
-            value = Math.Clamp(value, 50, 2000);
-            if (_imageHeight == value) return;
-
-            _imageHeight = value;
-            OnPropertyChanged(nameof(ImageHeight));
-        }
-    }
-
     private string _selectedSimilarityAlgorithm = string.Empty;
 
-    /// <summary>
-    /// Gets or sets the algorithm used for calculating string similarity.
-    /// </summary>
-    /// <value>
-    /// One of: "Levenshtein Distance", "Jaccard Similarity", "Jaro-Winkler Distance".
-    /// Default is "Jaro-Winkler Distance".
-    /// </value>
     public string SelectedSimilarityAlgorithm
     {
         get => _selectedSimilarityAlgorithm;
@@ -182,82 +85,8 @@ public class SettingsManager : INotifyPropertyChanged
         }
     }
 
-    private string _baseTheme = string.Empty;
-
-    /// <summary>
-    /// Valid base theme values.
-    /// </summary>
-    private static readonly HashSet<string> ValidBaseThemes = new(StringComparer.OrdinalIgnoreCase) { "Light", "Dark" };
-
-    /// <summary>
-    /// Gets or sets the base theme for the application appearance.
-    /// </summary>
-    /// <value>
-    /// "Light" or "Dark". Default is "Light".
-    /// </value>
-    public string BaseTheme
-    {
-        get => _baseTheme;
-        set
-        {
-            // Validate theme value, fallback to "Light" if invalid
-            if (string.IsNullOrWhiteSpace(value) || !ValidBaseThemes.Contains(value))
-            {
-                value = "Light";
-            }
-
-            if (_baseTheme == value) return;
-
-            _baseTheme = value;
-            OnPropertyChanged(nameof(BaseTheme));
-        }
-    }
-
-    private string _accentColor = string.Empty;
-
-    /// <summary>
-    /// Valid accent color values supported by MahApps.Metro/ControlzEx.
-    /// </summary>
-    private static readonly HashSet<string> ValidAccentColors = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "Red", "Green", "Blue", "Orange", "Purple", "Pink", "Lime", "Emerald",
-        "Teal", "Cyan", "Cobalt", "Indigo", "Violet", "Magenta", "Crimson",
-        "Amber", "Yellow", "Brown", "Olive", "Steel", "Mauve", "Taupe", "Sienna"
-    };
-
-    /// <summary>
-    /// Gets or sets the accent color for the application theme.
-    /// </summary>
-    /// <value>
-    /// A color name such as "Blue", "Red", "Green", etc.
-    /// Default is "Blue".
-    /// </value>
-    public string AccentColor
-    {
-        get => _accentColor;
-        set
-        {
-            // Validate accent color, fallback to "Blue" if invalid
-            if (string.IsNullOrWhiteSpace(value) || !ValidAccentColors.Contains(value))
-            {
-                value = "Blue";
-            }
-
-            if (_accentColor == value) return;
-
-            _accentColor = value;
-            OnPropertyChanged(nameof(AccentColor));
-        }
-    }
-
     private int _maxImagesToLoad = 30;
 
-    /// <summary>
-    /// Gets or sets the maximum number of similar images to load and display.
-    /// </summary>
-    /// <value>
-    /// The maximum number of images to load. Default is 30.
-    /// </value>
     public int MaxImagesToLoad
     {
         get => _maxImagesToLoad;
@@ -273,12 +102,6 @@ public class SettingsManager : INotifyPropertyChanged
 
     private int _imageLoaderMaxRetries = 3;
 
-    /// <summary>
-    /// Gets or sets the number of retry attempts when loading an image fails.
-    /// </summary>
-    /// <value>
-    /// The number of retry attempts. Default is 3.
-    /// </value>
     public int ImageLoaderMaxRetries
     {
         get => _imageLoaderMaxRetries;
@@ -294,12 +117,6 @@ public class SettingsManager : INotifyPropertyChanged
 
     private int _imageLoaderRetryDelayMilliseconds = 200;
 
-    /// <summary>
-    /// Gets or sets the delay between retry attempts when loading images.
-    /// </summary>
-    /// <value>
-    /// The delay in milliseconds. Default is 200.
-    /// </value>
     public int ImageLoaderRetryDelayMilliseconds
     {
         get => _imageLoaderRetryDelayMilliseconds;
@@ -315,12 +132,6 @@ public class SettingsManager : INotifyPropertyChanged
 
     private int _apiTimeoutSeconds = 30;
 
-    /// <summary>
-    /// Gets or sets the timeout duration for API calls when sending error reports.
-    /// </summary>
-    /// <value>
-    /// The timeout in seconds. Default is 30.
-    /// </value>
     public int ApiTimeoutSeconds
     {
         get => _apiTimeoutSeconds;
@@ -336,13 +147,6 @@ public class SettingsManager : INotifyPropertyChanged
 
     private string _lastImageFolder = string.Empty;
 
-    /// <summary>
-    /// Gets or sets the last used image folder path.
-    /// </summary>
-    /// <value>
-    /// The path to the last used image folder. Used for cleaning up orphaned temp files on startup.
-    /// Default is empty string.
-    /// </value>
     public string LastImageFolder
     {
         get => _lastImageFolder;
@@ -355,211 +159,494 @@ public class SettingsManager : INotifyPropertyChanged
         }
     }
 
-    /// <summary>
-    /// Initializes a new instance of the SettingsManager class and loads settings from file.
-    /// </summary>
-    /// <remarks>
-    /// If the settings file does not exist, default settings are created and saved.
-    /// If loading fails, an error is shown and default settings are used.
-    /// </remarks>
-    public SettingsManager()
+    // --- Thumbnail settings (merged: ImageWidth/ImageHeight from FindRomCover, ThumbnailSize from FindRomCover) ---
+
+    private int _imageWidth = 300;
+
+    public int ImageWidth
     {
-        CurrentInstance = this;
-        LoadSettings();
+        get => _imageWidth;
+        set
+        {
+            value = Math.Clamp(value, 50, 2000);
+            if (_imageWidth == value) return;
+
+            _imageWidth = value;
+            OnPropertyChanged(nameof(ImageWidth));
+        }
     }
 
-    private void LoadSettings()
-    {
-        try
-        {
-            if (!File.Exists(SettingsFilePath))
-            {
-                SetDefaultSettings();
-                try
-                {
-                    SaveSettings();
-                }
-                catch (Exception saveEx)
-                {
-                    // Log the error but continue with defaults
-                    _ = ErrorLogger.LogAsync(saveEx, "Failed to save default settings to settings.xml");
-                }
+    private int _imageHeight = 300;
 
+    public int ImageHeight
+    {
+        get => _imageHeight;
+        set
+        {
+            value = Math.Clamp(value, 50, 2000);
+            if (_imageHeight == value) return;
+
+            _imageHeight = value;
+            OnPropertyChanged(nameof(ImageHeight));
+        }
+    }
+
+    public int ThumbnailSize
+    {
+        get => Math.Max(_imageWidth, _imageHeight);
+        set
+        {
+            ImageWidth = value;
+            ImageHeight = value;
+        }
+    }
+
+    // --- Theme settings ---
+
+    private static readonly HashSet<string> ValidBaseThemes = new(StringComparer.OrdinalIgnoreCase) { "Light", "Dark" };
+
+    private string _baseTheme = "Dark";
+
+    public string BaseTheme
+    {
+        get => _baseTheme;
+        set
+        {
+            if (string.IsNullOrWhiteSpace(value) || !ValidBaseThemes.Contains(value))
+            {
+                value = "Dark";
+            }
+
+            if (_baseTheme == value) return;
+
+            _baseTheme = value;
+            OnPropertyChanged(nameof(BaseTheme));
+        }
+    }
+
+    private static readonly HashSet<string> ValidAccentColors = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Red", "Green", "Blue", "Orange", "Purple", "Pink", "Lime", "Emerald",
+        "Teal", "Cyan", "Cobalt", "Indigo", "Violet", "Magenta", "Crimson",
+        "Amber", "Yellow", "Brown", "Olive", "Steel", "Mauve", "Taupe", "Sienna"
+    };
+
+    private string _accentColor = "Blue";
+
+    public string AccentColor
+    {
+        get => _accentColor;
+        set
+        {
+            if (string.IsNullOrWhiteSpace(value) || !ValidAccentColors.Contains(value))
+            {
+                value = "Blue";
+            }
+
+            if (_accentColor == value) return;
+
+            _accentColor = value;
+            OnPropertyChanged(nameof(AccentColor));
+        }
+    }
+
+    // --- MAME settings ---
+
+    private bool _useMameDescriptions;
+
+    public bool UseMameDescriptions
+    {
+        get => _useMameDescriptions;
+        set
+        {
+            if (_useMameDescriptions == value) return;
+
+            _useMameDescriptions = value;
+            OnPropertyChanged(nameof(UseMameDescriptions));
+        }
+    }
+
+    // --- Extensions ---
+
+    private List<string> _supportedExtensions = [];
+
+    public List<string> SupportedExtensions
+    {
+        get => _supportedExtensions;
+        set
+        {
+            if (_supportedExtensions.SequenceEqual(value)) return;
+
+            _supportedExtensions = value;
+            OnPropertyChanged(nameof(SupportedExtensions));
+        }
+    }
+
+    // --- FindRomCover-specific settings ---
+
+    private string _searchEngine = "BingWeb";
+
+    public string SearchEngine
+    {
+        get => _searchEngine;
+        set
+        {
+            if (_searchEngine == value) return;
+
+            _searchEngine = value;
+            OnPropertyChanged(nameof(SearchEngine));
+        }
+    }
+
+    private string _bugReportApiKey = AppConstants.BugReportApiKey;
+
+    public string BugReportApiKey
+    {
+        get => _bugReportApiKey;
+        set
+        {
+            if (_bugReportApiKey == value) return;
+
+            _bugReportApiKey = value;
+            OnPropertyChanged(nameof(BugReportApiKey));
+        }
+    }
+
+    private string _bugReportApiUrl = AppConstants.BugReportApiUrl;
+
+    public string BugReportApiUrl
+    {
+        get => _bugReportApiUrl;
+        set
+        {
+            if (_bugReportApiUrl == value) return;
+
+            _bugReportApiUrl = value;
+            OnPropertyChanged(nameof(BugReportApiUrl));
+        }
+    }
+
+    private string _googleKey = string.Empty;
+
+    public string GoogleKey
+    {
+        get => _googleKey;
+        set
+        {
+            if (_googleKey == value) return;
+
+            _googleKey = value;
+            OnPropertyChanged(nameof(GoogleKey));
+        }
+    }
+
+    // --- Constructor and Load/Save ---
+
+    public SettingsManager()
+    {
+        lock (InstanceLock)
+        {
+            if (_currentInstance != null)
+            {
+                LoadSettings();
                 return;
             }
 
-            var doc = XDocument.Load(SettingsFilePath);
-            var settingsElement = doc.Element("Settings");
-
-            if (settingsElement == null)
-            {
-                throw new InvalidDataException("The settings.xml file is missing the root <Settings> element.");
-            }
-
-            string GetValue(string elementName, string defaultValue)
-            {
-                return settingsElement.Element(elementName)?.Value ?? defaultValue;
-            }
-
-            // Use the public properties so validation/clamping stays consistent with runtime updates.
-            SimilarityThreshold = double.Parse(GetValue("SimilarityThreshold", "70"), CultureInfo.InvariantCulture);
-            SelectedSimilarityAlgorithm = GetValue("SimilarityAlgorithm", "Jaro-Winkler Distance");
-            BaseTheme = GetValue("BaseTheme", "Light");
-            AccentColor = GetValue("AccentColor", "Blue");
-
-            var imageSizeElement = settingsElement.Element("ImageSize");
-            if (imageSizeElement != null)
-            {
-                ImageWidth = int.Parse(imageSizeElement.Element("Width")?.Value ?? "300", CultureInfo.InvariantCulture);
-                ImageHeight = int.Parse(imageSizeElement.Element("Height")?.Value ?? "300", CultureInfo.InvariantCulture);
-            }
-            else
-            {
-                ImageWidth = 300;
-                ImageHeight = 300;
-            }
-
-            MaxImagesToLoad = int.Parse(GetValue("MaxImagesToLoad", "30"), CultureInfo.InvariantCulture);
-            ImageLoaderMaxRetries = int.Parse(GetValue("ImageLoaderMaxRetries", "3"), CultureInfo.InvariantCulture);
-            ImageLoaderRetryDelayMilliseconds = int.Parse(GetValue("ImageLoaderRetryDelayMilliseconds", "200"), CultureInfo.InvariantCulture);
-            ApiTimeoutSeconds = int.Parse(GetValue("ApiTimeoutSeconds", "30"), CultureInfo.InvariantCulture);
-
-            var extensionsElement = settingsElement.Element("SupportedExtensions");
-            if (extensionsElement != null)
-            {
-                SupportedExtensions = extensionsElement.Elements("Extension")
-                    .Select(static e => e.Value)
-                    .Where(static e => !string.IsNullOrEmpty(e))
-                    .ToArray();
-            }
-
-            // Check if supported extensions is null or empty (fixes issue #4)
-            if (SupportedExtensions.Length == 0)
-            {
-                SupportedExtensions = GetDefaultExtensions();
-            }
-
-            var useMameDescValue = GetValue("UseMameDescription", "false");
-            if (string.IsNullOrEmpty(useMameDescValue))
-            {
-                UseMameDescription = false;
-            }
-            else
-            {
-                UseMameDescription = string.Equals(useMameDescValue, "true", StringComparison.OrdinalIgnoreCase);
-            }
-
-            LastImageFolder = GetValue("LastImageFolder", string.Empty);
+            _currentInstance = this;
         }
-        catch (Exception ex)
-        {
-            _ = ErrorLogger.LogAsync(ex, "Error loading settings from settings.xml");
 
-            SetDefaultSettings();
+        LoadSettings();
+    }
+
+    public void LoadSettings()
+    {
+        lock (_ioLock)
+        {
             try
             {
-                SaveSettings();
+                var bestPath = GetMostRecentSettingsFilePath();
+
+                if (bestPath == null || !File.Exists(bestPath))
+                {
+                    // Try to migrate from legacy settings.xml
+                    if (TryMigrateFromLegacyXml())
+                    {
+                        return;
+                    }
+
+                    SetDefaultSettings();
+                    try { SaveSettingsInternal(); }
+                    catch (Exception saveEx) { _ = ErrorLogger.LogAsync(saveEx, "Failed to save default settings to settings.dat"); }
+
+                    return;
+                }
+
+                var data = LoadAndDecryptSettings(bestPath);
+
+                if (data == null)
+                {
+                    // Try to migrate from legacy settings.xml before giving up
+                    if (TryMigrateFromLegacyXml())
+                    {
+                        return;
+                    }
+
+                    throw new InvalidDataException("Failed to deserialize settings data.");
+                }
+
+                SimilarityThreshold = data.SimilarityThreshold;
+                SelectedSimilarityAlgorithm = data.SimilarityAlgorithm;
+                BaseTheme = data.BaseTheme;
+                AccentColor = data.AccentColor;
+                ImageWidth = data.ImageWidth;
+                ImageHeight = data.ImageHeight;
+                MaxImagesToLoad = data.MaxImagesToLoad;
+                ImageLoaderMaxRetries = data.ImageLoaderMaxRetries;
+                ImageLoaderRetryDelayMilliseconds = data.ImageLoaderRetryDelayMilliseconds;
+                ApiTimeoutSeconds = data.ApiTimeoutSeconds;
+                SearchEngine = data.SearchEngine;
+                BugReportApiKey = data.BugReportApiKey;
+                BugReportApiUrl = data.BugReportApiUrl;
+                GoogleKey = data.GoogleKey;
+                UseMameDescriptions = data.UseMameDescriptions;
+                LastImageFolder = data.LastImageFolder;
+
+                if (data.SupportedExtensions.Count > 0)
+                {
+                    SupportedExtensions = data.SupportedExtensions;
+                }
+                else
+                {
+                    SupportedExtensions = GetDefaultExtensions();
+                }
             }
-            catch (Exception saveEx)
+            catch (Exception ex)
             {
-                _ = ErrorLogger.LogAsync(saveEx, "Failed to save default settings after load error");
+                _ = ErrorLogger.LogAsync(ex, "Error loading settings from settings.dat");
+                SetDefaultSettings();
+                try { SaveSettingsInternal(); }
+                catch (Exception saveEx) { _ = ErrorLogger.LogAsync(saveEx, "Failed to save default settings after load error"); }
             }
         }
     }
 
-    /// <summary>
-    /// Saves the current settings to the settings.xml file.
-    /// </summary>
-    /// <remarks>
-    /// This method uses a temporary file approach for atomic writes:
-    /// 1. Writes to a temporary file first
-    /// 2. Copies the temp file to the target location
-    /// 3. Cleans up the temporary file
-    /// 
-    /// This ensures that the settings file is never in a partially written state,
-    /// even if the application crashes during the save operation.
-    /// 
-    /// Errors during save are shown to the user and logged.
-    /// </remarks>
-    public void SaveSettings()
+    private SettingsData? LoadAndDecryptSettings(string filePath)
     {
-        // Capture all settings values under lock to ensure consistency
-        XDocument doc;
-        lock (_saveLock)
+        try
         {
-            doc = new XDocument(
-                new XElement("Settings",
-                    new XElement("SimilarityThreshold", SimilarityThreshold.ToString(CultureInfo.InvariantCulture)),
-                    new XElement("SupportedExtensions",
-                        SupportedExtensions.Select(static ext => new XElement("Extension", ext))
-                    ),
-                    new XElement("ImageSize",
-                        new XElement("Width", ImageWidth),
-                        new XElement("Height", ImageHeight)
-                    ),
-                    new XElement("SimilarityAlgorithm", SelectedSimilarityAlgorithm),
-                    new XElement("MaxImagesToLoad", MaxImagesToLoad),
-                    new XElement("ImageLoaderMaxRetries", ImageLoaderMaxRetries),
-                    new XElement("ImageLoaderRetryDelayMilliseconds", ImageLoaderRetryDelayMilliseconds),
-                    new XElement("ApiTimeoutSeconds", ApiTimeoutSeconds),
-                    new XElement("BaseTheme", BaseTheme),
-                    new XElement("AccentColor", AccentColor),
-                    new XElement("UseMameDescription", UseMameDescription.ToString().ToLowerInvariant()),
-                    new XElement("LastImageFolder", LastImageFolder)
-                )
-            );
-        }
+            var encryptedBytes = File.ReadAllBytes(filePath);
+            var decryptedBytes = Decrypt(encryptedBytes);
+            var json = Encoding.UTF8.GetString(decryptedBytes);
 
-        // Perform file I/O under a static lock to prevent cross-instance conflicts
-        var tempFilePath = SettingsFilePath + ".tmp";
-        lock (FileLock)
+            return JsonSerializer.Deserialize<SettingsData>(json);
+        }
+        catch (Exception ex)
         {
+            _ = ErrorLogger.LogAsync(ex, $"Failed to decrypt settings from: {filePath}");
+            return null;
+        }
+    }
+
+    private bool TryMigrateFromLegacyXml()
+    {
+        var legacyPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.xml");
+        if (!File.Exists(legacyPath))
+            return false;
+
+        try
+        {
+            var doc = System.Xml.Linq.XDocument.Load(legacyPath);
+            var root = doc.Element("Settings");
+            if (root == null) return false;
+
+            var legacyData = new SettingsData
+            {
+                SimilarityThreshold = double.TryParse(
+                    root.Element("ThumbnailSize")?.Value,
+                    NumberStyles.Any,
+                    CultureInfo.InvariantCulture,
+                    out var parsedThreshold) ? parsedThreshold : 300,
+                SimilarityAlgorithm = AppConstants.Algorithms.JaroWinkler,
+                BaseTheme = root.Element("BaseTheme")?.Value ?? "Light",
+                AccentColor = root.Element("AccentColor")?.Value ?? "Blue",
+                ImageWidth = int.TryParse(root.Element("ThumbnailSize")?.Value, out var w) ? w : 300,
+                ImageHeight = int.TryParse(root.Element("ThumbnailSize")?.Value, out var h) ? h : 300,
+                MaxImagesToLoad = 30,
+                ImageLoaderMaxRetries = 3,
+                ImageLoaderRetryDelayMilliseconds = 200,
+                ApiTimeoutSeconds = 30,
+                SearchEngine = root.Element("SearchEngine")?.Value ?? "BingWeb",
+                BugReportApiKey = root.Element("BugReportApiKey")?.Value ?? AppConstants.BugReportApiKey,
+                BugReportApiUrl = root.Element("BugReportApiUrl")?.Value ?? AppConstants.BugReportApiUrl,
+                GoogleKey = root.Element("GoogleKey")?.Value ?? string.Empty,
+                UseMameDescriptions = bool.TryParse(root.Element("UseMameDescriptions")?.Value, out var useMame) && useMame,
+                LastImageFolder = string.Empty,
+                SupportedExtensions = root.Element("SupportedExtensions")?
+                    .Elements("Extension")
+                    .Select(static x => x.Value)
+                    .Where(static x => !string.IsNullOrWhiteSpace(x))
+                    .ToList() ?? GetDefaultExtensions()
+            };
+
+            // Apply the migrated data
+            SimilarityThreshold = legacyData.SimilarityThreshold;
+            SelectedSimilarityAlgorithm = legacyData.SimilarityAlgorithm;
+            BaseTheme = legacyData.BaseTheme;
+            AccentColor = legacyData.AccentColor;
+            ImageWidth = legacyData.ImageWidth;
+            ImageHeight = legacyData.ImageHeight;
+            MaxImagesToLoad = legacyData.MaxImagesToLoad;
+            ImageLoaderMaxRetries = legacyData.ImageLoaderMaxRetries;
+            ImageLoaderRetryDelayMilliseconds = legacyData.ImageLoaderRetryDelayMilliseconds;
+            ApiTimeoutSeconds = legacyData.ApiTimeoutSeconds;
+            SearchEngine = legacyData.SearchEngine;
+            BugReportApiKey = legacyData.BugReportApiKey;
+            BugReportApiUrl = legacyData.BugReportApiUrl;
+            GoogleKey = legacyData.GoogleKey;
+            UseMameDescriptions = legacyData.UseMameDescriptions;
+            LastImageFolder = legacyData.LastImageFolder;
+            SupportedExtensions = legacyData.SupportedExtensions.Count > 0
+                ? legacyData.SupportedExtensions
+                : GetDefaultExtensions();
+
+            // Save in new encrypted format
+            SaveSettingsInternal();
+
+            // Rename old file so we don't migrate again
             try
             {
-                // Write to a temporary file first, then atomically replace the original
-                // This prevents corruption of settings.xml if the app crashes during write
-                doc.Save(tempFilePath);
-
-                // Use File.Copy + File.Delete instead of File.Move with overwrite
-                // This is more reliable on Windows when the target file is in use
-                File.Copy(tempFilePath, SettingsFilePath, true);
+                File.Move(legacyPath, legacyPath + ".migrated", true);
             }
-            catch (UnauthorizedAccessException ex)
+            catch
             {
-                ShowSaveError($"Access denied to settings.xml: {ex.Message}\n\n" +
-                              "Try running as administrator or checking file permissions.\n\n" +
-                              "Your settings will not be saved!");
-
-                _ = ErrorLogger.LogAsync(ex, "Failed to save settings");
+                // Best effort - not critical
             }
-            catch (IOException ex)
-            {
-                ShowSaveError($"Error saving settings to settings.xml: {ex.Message}\n\n" +
-                              "Your settings will not be saved!");
 
-                _ = ErrorLogger.LogAsync(ex, "Failed to save settings");
-            }
-            catch (Exception ex)
-            {
-                ShowSaveError($"Error saving settings to settings.xml: {ex.Message}\n\n" +
-                              "Your settings will not be saved!");
+            LogService.Information("Successfully migrated settings from settings.xml to settings.dat");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _ = ErrorLogger.LogAsync(ex, "Failed to migrate settings from settings.xml");
+            return false;
+        }
+    }
 
-                _ = ErrorLogger.LogAsync(ex, "Failed to save settings");
-            }
-            finally
-            {
+    private static string? GetMostRecentSettingsFilePath()
+    {
+        var appDirExists = File.Exists(SettingsFilePath);
+        var userDataExists = File.Exists(UserDataSettingsFilePath);
+
+        switch (appDirExists)
+        {
+            case false when !userDataExists:
+                return null;
+            case true when !userDataExists:
+                return SettingsFilePath;
+            case false when userDataExists:
+                return UserDataSettingsFilePath;
+            default:
+                // Both exist - use the most recently modified one
                 try
                 {
-                    if (File.Exists(tempFilePath))
-                    {
-                        File.Delete(tempFilePath);
-                    }
+                    var appDirTime = File.GetLastWriteTimeUtc(SettingsFilePath);
+                    var userDataTime = File.GetLastWriteTimeUtc(UserDataSettingsFilePath);
+                    return userDataTime > appDirTime ? UserDataSettingsFilePath : SettingsFilePath;
                 }
-                catch (Exception cleanupEx)
+                catch
                 {
-                    _ = ErrorLogger.LogAsync(cleanupEx, $"Failed to cleanup settings temp file: {tempFilePath}");
+                    // If we can't get the write time, prefer the app directory version
+                    return SettingsFilePath;
                 }
+        }
+    }
+
+    public void SaveSettings()
+    {
+        lock (_ioLock)
+        {
+            SaveSettingsInternal();
+        }
+    }
+
+    private void SaveSettingsInternal()
+    {
+        var data = new SettingsData
+        {
+            SimilarityThreshold = SimilarityThreshold,
+            SimilarityAlgorithm = SelectedSimilarityAlgorithm,
+            BaseTheme = BaseTheme,
+            AccentColor = AccentColor,
+            ImageWidth = ImageWidth,
+            ImageHeight = ImageHeight,
+            MaxImagesToLoad = MaxImagesToLoad,
+            ImageLoaderMaxRetries = ImageLoaderMaxRetries,
+            ImageLoaderRetryDelayMilliseconds = ImageLoaderRetryDelayMilliseconds,
+            ApiTimeoutSeconds = ApiTimeoutSeconds,
+            SearchEngine = SearchEngine,
+            BugReportApiKey = BugReportApiKey,
+            BugReportApiUrl = BugReportApiUrl,
+            GoogleKey = GoogleKey,
+            UseMameDescriptions = UseMameDescriptions,
+            LastImageFolder = LastImageFolder,
+            SupportedExtensions = SupportedExtensions
+        };
+
+        var json = JsonSerializer.Serialize(data);
+        var plaintextBytes = Encoding.UTF8.GetBytes(json);
+        var encryptedBytes = Encrypt(plaintextBytes);
+
+        // Try to save to the application directory first
+        var savedToAppDir = TrySaveToFile(encryptedBytes, SettingsFilePath);
+
+        // Also save to the user data folder as a backup / fallback
+        var savedToUserData = TrySaveToFile(encryptedBytes, UserDataSettingsFilePath);
+
+        switch (savedToAppDir)
+        {
+            case false when !savedToUserData:
+                ShowSaveError("Could not save settings to either location. Your settings changes may be lost.");
+                break;
+            case false:
+                ShowSaveError("Could not save settings to the application folder. Settings were saved to the user data folder instead.");
+                break;
+        }
+    }
+
+    private static bool TrySaveToFile(byte[] data, string filePath)
+    {
+        var tempFilePath = filePath + ".tmp";
+        try
+        {
+            var directory = Path.GetDirectoryName(filePath);
+            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+            {
+                Directory.CreateDirectory(directory);
             }
+
+            File.WriteAllBytes(tempFilePath, data);
+            File.Move(tempFilePath, filePath, true);
+            return true;
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _ = ErrorLogger.LogAsync(ex, $"Access denied saving settings to: {filePath}");
+            return false;
+        }
+        catch (IOException ex)
+        {
+            _ = ErrorLogger.LogAsync(ex, $"I/O error saving settings to: {filePath}");
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _ = ErrorLogger.LogAsync(ex, $"Failed to save settings to: {filePath}");
+            return false;
+        }
+        finally
+        {
+            try { if (File.Exists(tempFilePath)) File.Delete(tempFilePath); }
+            catch (Exception cleanupEx) { _ = ErrorLogger.LogAsync(cleanupEx, $"Failed to cleanup settings temp file: {tempFilePath}"); }
         }
     }
 
@@ -578,28 +665,80 @@ public class SettingsManager : INotifyPropertyChanged
     private void SetDefaultSettings()
     {
         _similarityThreshold = double.Parse(AppConstants.Messages.DefaultSimilarityThreshold, CultureInfo.InvariantCulture);
+        _selectedSimilarityAlgorithm = AppConstants.Algorithms.JaroWinkler;
         _supportedExtensions = GetDefaultExtensions();
         _imageWidth = 300;
         _imageHeight = 300;
-        _selectedSimilarityAlgorithm = AppConstants.Algorithms.JaroWinkler;
-        _baseTheme = AppConstants.Themes.Light;
+        _baseTheme = AppConstants.Themes.Dark;
         _accentColor = "Blue";
-        _useMameDescription = false;
+        _useMameDescriptions = false;
         _lastImageFolder = string.Empty;
+        _searchEngine = "BingWeb";
+        _bugReportApiKey = AppConstants.BugReportApiKey;
+        _bugReportApiUrl = AppConstants.BugReportApiUrl;
+        _googleKey = string.Empty;
     }
 
-    private static string[] GetDefaultExtensions()
+    private static List<string> GetDefaultExtensions()
     {
         return
         [
             "2hd", "3ds", "7z", "88d", "a78", "arc", "bat", "bin", "bs", "cas", "ccd", "cdi", "cdt", "chd", "cht",
             "ciso", "cmd", "col", "cpr", "cso", "cue", "cv", "d64", "d71", "d81", "d88", "dim", "dol", "dsk", "dup",
-            "elf", "exe", "fdi", "fds", "fig", "g64", "gb", "gcm", "gcz", "gdi", "gg", "gz", "hdf", "hdm", "img",
+            "dummy", "elf", "exe", "fdi", "fds", "fig", "g64", "gb", "gcm", "gcz", "gdi", "gg", "gz", "hdf", "hdm", "img",
             "int", "ipf", "iso", "lnk", "lnx", "m3u", "mdf", "mds", "ms1", "msa", "mx1", "mx2", "n64", "nbz", "nca",
             "ndd", "nds", "nes", "nib", "nrg", "nro", "nso", "nsp", "o", "pbp", "pce", "prg", "prx", "rar", "ri",
             "rom", "rvz", "sc", "scl", "sda", "sf", "sfc", "sfx", "sg", "smc", "sms", "sna", "st", "stx", "swc",
-            "t64", "tap", "tgc", "toc", "trd", "tzx", "u1", "unf", "unif", "v64", "voc", "wad", "wbfs", "wua", "xci",
-            "xdf", "z64", "z80", "zip", "zso"
+            "t64", "tap", "tgc", "toc", "trd", "tzx", "u1", "unf", "unif", "url", "v64", "voc", "wad", "wbfs", "wua", "xci",
+            "xdf", "z64", "z80", "zip", "zso",
+            "gba", "gbc", "snes", "smc", "md", "smd", "gen", "32x", "sgg"
         ];
+    }
+
+    // --- Encryption/Decryption ---
+
+    private static byte[] Encrypt(byte[] data)
+    {
+        using var aes = Aes.Create();
+        aes.Key = EncryptionKey;
+        aes.GenerateIV();
+
+        using var encryptor = aes.CreateEncryptor(aes.Key, aes.IV);
+        using var ms = new MemoryStream();
+
+        // Write IV first
+        ms.Write(aes.IV, 0, aes.IV.Length);
+
+        using (var cs = new CryptoStream(ms, encryptor, CryptoStreamMode.Write))
+        {
+            cs.Write(data, 0, data.Length);
+            cs.FlushFinalBlock();
+        }
+
+        return ms.ToArray();
+    }
+
+    private static byte[] Decrypt(byte[] encryptedData)
+    {
+        if (encryptedData == null || encryptedData.Length < 16)
+        {
+            throw new ArgumentException("Encrypted data is too short. Expected at least 16 bytes for the IV.", nameof(encryptedData));
+        }
+
+        using var aes = Aes.Create();
+        aes.Key = EncryptionKey;
+
+        // Read IV from the beginning
+        var iv = new byte[16];
+        Array.Copy(encryptedData, 0, iv, 0, 16);
+        aes.IV = iv;
+
+        using var decryptor = aes.CreateDecryptor(aes.Key, aes.IV);
+        using var ms = new MemoryStream(encryptedData, 16, encryptedData.Length - 16);
+        using var cs = new CryptoStream(ms, decryptor, CryptoStreamMode.Read);
+        using var result = new MemoryStream();
+
+        cs.CopyTo(result);
+        return result.ToArray();
     }
 }

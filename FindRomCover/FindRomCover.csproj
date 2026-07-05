@@ -1,75 +1,100 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0-windows</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <UseWPF>true</UseWPF>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <ApplicationIcon>images\icon.ico</ApplicationIcon>
-    <PackageIcon>icon2.png</PackageIcon>
-    <AssemblyVersion>2.9.0</AssemblyVersion>
-    <FileVersion>2.9.0</FileVersion>
-    <SupportedOSPlatformVersion>7.0</SupportedOSPlatformVersion>
-    <StartupObject>FindRomCover.App</StartupObject>
-    <IsPackable>false</IsPackable>
-    <LangVersion>14</LangVersion>
-    <NeutralLanguage>en-US</NeutralLanguage>
-    <DebugType>embedded</DebugType>
-    <DebugSymbols>true</DebugSymbols>
-    <Company>PureLogicCode.com</Company>
-  </PropertyGroup>
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <TargetFramework>net10.0-windows</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <UseWPF>true</UseWPF>
+        <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+        <ApplicationIcon>icon\icon.ico</ApplicationIcon>
+        <PackageIcon></PackageIcon>
+        <AssemblyVersion>2.0.0</AssemblyVersion>
+        <FileVersion>2.0.0</FileVersion>
+        <LangVersion>14</LangVersion>
+        <DebugType>embedded</DebugType>
+        <DebugSymbols>true</DebugSymbols>
+        <IsPackable>false</IsPackable>
+        <NeutralLanguage>en</NeutralLanguage>
+        <Company>PureLogicCode.com</Company>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <None Remove="audio\click.mp3" />
-    <None Update="settings.xml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="mame.dat">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
+    <ItemGroup>
+        <None Remove="audio\click.mp3" />
+        <None Remove="images\default.png" />
+        <None Update="mame.dat">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
 
-  <ItemGroup>
-    <Resource Include="images\icon.ico" />
-    <None Remove="images\icon.png" />
-    <Resource Include="images\icon.png" />
-    <None Remove="images\icon2.png" />
-    <Resource Include="images\icon2.png">
-      <Pack>True</Pack>
-      <PackagePath>\</PackagePath>
-    </Resource>
-    <None Remove="images\settings.png" />
-    <Resource Include="images\settings.png" />
-    <None Remove="images\brokenimage.png" />
-    <Resource Include="images\brokenimage.png" />
-  </ItemGroup>
+    <ItemGroup>
+        <Content Include="..\README.md">
+            <Link>README.md</Link>
+        </Content>
+        <Content Include="audio\click.mp3">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
+        <Resource Include="images\default.png">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Resource>
+        <None Remove="images\theme.png" />
+        <Resource Include="images\theme.png" />
+        <None Remove="images\about.png" />
+        <Resource Include="images\about.png" />
+        <None Remove="images\donate.png" />
+        <Resource Include="images\donate.png" />
+        <None Remove="images\exit.png" />
+        <Resource Include="images\exit.png" />
+        <None Remove="images\logo.png" />
+        <Resource Include="images\logo.png" />
+        <None Remove="images\keys.png" />
+        <Resource Include="images\keys.png" />
+        <None Remove="images\settings.png" />
+        <Resource Include="images\settings.png" />
+        <None Remove="images\brokenimage.png" />
+        <Resource Include="images\brokenimage.png" />
+        <None Remove="images\copy.png" />
+        <Resource Include="images\copy.png" />
+        <None Remove="images\usethis.png" />
+        <Resource Include="images\usethis.png" />
+        <None Remove="images\folder.png" />
+        <Resource Include="images\folder.png" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <Content Include="audio\click.mp3">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="ControlzEx" Version="7.0.4" />
+        <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="14.14.0" />
+        <PackageReference Include="MahApps.Metro" Version="3.0.0-rc0529" />
+        <PackageReference Include="MessagePack" Version="3.1.7" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.9" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.9" />
+        <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4022.49" />
+        <PackageReference Include="NAudio" Version="2.3.0" />
+        <PackageReference Include="Serilog" Version="4.3.1" />
+        <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+        <PackageReference Include="Serilog.Sinks.Observable" Version="3.0.0" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="ControlzEx" Version="7.0.4" />
-    <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="14.14.0" />
-    <PackageReference Include="MahApps.Metro" Version="3.0.0-rc0529" />
-    <PackageReference Include="MessagePack" Version="3.1.7" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.9" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.9" />
-  </ItemGroup>
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.WindowsDesktop.App.WindowsForms" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <Resource Include="images\theme.png" />
-    <Resource Include="images\about.png" />
-    <Resource Include="images\donate.png" />
-    <Resource Include="images\exit.png" />
-    <Resource Include="images\logo.png" />
-    <Resource Include="images\copy.png" />
-    <Resource Include="images\usethis.png" />
-    <Resource Include="images\folder.png" />
-  </ItemGroup>
+    <ItemGroup>
+        <None Update="settings.dat">
+            <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Remove="References\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Compile Remove="References\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Page Remove="References\**" />
+    </ItemGroup>
 
 </Project>

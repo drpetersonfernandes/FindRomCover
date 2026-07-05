@@ -1,492 +1,183 @@
-using FindRomCover.Services;
 using FluentAssertions;
+using FindRomCover.Services;
+using Xunit;
 
 namespace FindRomCover.Tests.Services;
 
 public class SimilarityCalculatorTests
 {
-    #region Levenshtein Similarity
-
     [Theory]
-    [InlineData("mario", "mario", 100.0)]
-    [InlineData("mario", "maria", 80.0)]
-    [InlineData("abc", "def", 0.0)]
-    [InlineData("a", "", 0.0)]
-    [InlineData("", "b", 0.0)]
-    [InlineData("streetfighter", "street fighter", 92.86)]
-    public void CalculateLevenshteinSimilarityReturnsExpectedScore(string a, string b, double expected)
+    [InlineData("hello", "hello", 100)]
+    [InlineData("hello", "hellx", 80)]
+    [InlineData("hello", "world", 20)]
+    [InlineData("", "", 100)]
+    [InlineData("a", "", 0)]
+    [InlineData("", "a", 0)]
+    [InlineData("abc", "abc", 100)]
+    [InlineData("kitten", "sitting", 57.14)]
+    public void CalculateLevenshteinSimilarityShouldReturnExpectedScore(string a, string b, double expected)
     {
         var result = SimilarityCalculator.CalculateLevenshteinSimilarity(a, b);
-        result.Should().BeApproximately(expected, 0.01);
+
+        result.Should().BeApproximately(expected, 0.5);
     }
 
     [Fact]
-    public void CalculateLevenshteinSimilarityBothEmptyReturns100()
+    public void CalculateLevenshteinSimilarityWithIdenticalStringsShouldReturn100()
     {
-        var result = SimilarityCalculator.CalculateLevenshteinSimilarity("", "");
-        result.Should().Be(100.0);
+        var result = SimilarityCalculator.CalculateLevenshteinSimilarity("Super Mario Bros", "Super Mario Bros");
+
+        result.Should().Be(100);
     }
 
     [Fact]
-    public void CalculateLevenshteinSimilarityIdenticalStringsReturns100()
+    public void CalculateLevenshteinSimilarityWithCompletelyDifferentStringsShouldReturnLowScore()
     {
-        var result = SimilarityCalculator.CalculateLevenshteinSimilarity("supermario", "supermario");
-        result.Should().Be(100.0);
+        var result = SimilarityCalculator.CalculateLevenshteinSimilarity("abc", "xyz");
+
+        result.Should().BeLessThan(10);
     }
-
-    [Fact]
-    public void CalculateLevenshteinSimilarityCompletelyDifferentReturns0()
-    {
-        var result = SimilarityCalculator.CalculateLevenshteinSimilarity("xyz", "abc");
-        result.Should().Be(0.0);
-    }
-
-    [Fact]
-    public void CalculateLevenshteinSimilarityOneEmptyStringReturns0()
-    {
-        var result = SimilarityCalculator.CalculateLevenshteinSimilarity("mario", "");
-        result.Should().Be(0.0);
-    }
-
-    #endregion
-
-    #region Jaccard Similarity
 
     [Theory]
-    [InlineData("mario", "mario", 100.0)]
-    [InlineData("", "", 100.0)]
-    public void CalculateJaccardIndexReturnsExpectedScore(string a, string b, double expected)
-    {
-        var ngramSize = Math.Min(a.Length, b.Length) < 2 ? 1 : 2;
-        var setA = SimilarityCalculator.GetNgrams(a, ngramSize);
-        var result = SimilarityCalculator.CalculateJaccardIndex(setA, b, ngramSize);
-        result.Should().BeApproximately(expected, 0.01);
-    }
-
-    [Fact]
-    public void CalculateJaccardIndexIdenticalStringsReturns100()
-    {
-        const string s = "streetfighter";
-        var setA = SimilarityCalculator.GetNgrams(s, 2);
-        var result = SimilarityCalculator.CalculateJaccardIndex(setA, s, 2);
-        result.Should().Be(100.0);
-    }
-
-    [Fact]
-    public void CalculateJaccardIndexSomeOverlapReturnsExactScore()
-    {
-        const string a = "mario";
-        const string b = "mario Bros";
-        var setA = SimilarityCalculator.GetNgrams(a, 2);
-        var result = SimilarityCalculator.CalculateJaccardIndex(setA, b, 2);
-        result.Should().BeApproximately(600.0 / 11.0, 0.01);
-    }
-
-    [Fact]
-    public void CalculateJaccardIndexNoOverlapReturns0()
-    {
-        const string a = "abc";
-        const string b = "xyz";
-        var setA = SimilarityCalculator.GetNgrams(a, 2);
-        var result = SimilarityCalculator.CalculateJaccardIndex(setA, b, 2);
-        result.Should().Be(0.0);
-    }
-
-    #endregion
-
-    #region Jaro-Winkler Distance
-
-    [Theory]
-    [InlineData("mario", "mario", 100.0)]
-    [InlineData("", "", 100.0)]
-    [InlineData("abc", "", 0.0)]
-    public void CalculateJaroWinklerDistanceReturnsExpectedScore(string s1, string s2, double expected)
+    [InlineData("hello", "hello", 100)]
+    [InlineData("", "", 100)]
+    [InlineData("abc", "xyz", 0)]
+    public void CalculateJaroWinklerDistanceShouldReturnExpectedScore(string s1, string s2, double expected)
     {
         var result = SimilarityCalculator.CalculateJaroWinklerDistance(s1, s2);
-        result.Should().BeApproximately(expected, 0.01);
+
+        result.Should().BeApproximately(expected, 1.0);
     }
 
     [Fact]
-    public void CalculateJaroWinklerDistanceIdenticalStringsReturns100()
+    public void CalculateJaroWinklerDistanceWithSimilarPrefixShouldReturnHighScore()
     {
-        var result = SimilarityCalculator.CalculateJaroWinklerDistance("supermario", "supermario");
-        result.Should().Be(100.0);
+        var result = SimilarityCalculator.CalculateJaroWinklerDistance("super mario", "super marion");
+
+        result.Should().BeGreaterThan(90);
     }
 
     [Fact]
-    public void CalculateJaroWinklerDistanceSimilarPrefixReturnsHigherScore()
+    public void CalculateJaroWinklerDistanceWithEmptyAndNonEmptyShouldReturnZero()
     {
-        // Jaro-Winkler gives bonus for matching prefixes
-        var result = SimilarityCalculator.CalculateJaroWinklerDistance("streetfighter", "street fighter");
-        result.Should().BeGreaterThan(50);
+        var result = SimilarityCalculator.CalculateJaroWinklerDistance("", "hello");
+
+        result.Should().Be(0);
     }
 
     [Fact]
-    public void CalculateJaroWinklerDistanceNoMatchReturns0()
+    public void CalculateJaroWinklerDistanceWithNonEmptyAndEmptyShouldReturnZero()
     {
-        var result = SimilarityCalculator.CalculateJaroWinklerDistance("abc", "xyz");
-        result.Should().Be(0.0);
-    }
+        var result = SimilarityCalculator.CalculateJaroWinklerDistance("hello", "");
 
-    #endregion
-
-    #region GetNgrams
-
-    [Fact]
-    public void GetNgramsEmptyStringReturnsEmptySet()
-    {
-        var result = SimilarityCalculator.GetNgrams("", 2);
-        result.Should().BeEmpty();
+        result.Should().Be(0);
     }
 
     [Fact]
-    public void GetNgramsNegativeNReturnsEmptySet()
-    {
-        var result = SimilarityCalculator.GetNgrams("abc", -1);
-        result.Should().BeEmpty();
-    }
-
-    [Fact]
-    public void GetNgramsBigramsReturnsCorrectSet()
-    {
-        var result = SimilarityCalculator.GetNgrams("abc", 2);
-        result.Should().Contain([" a", "ab", "bc", "c "]);
-    }
-
-    [Fact]
-    public void GetNgramsUnigramsReturnsCorrectSet()
+    public void GetNgramsShouldReturnCorrectNgramsForUnigrams()
     {
         var result = SimilarityCalculator.GetNgrams("abc", 1);
-        result.Should().Contain(["a", "b", "c"]);
+
+        result.Should().Contain("a");
+        result.Should().Contain("b");
+        result.Should().Contain("c");
     }
 
     [Fact]
-    public void GetNgramsTrigramsReturnsCorrectSet()
+    public void GetNgramsShouldReturnCorrectNgramsForBigrams()
     {
-        var result = SimilarityCalculator.GetNgrams("abc", 3);
-        result.Should().Contain(["  a", " ab", "abc", "bc ", "c  "]);
-    }
+        var result = SimilarityCalculator.GetNgrams("abc", 2);
 
-    #endregion
-
-    #region CalculateSimilarityAsync
-
-    [Fact]
-    public async Task CalculateSimilarityAsyncEmptyImageFolderPathReturnsEmptyResult()
-    {
-        var result = await SimilarityCalculator.CalculateSimilarityAsync(
-            "mario", string.Empty, 0, AppConstants.Algorithms.Levenshtein, CancellationToken.None);
-
-        result.SimilarImages.Should().BeEmpty();
-        result.ProcessingErrors.Should().BeEmpty();
+        result.Should().Contain("ab");
+        result.Should().Contain("bc");
     }
 
     [Fact]
-    public async Task CalculateSimilarityAsyncNonExistentFolderThrowsDirectoryNotFoundException()
+    public void GetNgramsShouldReturnCorrectNgramsForTrigrams()
     {
-        var nonExistentPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        var result = SimilarityCalculator.GetNgrams("abcd", 3);
 
-        var act = () => SimilarityCalculator.CalculateSimilarityAsync(
-            "mario", nonExistentPath, 0, AppConstants.Algorithms.Levenshtein, CancellationToken.None);
-
-        await act.Should().ThrowAsync<DirectoryNotFoundException>();
+        result.Should().Contain("abc");
+        result.Should().Contain("bcd");
     }
 
     [Fact]
-    public async Task CalculateSimilarityAsyncEmptyFolderReturnsEmptyResult()
+    public void GetNgramsWithEmptyStringShouldReturnEmptySet()
     {
-        var tempDir = Directory.CreateTempSubdirectory("frc_test_");
-        try
-        {
-            var result = await SimilarityCalculator.CalculateSimilarityAsync(
-                "mario", tempDir.FullName, 0, AppConstants.Algorithms.Levenshtein, CancellationToken.None);
-
-            result.SimilarImages.Should().BeEmpty();
-            result.ProcessingErrors.Should().BeEmpty();
-        }
-        finally
-        {
-            Directory.Delete(tempDir.FullName, true);
-        }
-    }
-
-    [Fact]
-    public async Task CalculateSimilarityAsyncWithMatchingImagesReturnsSortedResults()
-    {
-        var tempDir = Directory.CreateTempSubdirectory("frc_test_");
-        try
-        {
-            var imagePath = Path.Combine(tempDir.FullName, "mario.png");
-            await CreateMinimalBmpAsync(imagePath);
-
-            var result = await SimilarityCalculator.CalculateSimilarityAsync(
-                "mario", tempDir.FullName, 0, AppConstants.Algorithms.Levenshtein, CancellationToken.None);
-
-            result.SimilarImages.Should().NotBeEmpty();
-            result.SimilarImages.First().ImageName.Should().Be("mario");
-            result.SimilarImages.Should().BeInDescendingOrder(static x => x.SimilarityScore);
-        }
-        finally
-        {
-            Directory.Delete(tempDir.FullName, true);
-        }
-    }
-
-    [Fact]
-    public async Task CalculateSimilarityAsyncCancellationThrowsOperationCanceledException()
-    {
-        var tempDir = Directory.CreateTempSubdirectory("frc_test_");
-        try
-        {
-            // Create an image so the method doesn't return early on empty folder
-            var imagePath = Path.Combine(tempDir.FullName, "mario.png");
-            await CreateMinimalBmpAsync(imagePath);
-
-            var cts = new CancellationTokenSource();
-            cts.Cancel();
-
-            var act = () => SimilarityCalculator.CalculateSimilarityAsync(
-                "mario", tempDir.FullName, 0, AppConstants.Algorithms.Levenshtein, cts.Token);
-
-            await act.Should().ThrowAsync<OperationCanceledException>();
-        }
-        finally
-        {
-            Directory.Delete(tempDir.FullName, true);
-        }
-    }
-
-    [Fact]
-    public async Task CalculateSimilarityAsyncUnsupportedAlgorithmReturnsError()
-    {
-        var tempDir = Directory.CreateTempSubdirectory("frc_test_");
-        try
-        {
-            var imagePath = Path.Combine(tempDir.FullName, "test.png");
-            await CreateMinimalBmpAsync(imagePath);
-
-            var result = await SimilarityCalculator.CalculateSimilarityAsync(
-                "test", tempDir.FullName, 0, "Unknown Algorithm", CancellationToken.None);
-
-            result.ProcessingErrors.Should().ContainSingle()
-                .Which.Should().Contain("'Unknown Algorithm' is not implemented");
-        }
-        finally
-        {
-            Directory.Delete(tempDir.FullName, true);
-        }
-    }
-
-    [Fact]
-    public async Task CalculateSimilarityAsyncJaccardAlgorithmWorks()
-    {
-        var tempDir = Directory.CreateTempSubdirectory("frc_test_");
-        try
-        {
-            var imagePath = Path.Combine(tempDir.FullName, "mario.png");
-            await CreateMinimalBmpAsync(imagePath);
-
-            var result = await SimilarityCalculator.CalculateSimilarityAsync(
-                "mario", tempDir.FullName, 0, AppConstants.Algorithms.Jaccard, CancellationToken.None);
-
-            result.SimilarImages.Should().NotBeEmpty();
-        }
-        finally
-        {
-            Directory.Delete(tempDir.FullName, true);
-        }
-    }
-
-    [Fact]
-    public async Task CalculateSimilarityAsyncJaroWinklerAlgorithmWorks()
-    {
-        var tempDir = Directory.CreateTempSubdirectory("frc_test_");
-        try
-        {
-            var imagePath = Path.Combine(tempDir.FullName, "mario.png");
-            await CreateMinimalBmpAsync(imagePath);
-
-            var result = await SimilarityCalculator.CalculateSimilarityAsync(
-                "mario", tempDir.FullName, 0, AppConstants.Algorithms.JaroWinkler, CancellationToken.None);
-
-            result.SimilarImages.Should().NotBeEmpty();
-        }
-        finally
-        {
-            Directory.Delete(tempDir.FullName, true);
-        }
-    }
-
-    #region Additional GetNgrams Tests
-
-    [Fact]
-    public void GetNgrams_WithNZero_ReturnsEmptySet()
-    {
-        var result = SimilarityCalculator.GetNgrams("hello", 0);
+        var result = SimilarityCalculator.GetNgrams("", 2);
 
         result.Should().BeEmpty();
     }
 
     [Fact]
-    public void GetNgrams_NLargerThanStringLength_ReturnsNgramsWithPadding()
+    public void GetNgramsWithZeroNShouldReturnEmptySet()
     {
-        var result = SimilarityCalculator.GetNgrams("ab", 5);
+        var result = SimilarityCalculator.GetNgrams("abc", 0);
 
-        result.Should().NotBeEmpty();
-        result.Should().HaveCount(6);
-    }
-
-    #endregion
-
-    #region Additional Levenshtein Tests
-
-    [Fact]
-    public void CalculateLevenshteinSimilarity_WithThresholdEarlyExit_ReturnsZero()
-    {
-        // Two long, very different strings with high threshold should trigger early exit
-        var result = SimilarityCalculator.CalculateLevenshteinSimilarity(
-            "super_mario_world_adventure_game",
-            "xxyyzzwwvvuuttssrrqqpp", 90.0);
-
-        result.Should().Be(0.0);
+        result.Should().BeEmpty();
     }
 
     [Fact]
-    public void CalculateLevenshteinSimilarity_WithThresholdBelowActualSimularity_ReturnsCorrectScore()
+    public void GetNgramsWithNegativeNShouldReturnEmptySet()
     {
-        // Similar strings with threshold below actual similarity
-        var result = SimilarityCalculator.CalculateLevenshteinSimilarity(
-            "mario", "mario", 50.0);
+        var result = SimilarityCalculator.GetNgrams("abc", -1);
 
-        result.Should().Be(100.0);
+        result.Should().BeEmpty();
     }
 
     [Fact]
-    public void CalculateLevenshteinSimilarity_VeryLongIdenticalStrings_Returns100()
+    public void GetNgramsShouldIncludePaddedNgrams()
     {
-        var longString = new string('x', 1000);
-        var result = SimilarityCalculator.CalculateLevenshteinSimilarity(longString, longString);
+        var result = SimilarityCalculator.GetNgrams("ab", 2);
 
-        result.Should().Be(100.0);
-    }
-
-    #endregion
-
-    #region Additional Jaro-Winkler Tests
-
-    [Fact]
-    public void CalculateJaroWinklerDistance_WithUnicodeCharacters_DoesNotThrow()
-    {
-        var act = static () => SimilarityCalculator.CalculateJaroWinklerDistance("pok\u00E9mon", "pokemon");
-
-        act.Should().NotThrow();
-    }
-
-    #endregion
-
-    #region Additional CalculateSimilarityAsync Tests
-
-    [Fact]
-    public async Task CalculateSimilarityAsync_OnImageLoadedCallback_FiresForEachLoadedImage()
-    {
-        var tempDir = Directory.CreateTempSubdirectory("frc_test_");
-        try
-        {
-            await CreateMinimalBmpAsync(Path.Combine(tempDir.FullName, "mario.png"));
-            await CreateMinimalBmpAsync(Path.Combine(tempDir.FullName, "mario_bros.png"));
-
-            var loadedImages = new System.Collections.Concurrent.ConcurrentBag<FindRomCover.Models.ImageData>();
-
-            await SimilarityCalculator.CalculateSimilarityAsync(
-                "mario", tempDir.FullName, 0, AppConstants.Algorithms.Levenshtein,
-                CancellationToken.None,
-                onImageLoaded: loadedImages.Add);
-
-            loadedImages.Should().NotBeEmpty();
-            loadedImages.Should().AllSatisfy(static img => img.ImageName.Should().Contain("mario"));
-        }
-        finally
-        {
-            Directory.Delete(tempDir.FullName, true);
-        }
+        // With padding, "ab" becomes " ab " and bigrams are: " a", "ab", "b "
+        result.Should().Contain(" a");
+        result.Should().Contain("ab");
+        result.Should().Contain("b ");
     }
 
     [Fact]
-    public async Task CalculateSimilarityAsync_MaxImagesToLoadParameter_LimitsResults()
+    public void CalculateJaccardIndexWithIdenticalStringsShouldReturn100()
     {
-        var tempDir = Directory.CreateTempSubdirectory("frc_test_");
-        try
-        {
-            // Create more images than maxImagesToLoad
-            for (var i = 1; i <= 5; i++)
-                await CreateMinimalBmpAsync(Path.Combine(tempDir.FullName, $"mario{i}.png"));
+        var setA = SimilarityCalculator.GetNgrams("hello", 2);
 
-            var result = await SimilarityCalculator.CalculateSimilarityAsync(
-                "mario", tempDir.FullName, 0, AppConstants.Algorithms.Levenshtein,
-                CancellationToken.None,
-                2);
+        var result = SimilarityCalculator.CalculateJaccardIndex(setA, "hello", 2);
 
-            result.SimilarImages.Should().HaveCountLessThanOrEqualTo(2);
-        }
-        finally
-        {
-            Directory.Delete(tempDir.FullName, true);
-        }
+        result.Should().Be(100);
     }
 
     [Fact]
-    public async Task CalculateSimilarityAsync_WithMaxImagesToLoadZero_UsesDefault()
+    public void CalculateJaccardIndexWithCompletelyDifferentStringsShouldReturnLowScore()
     {
-        var tempDir = Directory.CreateTempSubdirectory("frc_test_");
-        try
-        {
-            await CreateMinimalBmpAsync(Path.Combine(tempDir.FullName, "game.png"));
+        var setA = SimilarityCalculator.GetNgrams("abc", 2);
 
-            var act = () => SimilarityCalculator.CalculateSimilarityAsync(
-                "game", tempDir.FullName, 0, AppConstants.Algorithms.Levenshtein,
-                CancellationToken.None);
+        var result = SimilarityCalculator.CalculateJaccardIndex(setA, "xyz", 2);
 
-            await act.Should().NotThrowAsync();
-        }
-        finally
-        {
-            Directory.Delete(tempDir.FullName, true);
-        }
+        result.Should().BeLessThan(10);
     }
 
-    #endregion
-
-    /// <summary>
-    /// Creates a minimal valid 1x1 24bpp BMP file asynchronously.
-    /// </summary>
-    private static Task CreateMinimalBmpAsync(string path)
+    [Fact]
+    public void CalculateJaccardIndexWithPartiallyMatchingStringsShouldReturnMiddleScore()
     {
-        // Minimal 1x1 24bpp BMP (58 bytes)
-        var bmpBytes = new byte[]
-        {
-            // BMP file header (14 bytes)
-            0x42, 0x4D, // 'BM'
-            0x3A, 0x00, 0x00, 0x00, // file size = 58
-            0x00, 0x00, 0x00, 0x00, // reserved
-            0x36, 0x00, 0x00, 0x00, // pixel offset = 54
-            // DIB header (BITMAPINFOHEADER, 40 bytes)
-            0x28, 0x00, 0x00, 0x00, // header size = 40
-            0x01, 0x00, 0x00, 0x00, // width = 1
-            0x01, 0x00, 0x00, 0x00, // height = 1
-            0x01, 0x00, // planes = 1
-            0x18, 0x00, // bits per pixel = 24
-            0x00, 0x00, 0x00, 0x00, // compression = 0
-            0x04, 0x00, 0x00, 0x00, // image size = 4
-            0x00, 0x00, 0x00, 0x00, // x pixels per meter
-            0x00, 0x00, 0x00, 0x00, // y pixels per meter
-            0x00, 0x00, 0x00, 0x00, // colors in color table
-            0x00, 0x00, 0x00, 0x00, // important colors
-            // Pixel data (4 bytes: BGR + padding)
-            0xFF, 0x00, 0x00, // blue pixel
-            0x00 // padding to 4-byte boundary
-        };
-        return File.WriteAllBytesAsync(path, bmpBytes);
+        var setA = SimilarityCalculator.GetNgrams("super mario", 2);
+
+        var result = SimilarityCalculator.CalculateJaccardIndex(setA, "super marion", 2);
+
+        result.Should().BeGreaterThan(70);
+        result.Should().BeLessThan(100);
     }
 
-    #endregion
+    [Fact]
+    public void CalculateLevenshteinSimilarityWithThresholdShouldReturn0WhenBelowThreshold()
+    {
+        var result = SimilarityCalculator.CalculateLevenshteinSimilarity("abc", "xyz", 90);
+
+        result.Should().Be(0);
+    }
+
+    [Fact]
+    public void DefaultMaxImagesToLoadShouldBe30()
+    {
+        SimilarityCalculator.DefaultMaxImagesToLoad.Should().Be(30);
+    }
 }

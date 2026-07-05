@@ -1,49 +1,95 @@
-using System.Windows.Media.Imaging;
-using FindRomCover.Models;
 using FluentAssertions;
+using FindRomCover.Models;
+using Xunit;
 
 namespace FindRomCover.Tests.Models;
 
 public class ImageDataTests
 {
     [Fact]
-    public void ConstructorSetsProperties()
+    public void ImageWidthSetNegativeValueShouldThrowArgumentOutOfRangeException()
     {
-        var imageData = new ImageData(@"C:\images\mario.png", "mario", 85.5);
+        var imageData = new ImageData { ImagePath = "test.png" };
 
-        imageData.ImagePath.Should().Be(@"C:\images\mario.png");
-        imageData.ImageName.Should().Be("mario");
-        imageData.SimilarityScore.Should().Be(85.5);
+        var act = () => { imageData.ImageWidth = -1; };
+
+        act.Should().Throw<ArgumentOutOfRangeException>()
+            .WithParameterName("value");
     }
 
     [Fact]
-    public void ConstructorWithNullPathSetsNull()
+    public void ImageHeightSetNegativeValueShouldThrowArgumentOutOfRangeException()
     {
-        var imageData = new ImageData(null, "mario", 100.0);
+        var imageData = new ImageData { ImagePath = "test.png" };
 
-        imageData.ImagePath.Should().BeNull();
-        imageData.ImageName.Should().Be("mario");
+        var act = () => { imageData.ImageHeight = -1; };
+
+        act.Should().Throw<ArgumentOutOfRangeException>()
+            .WithParameterName("value");
     }
 
     [Fact]
-    public void DisplayImageWhenImageSourceIsNullReturnsBrokenImage()
+    public void ImageWidthSetValidValueShouldUpdateProperty()
     {
-        var imageData1 = new ImageData(@"C:\images\test1.png", "test1", 50.0);
-        var imageData2 = new ImageData(@"C:\images\test2.png", "test2", 60.0);
-
-        imageData1.DisplayImage.Should().NotBeNull();
-        imageData1.DisplayImage.Should().BeSameAs(imageData2.DisplayImage);
-    }
-
-    [Fact]
-    public void DisplayImageWhenImageSourceIsSetReturnsImageSource()
-    {
-        var imageSource = new BitmapImage();
-        var imageData = new ImageData(@"C:\images\test.png", "test", 50.0)
+        var imageData = new ImageData
         {
-            ImageSource = imageSource
+            ImagePath = "test.png",
+            ImageWidth = 1920
         };
 
-        imageData.DisplayImage.Should().BeSameAs(imageSource);
+        imageData.ImageWidth.Should().Be(1920);
+    }
+
+    [Fact]
+    public void ImageHeightSetValidValueShouldUpdateProperty()
+    {
+        var imageData = new ImageData
+        {
+            ImagePath = "test.png",
+            ImageHeight = 1080
+        };
+
+        imageData.ImageHeight.Should().Be(1080);
+    }
+
+    [Fact]
+    public void ImageDataDefaultValuesShouldBeSetCorrectly()
+    {
+        var imageData = new ImageData { ImagePath = "path/to/image.png" };
+
+        imageData.ImagePath.Should().Be("path/to/image.png");
+        imageData.ImageName.Should().Be("Unknown Filename");
+        imageData.ImageFileSize.Should().Be("Unknown File Size");
+        imageData.ImageEncodingFormat.Should().Be("Unknown Encoding Format");
+        imageData.ImageWidth.Should().Be(0);
+        imageData.ImageHeight.Should().Be(0);
+        imageData.ThumbnailWidth.Should().Be(0);
+        imageData.ThumbnailHeight.Should().Be(0);
+    }
+
+    [Fact]
+    public void ThumbnailWidthSetValueShouldRaisePropertyChanged()
+    {
+        var imageData = new ImageData { ImagePath = "test.png" };
+        var raised = false;
+        imageData.PropertyChanged += (_, _) => { raised = true; };
+
+        imageData.ThumbnailWidth = 100;
+
+        raised.Should().BeTrue();
+        imageData.ThumbnailWidth.Should().Be(100);
+    }
+
+    [Fact]
+    public void ThumbnailHeightSetValueShouldRaisePropertyChanged()
+    {
+        var imageData = new ImageData { ImagePath = "test.png" };
+        var raised = false;
+        imageData.PropertyChanged += (_, _) => { raised = true; };
+
+        imageData.ThumbnailHeight = 100;
+
+        raised.Should().BeTrue();
+        imageData.ThumbnailHeight.Should().Be(100);
     }
 }

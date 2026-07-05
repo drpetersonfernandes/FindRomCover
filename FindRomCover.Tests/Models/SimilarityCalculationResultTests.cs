@@ -1,39 +1,51 @@
-using FindRomCover.Models;
 using FluentAssertions;
+using FindRomCover.Models;
+using Xunit;
 
 namespace FindRomCover.Tests.Models;
 
 public class SimilarityCalculationResultTests
 {
     [Fact]
-    public void DefaultConstructorInitializesLists()
+    public void DefaultSimilarImagesShouldBeEmptyList()
     {
         var result = new SimilarityCalculationResult();
 
-        result.SimilarImages.Should().NotBeNull().And.BeEmpty();
-        result.ProcessingErrors.Should().NotBeNull().And.BeEmpty();
+        result.SimilarImages.Should().BeEmpty();
     }
 
     [Fact]
-    public void SimilarImagesSetterWorks()
+    public void DefaultProcessingErrorsShouldBeEmptyList()
+    {
+        var result = new SimilarityCalculationResult();
+
+        result.ProcessingErrors.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void SimilarImagesShouldBeSettable()
     {
         var result = new SimilarityCalculationResult();
         var images = new List<ImageData>
         {
-            new("path", "name", 90.0)
+            new() { ImagePath = "test1.png", ImageName = "Test 1" },
+            new() { ImagePath = "test2.png", ImageName = "Test 2" }
         };
 
         result.SimilarImages = images;
-        result.SimilarImages.Should().HaveCount(1);
+
+        result.SimilarImages.Should().HaveCount(2);
     }
 
     [Fact]
-    public void ProcessingErrorsSetterWorks()
+    public void ProcessingErrorsShouldBeSettable()
     {
         var result = new SimilarityCalculationResult();
         var errors = new List<string> { "Error 1", "Error 2" };
 
         result.ProcessingErrors = errors;
+
         result.ProcessingErrors.Should().HaveCount(2);
+        result.ProcessingErrors.Should().Contain("Error 1");
     }
 }

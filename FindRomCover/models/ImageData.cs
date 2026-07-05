@@ -1,17 +1,11 @@
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using System.Windows.Media.Imaging;
 using FindRomCover.Services;
 
 namespace FindRomCover.Models;
 
-/// <summary>
-/// Represents an image data object containing file information, similarity score, and display source.
-/// </summary>
-/// <remarks>
-/// This class is used to store information about similar images found during the search process.
-/// It includes the image file path, the calculated similarity score compared to the ROM name,
-/// and the actual bitmap data for display.
-/// </remarks>
-public class ImageData
+public class ImageData : INotifyPropertyChanged
 {
     private static readonly Lazy<BitmapImage> BrokenImageLazy = new(static () =>
     {
@@ -24,65 +18,91 @@ public class ImageData
         }
         catch (Exception ex)
         {
-            _ = ErrorLogger.LogAsync(ex, "Failed to load broken image placeholder resource");
+            LogService.Error(ex, "Failed to load broken image fallback resource");
             var bitmap = new BitmapImage();
             if (bitmap.CanFreeze)
                 bitmap.Freeze();
-
             return bitmap;
         }
     });
 
-    /// <summary>
-    /// Gets the full file path to the image.
-    /// </summary>
+    private int _imageWidth;
+    private int _imageHeight;
+
     public string? ImagePath { get; init; }
+    public string? ImageName { get; set; } = "Unknown Filename";
+    public string ImageFileSize { get; set; } = "Unknown File Size";
+    public string ImageEncodingFormat { get; set; } = "Unknown Encoding Format";
 
-    /// <summary>
-    /// Gets the filename of the image without extension.
-    /// </summary>
-    public string? ImageName { get; init; }
-
-    /// <summary>
-    /// Gets the similarity score between this image's name and the search query.
-    /// </summary>
-    /// <value>
-    /// A value between 0 and 100, where higher values indicate greater similarity.
-    /// </value>
     public double SimilarityScore { get; init; }
 
-    /// <summary>
-    /// Gets the loaded bitmap image source.
-    /// </summary>
-    /// <remarks>
-    /// This property is null until the image is explicitly loaded.
-    /// Use <see cref="DisplayImage"/> for UI binding which provides a fallback for unloaded images.
-    /// </remarks>
     public BitmapImage? ImageSource { get; init; }
 
-    /// <summary>
-    /// Gets the display image to use in the UI.
-    /// </summary>
-    /// <value>
-    /// Returns <see cref="ImageSource"/> if available; otherwise returns a placeholder image.
-    /// </value>
     public BitmapImage DisplayImage => ImageSource ?? BrokenImageLazy.Value;
 
-    /// <summary>
-    /// Cached context menu for this image to avoid recreating it on every right-click.
-    /// </summary>
-    public System.Windows.Controls.ContextMenu? CachedContextMenu { get; set; }
+    public int ImageWidth
+    {
+        get => _imageWidth;
+        set
+        {
+            if (value <= 0)
+                throw new ArgumentOutOfRangeException(nameof(value), "Image width must be positive.");
 
-    /// <summary>
-    /// Initializes a new instance of the ImageData class.
-    /// </summary>
-    /// <param name="imagePath">The full path to the image file.</param>
-    /// <param name="imageName">The filename without extension.</param>
-    /// <param name="similarityScore">The calculated similarity score.</param>
+            _imageWidth = value;
+        }
+    }
+
+    public int ImageHeight
+    {
+        get => _imageHeight;
+        set
+        {
+            if (value <= 0)
+                throw new ArgumentOutOfRangeException(nameof(value), "Image height must be positive.");
+
+            _imageHeight = value;
+        }
+    }
+
+    public int ThumbnailWidth
+    {
+        get;
+        set
+        {
+            if (field == value) return;
+
+            field = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public int ThumbnailHeight
+    {
+        get;
+        set
+        {
+            if (field == value) return;
+
+            field = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public ImageData()
+    {
+    }
+
     public ImageData(string? imagePath, string? imageName, double similarityScore)
     {
         ImagePath = imagePath;
         ImageName = imageName;
         SimilarityScore = similarityScore;
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 }

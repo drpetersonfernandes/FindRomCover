@@ -1,68 +1,35 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using FindRomCover.Services;
 using FluentAssertions;
+using FindRomCover.Services;
+using Xunit;
 
 namespace FindRomCover.Tests.Services;
 
-[SuppressMessage("ReSharper", "NullableWarningSuppressionIsUsed")]
 public class ObjectToBoolConverterTests
 {
     private readonly ObjectToBoolConverter _converter = new();
 
-    [Fact]
-    public void ConvertNullReturnsFalse()
+    [Theory]
+    [InlineData("some string", true)]
+    [InlineData(123, true)]
+    [InlineData(0, true)]
+    public void ConvertWithNonNullValueShouldReturnTrue(object? value, bool expected)
     {
-        var result = _converter.Convert(null!, typeof(bool), null, CultureInfo.InvariantCulture);
+        var result = _converter.Convert(value, typeof(bool), null, CultureInfo.InvariantCulture);
+        result.Should().Be(expected);
+    }
 
+    [Fact]
+    public void ConvertWithNullValueShouldReturnFalse()
+    {
+        var result = _converter.Convert(null, typeof(bool), null, CultureInfo.InvariantCulture);
         result.Should().Be(false);
     }
 
     [Fact]
-    public void ConvertNonNullObjectReturnsTrue()
+    public void ConvertBackShouldThrowNotImplementedException()
     {
-        var result = _converter.Convert(new object(), typeof(bool), null, CultureInfo.InvariantCulture);
-
-        result.Should().Be(true);
-    }
-
-    [Fact]
-    public void ConvertNonNullStringReturnsTrue()
-    {
-        var result = _converter.Convert("test", typeof(bool), null, CultureInfo.InvariantCulture);
-
-        result.Should().Be(true);
-    }
-
-    [Fact]
-    public void ConvertNonNullIntegerReturnsTrue()
-    {
-        var result = _converter.Convert(42, typeof(bool), null, CultureInfo.InvariantCulture);
-
-        result.Should().Be(true);
-    }
-
-    [Fact]
-    public void ConvertBooleanFalseReturnsTrueBecauseItsNotNull()
-    {
-        var result = _converter.Convert(false, typeof(bool), null, CultureInfo.InvariantCulture);
-
-        result.Should().Be(true);
-    }
-
-    [Fact]
-    public void ConvertBackThrowsNotImplementedException()
-    {
-        var act = () => _converter.ConvertBack(true, typeof(object), null, CultureInfo.InvariantCulture);
-
-        act.Should().Throw<NotImplementedException>();
-    }
-
-    [Fact]
-    public void ConvertBackWithNullParameterThrowsNotImplementedException()
-    {
-        var act = () => _converter.ConvertBack(null, typeof(object), null, CultureInfo.InvariantCulture);
-
+        Action act = () => _converter.ConvertBack(true, typeof(object), null, CultureInfo.InvariantCulture);
         act.Should().Throw<NotImplementedException>();
     }
 }

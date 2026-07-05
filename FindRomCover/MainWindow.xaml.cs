@@ -1,39 +1,40 @@
 using System.Collections.ObjectModel;
-using System.IO;
-using System.Windows;
-using System.Windows.Controls;
 using System.ComponentModel;
 using System.Globalization;
-using System.Windows.Documents;
+using System.IO;
+using System.Runtime.CompilerServices;
+using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using FindRomCover.Managers;
 using FindRomCover.Models;
 using FindRomCover.Services;
 using Microsoft.Win32;
+using Microsoft.Web.WebView2.Core;
 using Application = System.Windows.Application;
-using ICommand = System.Windows.Input.ICommand;
-using KeyEventArgs = System.Windows.Input.KeyEventArgs;
-using MenuItem = System.Windows.Controls.MenuItem;
 using MessageBox = System.Windows.MessageBox;
-using TextBox = System.Windows.Controls.TextBox;
 
 namespace FindRomCover;
 
 public partial class MainWindow : INotifyPropertyChanged, IDisposable
 {
     private CancellationTokenSource? _loadMissingCts;
-    private List<MameData>? _machines;
     private Dictionary<string, string>? _mameLookup;
     private CancellationTokenSource? _findSimilarCts;
-    private readonly SemaphoreSlim _findSimilarSemaphore = new(1, 1); // Semaphore to ensure only one search runs at a time
+    private readonly SemaphoreSlim _findSimilarSemaphore = new(1, 1);
+    private Task? _findSimilarTask;
+    private string _selectedRomFileName = string.Empty;
     private bool _disposed;
+    private CoreWebView2Environment? _webViewEnv;
+    private ImageFolderWatcher? _imageFolderWatcher;
+    private string? _watchedFolderPath;
+    private SystemTrayIcon? _systemTrayIcon;
+    private bool _isExiting;
 
     public event PropertyChangedEventHandler? PropertyChanged;
-    public SettingsManager Settings { get; }
-
-    private string _selectedRomFileName = string.Empty;
 
     public ObservableCollection<ImageData> SimilarImages { get; set; } = [];
+    public ObservableCollection<ImageData> PanelImages { get; set; } = [];
     public ObservableCollection<MissingImageItem> MissingImages { get; set; } = [];
 
     public bool IsCheckingMissing
@@ -44,7 +45,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
             if (field == value) return;
 
             field = value;
-            OnPropertyChanged(nameof(IsCheckingMissing));
+            OnPropertyChanged();
         }
     }
 
@@ -56,7 +57,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
             if (field == value) return;
 
             field = value;
-            OnPropertyChanged(nameof(IsFindingSimilar));
+            OnPropertyChanged();
         }
     }
 
@@ -68,40 +69,68 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
             if (field == value) return;
 
             field = value;
-            OnPropertyChanged(nameof(HasSearchedSimilar));
+            OnPropertyChanged();
         }
     }
 
-    // Commands for keyboard shortcuts
+    public bool IsSearching
+    {
+        get;
+        set
+        {
+            if (field == value) return;
+
+            field = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public bool HasSearchedApi
+    {
+        get;
+        set
+        {
+            if (field == value) return;
+
+            field = value;
+            OnPropertyChanged();
+        }
+    }
+
+    public SettingsManager Settings { get; }
+
     public ICommand CheckForMissingImagesCommand { get; }
-    public ICommand RemoveSelectedItemCommand { get; }
     public ICommand ExitCommand { get; }
 
-    public MainWindow(SettingsManager settingsManager)
+    public MainWindow(SettingsManager settingsManager, string? startupImageFolder = null, string? startupRomFolder = null)
     {
-        Settings = settingsManager ?? throw new ArgumentNullException(nameof(settingsManager));
+        Settings = settingsManager;
         InitializeComponent();
         DataContext = this;
 
-        // Initialize commands
         CheckForMissingImagesCommand = new DelegateCommand(
-            _ => BtnCheckForMissingImages_ClickAsync(this, new RoutedEventArgs()),
+            async void (_) =>
+            {
+                try
+                {
+                    await RefreshMissingImagesListAsync();
+                }
+                catch (Exception ex)
+                {
+                    LogService.Error(ex, "Error in CheckForMissingImagesCommand");
+                }
+            },
             _ => BtnCheckForMissingImages?.IsEnabled ?? false);
-        RemoveSelectedItemCommand = new DelegateCommand(
-            _ => BtnRemoveSelectedItem_Click(this, new RoutedEventArgs()),
-            _ => LstMissingImages?.SelectedItem != null);
         ExitCommand = new DelegateCommand(_ => Close());
 
-        // Set folder paths from command-line arguments if provided by App.xaml.cs
-        if (!string.IsNullOrEmpty(App.StartupImageFolderPath) && !string.IsNullOrEmpty(App.StartupRomFolderPath))
+        if (!string.IsNullOrEmpty(startupImageFolder))
         {
-            TxtImageFolder.Text = App.StartupImageFolderPath;
-            TxtRomFolder.Text = App.StartupRomFolderPath;
+            TxtImageFolder.Text = startupImageFolder;
         }
-        else
+
+        if (!string.IsNullOrEmpty(startupRomFolder))
         {
-            TxtImageFolder.Text = "";
-            TxtRomFolder.Text = "";
+            TxtRomFolder.Text = startupRomFolder;
         }
 
         UpdateThumbnailSizeMenuChecks();
@@ -111,92 +140,219 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         UpdateBaseThemeMenuChecks();
         UpdateMameDescriptionCheck();
 
-        // Subscribe to SettingsManager PropertyChanged to update UI for non-binding properties (like menu checks)
         Settings.PropertyChanged += AppSettingsManagerPropertyChangedAsync;
-
         Closing += OnWindowClosing;
+        Loaded += MainWindow_LoadedAsync;
+        StateChanged += OnWindowStateChanged;
 
-        // Load _machines and _mameLookup
-        LoadMameData();
+        InitializeNotifyIcon();
 
-        // Initial UI state update based on folder paths
+        _ = LoadMameDataAsync();
         UpdateUiStateForFolderPaths();
     }
 
-    private void LoadMameData()
+    private void InitializeNotifyIcon()
     {
         try
         {
-            _machines = MameDataService.LoadFromDat();
-
-            // Only recreate the lookup dictionary if we have machines data
-            // and it's different from what we already have (prevents unnecessary recreation)
-            if (_machines is { Count: > 0 })
-            {
-                _mameLookup = _machines
-                    .GroupBy(static m => m.MachineName, StringComparer.OrdinalIgnoreCase)
-                    .ToDictionary(static g => g.Key, static g => g.First().Description, StringComparer.OrdinalIgnoreCase);
-            }
-
-            // If MAME data loaded successfully, ensure menu item is enabled
-            MenuUseMameDescription.IsEnabled = true;
-            MenuUseMameDescription.ToolTip = null;
+            _systemTrayIcon = new SystemTrayIcon();
+            _systemTrayIcon.Initialize();
+            _systemTrayIcon.RestoreRequested += RestoreFromTray;
+            _systemTrayIcon.ExitRequested += ExitApplication;
         }
-        catch (FileNotFoundException ex)
-        {
-            const string contextMessage = "The file 'mame.dat' could not be found in the application folder.";
-            _ = ErrorLogger.LogAsync(ex, contextMessage);
+        catch (Exception ex) { LogService.Error(ex, "Error in InitializeNotifyIcon"); }
+    }
 
-            MenuUseMameDescription.IsEnabled = false;
-            MenuUseMameDescription.ToolTip = "MAME data (mame.dat) could not be found.";
-            DisableMameDescriptionSetting();
-            MessageBox.Show(contextMessage, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+    private void OnWindowStateChanged(object? sender, EventArgs e)
+    {
+        try
+        {
+            if (WindowState == WindowState.Minimized)
+            {
+                MinimizeToTray();
+            }
+        }
+        catch (Exception ex) { LogService.Error(ex, "Error in OnWindowStateChanged"); }
+    }
+
+    private void MinimizeToTray()
+    {
+        try
+        {
+            if (_systemTrayIcon == null) return;
+
+            _systemTrayIcon.Visible = true;
+            Hide();
+            _systemTrayIcon.ShowBalloonTip("FindRomCover", "Application minimized to tray.");
+        }
+        catch (Exception ex) { LogService.Error(ex, "Error in MinimizeToTray"); }
+    }
+
+    private void RestoreFromTray()
+    {
+        try
+        {
+            Show();
+            WindowState = WindowState.Normal;
+            Activate();
+            _systemTrayIcon?.Visible = false;
+        }
+        catch (Exception ex) { LogService.Error(ex, "Error in RestoreFromTray"); }
+    }
+
+    private void ExitApplication()
+    {
+        try
+        {
+            _isExiting = true;
+            _systemTrayIcon?.Dispose();
+            _systemTrayIcon = null;
+            Application.Current.Shutdown();
+        }
+        catch (Exception ex) { LogService.Error(ex, "Error in ExitApplication"); }
+    }
+
+    private async void MainWindow_LoadedAsync(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            LstMissingImages.PreviewKeyDown += LstMissingImages_PreviewKeyDown;
+
+            await InitializeWebViewsAsync();
+
+            if (!string.IsNullOrEmpty(TxtRomFolder.Text) && !string.IsNullOrEmpty(TxtImageFolder.Text))
+            {
+                await RefreshMissingImagesListAsync();
+            }
         }
         catch (Exception ex)
         {
-            var contextMessage = $"Failed to load MAME data from 'mame.dat': {ex.Message}";
-            _ = ErrorLogger.LogAsync(ex, contextMessage);
-
-            MenuUseMameDescription.IsEnabled = false;
-            MenuUseMameDescription.ToolTip = "MAME data (mame.dat) could not be loaded or is corrupted.";
-            DisableMameDescriptionSetting();
-            MessageBox.Show(contextMessage, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            LogService.Error(ex, "Error in MainWindow_LoadedAsync");
         }
     }
 
-    private void DisableMameDescriptionSetting()
+    private async Task InitializeWebViewsAsync()
     {
-        if (Settings.UseMameDescription)
+        try
         {
-            Settings.UseMameDescription = false;
-            Settings.SaveSettings();
+            _webViewEnv = await CreateWebViewEnvironmentAsync();
+
+            try
+            {
+                await GoogleWebView.EnsureCoreWebView2Async(_webViewEnv);
+                GoogleWebView.NavigationCompleted += (_, _) =>
+                {
+                    var source = GoogleWebView.CoreWebView2?.Source;
+                    if (!string.IsNullOrEmpty(source) && !source.Equals("about:blank", StringComparison.OrdinalIgnoreCase))
+                    {
+                        IsSearching = false;
+                        StatusMessage.Text = "Google web search loaded.";
+                    }
+                };
+            }
+            catch (Exception ex)
+            {
+                LogService.Error(ex, "Failed to initialize Google WebView2");
+            }
+
+            try
+            {
+                await BingWebView.EnsureCoreWebView2Async(_webViewEnv);
+                BingWebView.NavigationCompleted += (_, _) =>
+                {
+                    var source = BingWebView.CoreWebView2?.Source;
+                    if (!string.IsNullOrEmpty(source) && !source.Equals("about:blank", StringComparison.OrdinalIgnoreCase))
+                    {
+                        IsSearching = false;
+                        StatusMessage.Text = "Bing web search loaded.";
+                    }
+                };
+            }
+            catch (Exception ex)
+            {
+                LogService.Error(ex, "Failed to initialize Bing WebView2");
+            }
+        }
+        catch (Exception ex)
+        {
+            LogService.Error(ex, "Failed to initialize WebView2 environment");
         }
     }
 
-    private void UpdateBaseThemeMenuChecks()
+    private static Task<CoreWebView2Environment> CreateWebViewEnvironmentAsync()
     {
-        LightTheme.IsChecked = Settings.BaseTheme == "Light";
-        DarkTheme.IsChecked = Settings.BaseTheme == "Dark";
+        var userDataFolder = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "FindRomCover", "WebView2Data");
+
+        try
+        {
+            if (!Directory.Exists(userDataFolder))
+                Directory.CreateDirectory(userDataFolder);
+        }
+        catch
+        {
+            userDataFolder = null;
+        }
+
+        return CoreWebView2Environment.CreateAsync(null, userDataFolder);
+    }
+
+    private async Task<bool> EnsureWebViewReadyAsync(Microsoft.Web.WebView2.Wpf.WebView2 webView)
+    {
+        if (webView.CoreWebView2 != null)
+            return true;
+
+        try
+        {
+            if (_webViewEnv == null)
+            {
+                _webViewEnv = await CreateWebViewEnvironmentAsync();
+            }
+
+            await webView.EnsureCoreWebView2Async(_webViewEnv);
+            return webView.CoreWebView2 != null;
+        }
+        catch (Exception ex)
+        {
+            LogService.Error(ex, "Failed to lazily initialize WebView2");
+            return false;
+        }
+    }
+
+    private async Task LoadMameDataAsync()
+    {
+        try
+        {
+            var machines = await Task.Run(MameManager.LoadFromDat);
+            _mameLookup = machines
+                .GroupBy(static m => m.MachineName, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(static g => g.Key, static g => g.First().Description, StringComparer.OrdinalIgnoreCase);
+            ToggleMameDescriptions.IsEnabled = true;
+        }
+        catch (Exception ex)
+        {
+            _mameLookup = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            ToggleMameDescriptions.IsEnabled = false;
+            ToggleMameDescriptions.IsChecked = false;
+            LogService.Error(ex, "Failed to load MAME data");
+        }
     }
 
     private async void AppSettingsManagerPropertyChangedAsync(object? sender, PropertyChangedEventArgs e)
     {
         try
         {
-            // This handler is now only needed for settings that don't update the UI via direct binding,
-            // such as menu item checks or triggering a list refresh.
             switch (e.PropertyName)
             {
                 case nameof(SettingsManager.BaseTheme):
-                    LightTheme.IsChecked = Settings.BaseTheme == "Light";
-                    DarkTheme.IsChecked = Settings.BaseTheme == "Dark";
+                    UpdateBaseThemeMenuChecks();
                     break;
                 case nameof(SettingsManager.AccentColor):
                     UpdateAccentColorChecks();
                     break;
                 case nameof(SettingsManager.ImageWidth):
                 case nameof(SettingsManager.ImageHeight):
-                    // The UI is updated via data binding. We just need to update the menu checks.
                     UpdateThumbnailSizeMenuChecks();
                     break;
                 case nameof(SettingsManager.SelectedSimilarityAlgorithm):
@@ -205,7 +361,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
                 case nameof(SettingsManager.SimilarityThreshold):
                     UpdateSimilarityThresholdChecks();
                     break;
-                case nameof(SettingsManager.UseMameDescription):
+                case nameof(SettingsManager.UseMameDescriptions):
                     UpdateMameDescriptionCheck();
                     if (_mameLookup is { Count: > 0 })
                         await RefreshMissingImagesListAsync();
@@ -214,813 +370,238 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         }
         catch (Exception ex)
         {
-            _ = ErrorLogger.LogAsync(ex, "Error in AppSettings_PropertyChanged");
+            LogService.Error(ex, "Error in AppSettings_PropertyChanged");
         }
     }
 
-    private void OnPropertyChanged(string propertyName)
+    protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 
     private void ChangeBaseTheme_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is not MenuItem menuItem) return;
+        try
+        {
+            if (sender is not MenuItem menuItem) return;
 
-        var theme = menuItem.Name == "LightTheme" ? "Light" : "Dark";
-        App.ChangeTheme(theme, Settings.AccentColor); // Use static App.ChangeTheme
+            var theme = menuItem.Name == "LightTheme" ? "Light" : "Dark";
+            App.ChangeTheme(theme, Settings.AccentColor);
+        }
+        catch (Exception ex) { LogService.Error(ex, "Error in ChangeBaseTheme_Click"); }
     }
 
     private void ChangeAccentColor_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is not MenuItem menuItem) return;
+        try
+        {
+            if (sender is not MenuItem menuItem) return;
 
-        var accent = menuItem.Name.Replace("Accent", "");
-        App.ChangeTheme(Settings.BaseTheme, accent); // Use static App.ChangeTheme
+            var accent = menuItem.Name.Replace("Accent", "");
+            App.ChangeTheme(Settings.BaseTheme, accent);
+        }
+        catch (Exception ex) { LogService.Error(ex, "Error in ChangeAccentColor_Click"); }
     }
 
     private void UpdateAccentColorChecks()
     {
-        var currentAccent = Settings.AccentColor;
-        foreach (var item in MenuAccentColors.Items)
+        try
         {
-            if (item is not MenuItem { Header: not null } menuItem) continue;
+            var currentAccent = Settings.AccentColor;
+            foreach (var item in MenuAccentColors.Items)
+            {
+                if (item is not MenuItem { Header: not null } menuItem) continue;
 
-            menuItem.IsChecked = menuItem.Name.Replace("Accent", "") == currentAccent;
+                if (menuItem.Header is StackPanel sp)
+                {
+                    var tb = sp.Children.OfType<TextBlock>().FirstOrDefault();
+                    if (tb != null)
+                    {
+                        menuItem.IsChecked = tb.Text == currentAccent;
+                    }
+                }
+                else
+                {
+                    menuItem.IsChecked = menuItem.Name.Replace("Accent", "") == currentAccent;
+                }
+            }
         }
+        catch (Exception ex) { LogService.Error(ex, "Error in UpdateAccentColorChecks"); }
+    }
+
+    private void UpdateBaseThemeMenuChecks()
+    {
+        try
+        {
+            LightTheme.IsChecked = Settings.BaseTheme == "Light";
+            DarkTheme.IsChecked = Settings.BaseTheme == "Dark";
+        }
+        catch (Exception ex) { LogService.Error(ex, "Error in UpdateBaseThemeMenuChecks"); }
+    }
+
+    private void UpdateMameDescriptionCheck()
+    {
+        try
+        {
+            ToggleMameDescriptions.IsChecked = Settings.UseMameDescriptions;
+        }
+        catch (Exception ex) { LogService.Error(ex, "Error in UpdateMameDescriptionCheck"); }
     }
 
     private void DonateButton_Click(object sender, RoutedEventArgs e)
     {
-        try
-        {
-            var psi = new System.Diagnostics.ProcessStartInfo
-            {
-                FileName = "https://www.purelogiccode.com/donate",
-                UseShellExecute = true
-            };
-            System.Diagnostics.Process.Start(psi);
-        }
+        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://www.purelogiccode.com/donate") { UseShellExecute = true }); }
         catch (Exception ex)
         {
-            MessageBox.Show($"Unable to open the donation link: {ex.Message}",
-                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-
-            var formattedException = $"Unable to open the donation link.\n\n" +
-                                     $"Exception type: {ex.GetType().Name}\n" +
-                                     $"Exception details: {ex.Message}";
-            _ = ErrorLogger.LogAsync(ex, formattedException);
+            MessageBox.Show($"Unable to open the donation link: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            LogService.Error(ex, "Error opening donation link");
         }
     }
 
-    private void About_Click(object sender, RoutedEventArgs e)
+    private void ShowAboutWindow_Click(object sender, RoutedEventArgs e)
     {
-        AboutWindow aboutWindow = new();
-        aboutWindow.ShowDialog();
+        try { new AboutWindow { Owner = this }.ShowDialog(); }
+        catch (Exception ex) { LogService.Error(ex, "Error in ShowAboutWindow_Click"); }
+    }
+
+    private async void CheckForUpdates_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var updateInfo = await UpdateCheckService.CheckForUpdateAsync();
+
+            if (updateInfo is { IsUpdateAvailable: true })
+            {
+                var choice = MessageBox.Show(
+                    $"A new version of FindRomCover is available!\n\n" +
+                    $"Current: {updateInfo.CurrentVersion}\n" +
+                    $"Latest: {updateInfo.LatestVersion}\n\n" +
+                    "Would you like to go to the download page?",
+                    "Update Available", MessageBoxButton.YesNo, MessageBoxImage.Information);
+
+                if (choice == MessageBoxResult.Yes)
+                {
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(updateInfo.ReleaseUrl) { UseShellExecute = true });
+                }
+            }
+            else
+            {
+                MessageBox.Show(
+                    $"You are running the latest version (v{updateInfo.CurrentVersion}).",
+                    "No Updates Available", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Unable to check for updates: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            LogService.Error(ex, "Error checking for updates");
+        }
+    }
+
+    private void ApiSettings_Click(object sender, RoutedEventArgs e)
+    {
+        try { new ApiSettingsWindow(Settings) { Owner = this }.ShowDialog(); }
+        catch (Exception ex) { LogService.Error(ex, "Error in ApiSettings_Click"); }
+    }
+
+    private void ToggleDebugWindow_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (App.LogWindow == null) return;
+
+            if (ToggleDebugWindow.IsChecked) App.LogWindow.Show(); else App.LogWindow.Hide();
+        }
+        catch (Exception ex) { LogService.Error(ex, "Error in ToggleDebugWindow_Click"); }
+    }
+
+    private void ToggleMameDescriptions_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Settings.UseMameDescriptions = ToggleMameDescriptions.IsChecked;
+            Settings.SaveSettings();
+        }
+        catch (Exception ex) { LogService.Error(ex, "Error in ToggleMameDescriptions_Click"); }
     }
 
     private void OnWindowClosing(object? sender, CancelEventArgs e)
     {
-        try
+        if (_isExiting)
         {
-            _findSimilarCts?.Cancel();
-        }
-        catch (ObjectDisposedException)
-        {
+            // Allow close when explicitly exiting
+            try { _findSimilarCts?.Cancel(); }
+            catch
+            {
+                // ignored
+            }
+
+            try { _loadMissingCts?.Cancel(); }
+            catch
+            {
+                // ignored
+            }
+
+            return;
         }
 
-        try
+        // Allow the window to close normally (X button or Alt+F4)
+        try { _findSimilarCts?.Cancel(); }
+        catch
         {
-            _loadMissingCts?.Cancel();
+            // ignored
         }
-        catch (ObjectDisposedException)
+
+        try { _loadMissingCts?.Cancel(); }
+        catch
         {
+            // ignored
         }
     }
 
     private void Exit_Click(object sender, RoutedEventArgs e)
     {
-        Application.Current.Shutdown();
+        try { ExitApplication(); }
+        catch (Exception ex) { LogService.Error(ex, "Error in Exit_Click"); }
     }
 
     private void BtnBrowseRomFolder_Click(object sender, RoutedEventArgs e)
     {
         try
         {
-            var dialog = new OpenFolderDialog
-            {
-                Title = "Select the folder where your ROM or ISO files are stored."
-            };
-
+            var dialog = new OpenFolderDialog { Title = "Select the folder where your ROM or ISO files are stored." };
             if (dialog.ShowDialog() == true)
             {
                 TxtRomFolder.Text = dialog.FolderName;
-                UpdateUiStateForFolderPaths(); // Update UI state after browsing
+                UpdateUiStateForFolderPaths();
             }
         }
-        catch (Exception ex)
-        {
-            _ = ErrorLogger.LogAsync(ex, "Error in BtnBrowseRomFolder_Click");
-            MessageBox.Show("An error occurred while selecting the ROM folder.", "Error",
-                MessageBoxButton.OK, MessageBoxImage.Error);
-        }
+        catch (Exception ex) { LogService.Error(ex, "Error in BtnBrowseRomFolder_Click"); }
     }
 
     private void BtnBrowseImageFolder_Click(object sender, RoutedEventArgs e)
     {
         try
         {
-            var dialog = new OpenFolderDialog
-            {
-                Title = "Select the folder where your image files are stored."
-            };
-
+            var dialog = new OpenFolderDialog { Title = "Select the folder where your image files are stored." };
             if (dialog.ShowDialog() != true) return;
 
             TxtImageFolder.Text = dialog.FolderName;
-            UpdateUiStateForFolderPaths(); // Update UI state after browsing
-
-            // Save the image folder to settings for cleanup on next startup
+            UpdateUiStateForFolderPaths();
             Settings.LastImageFolder = dialog.FolderName;
             Settings.SaveSettings();
         }
-        catch (Exception ex)
-        {
-            _ = ErrorLogger.LogAsync(ex, "Error in BtnBrowseImageFolder_Click");
-            MessageBox.Show("An error occurred while selecting the Image folder.", "Error",
-                MessageBoxButton.OK, MessageBoxImage.Error);
-        }
+        catch (Exception ex) { LogService.Error(ex, "Error in BtnBrowseImageFolder_Click"); }
     }
 
     private async void BtnCheckForMissingImages_ClickAsync(object sender, RoutedEventArgs e)
     {
-        try
-        {
-            await RefreshMissingImagesListAsync();
-        }
-        catch (Exception ex)
-        {
-            _ = ErrorLogger.LogAsync(ex, "Error in BtnCheckForMissingImages_Click");
-        }
-    }
-
-    private async Task LoadMissingImagesListAsync(CancellationToken cancellationToken = default)
-    {
-        if ((Settings.SupportedExtensions.Length == 0))
-        {
-            MessageBox.Show("No supported file extensions loaded. Please check file 'settings.xml' or edit them in the Settings menu.", "Warning",
-                MessageBoxButton.OK, MessageBoxImage.Warning);
-
-            return;
-        }
-
-        var romFolderPath = GetValidatedRomFolderPath();
-        var imageFolderPath = GetValidatedImageFolderPath();
-
-        if (string.IsNullOrEmpty(romFolderPath) || string.IsNullOrEmpty(imageFolderPath))
-        {
-            MessageBox.Show("Please select both ROM and Image folders.", "Warning",
-                MessageBoxButton.OK, MessageBoxImage.Warning);
-
-            return;
-        }
-
-        IsCheckingMissing = true;
-        try
-        {
-            var missingFiles = await Task.Run(async () =>
-            {
-                try
-                {
-                    // Check for cancellation at the start
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    var allRomNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                    var supportedExtensionsSet = new HashSet<string>(
-                        Settings.SupportedExtensions.Select(static ext => "." + ext),
-                        StringComparer.OrdinalIgnoreCase);
-
-                    var enumerationOptions = new EnumerationOptions
-                    {
-                        IgnoreInaccessible = true, // Skip directories that can't be accessed.
-                        RecurseSubdirectories = true
-                    };
-
-                    // Scan the directory tree once for all files, ignoring inaccessible subdirectories.
-                    var files = Directory.EnumerateFiles(romFolderPath, "*.*", enumerationOptions);
-
-                    foreach (var file in files)
-                    {
-                        cancellationToken.ThrowIfCancellationRequested();
-
-                        // Filter by extension in memory.
-                        var extension = Path.GetExtension(file);
-                        if (supportedExtensionsSet.Contains(extension))
-                        {
-                            var fileName = Path.GetFileNameWithoutExtension(file);
-                            if (!string.IsNullOrEmpty(fileName))
-                                allRomNames.Add(fileName);
-                        }
-                    }
-
-                    var missing = new List<(string RomName, string SearchName)>();
-
-                    // Process ROMs with periodic cancellation checks
-                    var processedCount = 0;
-                    foreach (var romName in allRomNames)
-                    {
-                        // Check for cancellation periodically (every 100 items)
-                        if (++processedCount % 100 == 0)
-                        {
-                            cancellationToken.ThrowIfCancellationRequested();
-                            await Task.Yield(); // Yield periodically to prevent blocking
-                        }
-
-                        if (FindCorrespondingImage(romName, imageFolderPath) == null)
-                        {
-                            if (Settings.UseMameDescription &&
-                                _mameLookup != null &&
-                                _mameLookup.TryGetValue(romName, out var description) &&
-                                !string.IsNullOrEmpty(description))
-                            {
-                                missing.Add((romName, description));
-                            }
-                            else
-                            {
-                                missing.Add((romName, romName));
-                            }
-                        }
-                    }
-
-                    // Final cancellation check before returning
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    return missing.OrderBy(static x => x.RomName).ToList();
-                }
-                catch (OperationCanceledException)
-                {
-                    // Re-throw cancellation exceptions
-                    throw;
-                }
-                catch (UnauthorizedAccessException ex)
-                {
-                    throw new InvalidOperationException("Access denied to folder. Try running as administrator.", ex);
-                }
-                catch (DirectoryNotFoundException ex)
-                {
-                    throw new InvalidOperationException("Folder not found. Please check the paths.", ex);
-                }
-                catch (Exception ex)
-                {
-                    throw new InvalidOperationException($"Error scanning folders: {ex.Message}", ex);
-                }
-            }, cancellationToken);
-
-            // Check cancellation before updating UI
-            cancellationToken.ThrowIfCancellationRequested();
-
-            // Only update UI if we got valid results
-            MissingImages.Clear();
-            SimilarImages.Clear();
-
-            // Batch add items to ObservableCollection for better performance
-            var missingImageItems = missingFiles.Select(static mf => new MissingImageItem(mf.RomName, mf.SearchName)).ToList();
-            foreach (var item in missingImageItems)
-            {
-                MissingImages.Add(item);
-            }
-
-            UpdateMissingCount();
-        }
-        catch (OperationCanceledException)
-        {
-            // Operation was cancelled - clean up UI state but don't show error
-        }
-        catch (Exception ex)
-        {
-            // Show user-friendly error
-            string userMessage;
-            if (ex is InvalidOperationException ioEx)
-            {
-                userMessage = ioEx.Message;
-            }
-            else
-            {
-                userMessage =
-                    "There was an error checking for missing image files.\n\nCheck if the provided folders are valid.";
-            }
-
-            MessageBox.Show(userMessage, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-
-            // Log detailed error
-            var formattedException = $"Error checking for missing images: {ex.Message}";
-            _ = ErrorLogger.LogAsync(ex, formattedException);
-        }
-        finally
-        {
-            IsCheckingMissing = false;
-        }
-    }
-
-    private static string? FindCorrespondingImage(string fileNameWithoutExtension, string imageFolderPath)
-    {
-        string[] imageExtensions = [".png", ".jpg", ".jpeg"];
-        foreach (var ext in imageExtensions)
-        {
-            var imagePath = Path.Combine(imageFolderPath, fileNameWithoutExtension + ext);
-            if (File.Exists(imagePath))
-            {
-                return imagePath;
-            }
-        }
-
-        return null;
-    }
-
-    private async void LstMissingImages_SelectionChangedAsync(object sender, SelectionChangedEventArgs e)
-    {
-        try
-        {
-            // Requery commands that depend on selection
-            CommandManager.InvalidateRequerySuggested();
-
-            try
-            {
-                // --- Start of method: setup and early exit conditions ---
-                _findSimilarCts?.Cancel();
-                _findSimilarCts?.Dispose();
-                _findSimilarCts = null;
-
-                if (LstMissingImages.SelectedItem == null)
-                {
-                    SimilarImages.Clear();
-                    LblSearchQuery.Content = null;
-                    IsFindingSimilar = false;
-                    HasSearchedSimilar = false;
-                    return;
-                }
-
-                var imageFolderPath = GetValidatedImageFolderPath();
-                if (string.IsNullOrEmpty(imageFolderPath))
-                {
-                    IsFindingSimilar = false;
-                    return;
-                }
-
-                _findSimilarCts = new CancellationTokenSource();
-                var cancellationToken = _findSimilarCts.Token;
-
-                if (LstMissingImages.SelectedItem is not MissingImageItem selectedItem)
-                {
-                    IsFindingSimilar = false;
-                    _findSimilarCts = null;
-                    return;
-                }
-
-                var romName = selectedItem.RomName;
-                var searchName = selectedItem.SearchName;
-                _selectedRomFileName = romName;
-
-                // --- Core logic with robust progress indicator handling ---
-                IsFindingSimilar = true;
-
-                // Set up search header and clear previous results immediately on UI thread
-                await Application.Current.Dispatcher.InvokeAsync(() =>
-                {
-                    if (cancellationToken.IsCancellationRequested) return;
-
-                    var textBlock = new TextBlock();
-                    textBlock.Inlines.Add(new Run("Search Query: "));
-                    textBlock.Inlines.Add(new Run($"{searchName} ") { FontWeight = FontWeights.Bold });
-                    textBlock.Inlines.Add(new Run("for ROM: "));
-                    textBlock.Inlines.Add(new Run($"{romName} ") { FontWeight = FontWeights.Bold });
-                    textBlock.Inlines.Add(new Run("with "));
-                    textBlock.Inlines.Add(new Run($"{Settings.SelectedSimilarityAlgorithm} ") { FontWeight = FontWeights.Bold });
-                    textBlock.Inlines.Add(new Run("algorithm"));
-                    LblSearchQuery.Content = textBlock;
-
-                    SimilarImages.Clear();
-                });
-
-                try
-                {
-                    await _findSimilarSemaphore.WaitAsync(cancellationToken);
-                    try
-                    {
-                        SimilarityCalculationResult similarityResult;
-                        try
-                        {
-                            similarityResult = await ButtonFactory.CreateSimilarImagesCollectionAsync(
-                                searchName,
-                                imageFolderPath,
-                                Settings.SimilarityThreshold,
-                                Settings.SelectedSimilarityAlgorithm,
-                                cancellationToken,
-                                imageData =>
-                                {
-                                    // Fire-and-forget: add image to UI as soon as it loads
-                                    _ = Application.Current.Dispatcher.InvokeAsync(() =>
-                                    {
-                                        if (!cancellationToken.IsCancellationRequested)
-                                        {
-                                            SimilarImages.Add(imageData);
-                                            HasSearchedSimilar = true;
-                                        }
-                                    });
-                                }
-                            );
-                        }
-                        finally
-                        {
-                            // Flush any pending dispatcher operations
-                            if (!cancellationToken.IsCancellationRequested)
-                            {
-                                await Application.Current.Dispatcher.InvokeAsync(static () => { });
-                            }
-                        }
-
-                        if (!cancellationToken.IsCancellationRequested)
-                        {
-                            HasSearchedSimilar = true;
-
-                            if (similarityResult.ProcessingErrors.Count > 0)
-                            {
-                                var errorSummary = $"Encountered {similarityResult.ProcessingErrors.Count} issues while processing images:\n\n";
-                                errorSummary += string.Join("\n", similarityResult.ProcessingErrors.Take(5));
-                                if (similarityResult.ProcessingErrors.Count > 5)
-                                {
-                                    errorSummary += $"\n...and {similarityResult.ProcessingErrors.Count - 5} more. Check the application log for full details.";
-                                }
-
-                                MessageBox.Show(errorSummary, "Image Processing Warnings", MessageBoxButton.OK, MessageBoxImage.Warning);
-                            }
-
-                            ImageScrollViewer.ScrollToTop();
-                        }
-                    }
-                    finally
-                    {
-                        _findSimilarSemaphore.Release();
-                    }
-                }
-                catch (OperationCanceledException)
-                {
-                    // This is an expected outcome when the selection changes quickly.
-                    // No action or logging needed. The 'finally' block ensures cleanup.
-                }
-                catch (Exception ex)
-                {
-                    // For any other unexpected error, log it and notify the user.
-                    // The check for cancellationToken prevents showing an error for a cancelled operation
-                    // that might throw a different exception type during unwinding.
-                    if (!cancellationToken.IsCancellationRequested)
-                    {
-                        MessageBox.Show($"An error occurred while searching for similar images: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                        _ = ErrorLogger.LogAsync(ex, "Error in LstMissingImages_SelectionChanged");
-                    }
-                }
-                finally
-                {
-                    // This block ensures the progress ring is always turned off,
-                    // whether the operation succeeded, was cancelled, or failed.
-                    IsFindingSimilar = false;
-                }
-            }
-            catch (Exception ex)
-            {
-                _ = ErrorLogger.LogAsync(ex, "Error in LstMissingImages_SelectionChangedAsync");
-            }
-        }
-        catch (Exception ex)
-        {
-            _ = ErrorLogger.LogAsync(ex, "Error in LstMissingImages_SelectionChangedAsync");
-        }
-    }
-
-    private void ImageCell_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is FrameworkElement { DataContext: ImageData { ImagePath: not null } imageData })
-        {
-            _ = UseImageAsync(imageData.ImagePath);
-        }
-    }
-
-    public async Task UseImageAsync(string? imagePath)
-    {
-        var imageFolderPath = GetValidatedImageFolderPath(false);
-
-        if (string.IsNullOrEmpty(_selectedRomFileName) ||
-            string.IsNullOrEmpty(imagePath) ||
-            string.IsNullOrEmpty(imageFolderPath))
-        {
-            return;
-        }
-
-        var newFileName = Path.Combine(imageFolderPath, _selectedRomFileName + ".png");
-
-        try
-        {
-            var result = await ImageProcessor.ConvertAndSaveImageAsync(imagePath, newFileName, CancellationToken.None);
-            if (result.Success)
-            {
-                App.AudioService.PlayClickSound();
-                RemoveSelectedItem();
-                SimilarImages.Clear();
-                UpdateMissingCount();
-            }
-            else
-            {
-                MessageBox.Show("Failed to save the image.", "Save Failed",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"Unexpected error saving image: {ex.Message}", "Error",
-                MessageBoxButton.OK, MessageBoxImage.Error);
-            _ = ErrorLogger.LogAsync(ex, $"Unexpected error in UseImage: {imagePath}");
-        }
-    }
-
-    private void RemoveSelectedItem()
-    {
-        if (LstMissingImages.SelectedItem == null || LstMissingImages.SelectedIndex < 0)
-            return;
-
-        try
-        {
-            var oldIndex = LstMissingImages.SelectedIndex;
-            MissingImages.RemoveAt(oldIndex);
-
-            // Select next logical item
-            if (MissingImages.Count > 0)
-            {
-                // Calculate new index - ensure it's valid
-                var newIndex = Math.Min(oldIndex, MissingImages.Count - 1);
-
-                LstMissingImages.SelectedIndex = newIndex;
-
-                // Only scroll if we have a valid item to scroll to
-                if (newIndex >= 0 && MissingImages.Count > newIndex)
-                {
-                    var itemToScrollTo = MissingImages[newIndex];
-                    LstMissingImages.ScrollIntoView(itemToScrollTo);
-                }
-            }
-            else
-            {
-                // If no items remain, explicitly clear the search query label
-                LblSearchQuery.Content = null;
-            }
-        }
-        catch (Exception ex)
-        {
-            _ = ErrorLogger.LogAsync(ex, "Error in RemoveSelectedItem");
-        }
-
-        UpdateMissingCount();
-    }
-
-    private void UpdateMissingCount()
-    {
-        try
-        {
-            LabelMissingRoms.Content = AppConstants.Messages.MissingCoversPrefix + MissingImages.Count;
-        }
-        catch (Exception ex)
-        {
-            _ = ErrorLogger.LogAsync(ex, "Error in UpdateMissingCount");
-        }
-    }
-
-    private void SetSimilarityAlgorithm_Click(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            if (sender is not MenuItem menuItem) return;
-
-            var algorithm = menuItem.Header.ToString() ?? "Jaro-Winkler Distance";
-            Settings.SelectedSimilarityAlgorithm = algorithm; // Update App.Settings
-            Settings.SaveSettings(); // Save the settings
-        }
-        catch (Exception ex)
-        {
-            _ = ErrorLogger.LogAsync(ex, "Error in SetSimilarityAlgorithm_Click");
-        }
-    }
-
-    private void UpdateSimilarityAlgorithmChecks()
-    {
-        try
-        {
-            foreach (var item in MenuSimilarityAlgorithms.Items)
-            {
-                if (item is MenuItem menuItem)
-                {
-                    menuItem.IsChecked = menuItem.Header.ToString() == Settings.SelectedSimilarityAlgorithm; // Use App.Settings
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            _ = ErrorLogger.LogAsync(ex, "Error in UpdateSimilarityAlgorithmChecks");
-        }
-    }
-
-    private void SetSimilarityThreshold_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is not MenuItem clickedItem)
-        {
-            return;
-        }
-
-        try
-        {
-            var headerText = clickedItem.Header.ToString()?.Replace("%", "") ?? "70";
-
-            if (double.TryParse(headerText, out var rate))
-            {
-                Settings.SimilarityThreshold = rate;
-                Settings.SaveSettings();
-            }
-            else
-            {
-                MessageBox.Show("Invalid similarity threshold selected.\n\n" +
-                                "The error was reported to the developer that will try to fix the issue.",
-                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-
-                _ = ErrorLogger.LogAsync(null, "Invalid similarity threshold selected.");
-            }
-        }
-        catch (Exception ex)
-        {
-            _ = ErrorLogger.LogAsync(ex, "Error in SetSimilarityThreshold_Click");
-        }
-    }
-
-    private void UpdateSimilarityThresholdChecks()
-    {
-        var currentThreshold = Settings.SimilarityThreshold;
-
-        foreach (var item in MySimilarityMenu.Items)
-        {
-            if (item is not MenuItem menuItem) continue;
-
-            var thresholdString = menuItem.Header.ToString()?.Replace("%", "") ?? "70";
-
-            if (double.TryParse(thresholdString, NumberStyles.Any, CultureInfo.InvariantCulture, out var menuItemThreshold))
-            {
-                // Use a small epsilon for floating-point comparison
-                const double epsilon = 0.001;
-                menuItem.IsChecked = Math.Abs(menuItemThreshold - currentThreshold) < epsilon;
-            }
-        }
-    }
-
-    private void SetThumbnailSize_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is not MenuItem menuItem)
-        {
-            return;
-        }
-
-        // Get size from Tag property instead of parsing header text
-        if (menuItem.Tag is not int size && !int.TryParse(menuItem.Tag?.ToString(), out size))
-        {
-            MessageBox.Show("Invalid thumbnail size selected.",
-                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            return;
-        }
-
-        try
-        {
-            Settings.ImageWidth = size;
-            Settings.ImageHeight = size;
-            Settings.SaveSettings();
-        }
-        catch (Exception ex)
-        {
-            _ = ErrorLogger.LogAsync(ex, "Error in SetThumbnailSize_Click");
-        }
-    }
-
-    private void UpdateThumbnailSizeMenuChecks()
-    {
-        var currentWidth = Settings.ImageWidth;
-        var currentHeight = Settings.ImageHeight;
-
-        foreach (var item in ImageSizeMenu.Items)
-        {
-            if (item is not MenuItem menuItem) continue;
-
-            if (menuItem.Tag is int size || int.TryParse(menuItem.Tag?.ToString(), out size))
-            {
-                menuItem.IsChecked = size == currentWidth && size == currentHeight;
-            }
-        }
-    }
-
-    private void Image_ContextMenuOpening(object sender, ContextMenuEventArgs e)
-    {
-        if (sender is not FrameworkElement { DataContext: ImageData imageData } element) return;
-
-        if (imageData.ImagePath != null)
-        {
-            // Pass the UseImageAsync method wrapped as fire-and-forget action
-            element.ContextMenu = ButtonFactory.CreateContextMenu(imageData.ImagePath, path => { _ = UseImageAsync(path); }, imageData.CachedContextMenu);
-            // Store the menu in the ImageData for future reuse
-            imageData.CachedContextMenu = element.ContextMenu;
-        }
-    }
-
-    private void EditExtensions_Click(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            var settingsWindow = new SettingsWindow(Settings) // Pass App.Settings
-            {
-                Owner = this
-            };
-            settingsWindow.ShowDialog();
-        }
-        catch (Exception ex)
-        {
-            _ = ErrorLogger.LogAsync(ex, "Error in EditExtensions_Click");
-            MessageBox.Show("An error occurred while opening the Settings window.", "Error",
-                MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-    }
-
-    private void TxtImageFolder_TextChanged(object sender, TextChangedEventArgs e)
-    {
-        try
-        {
-            // Only update button enabled state based on non-empty text,
-            // full Directory.Exists validation happens on LostFocus/Enter.
-            BtnCheckForMissingImages.IsEnabled = !string.IsNullOrEmpty(TxtRomFolder.Text.Trim()) && !string.IsNullOrEmpty(TxtImageFolder.Text.Trim());
-            LstMissingImages.IsEnabled = BtnCheckForMissingImages.IsEnabled; // Keep LstMissingImages enabled state in sync
-            if (!BtnCheckForMissingImages.IsEnabled)
-            {
-                MissingImages.Clear();
-                ResetSimilarSearchState();
-                UpdateMissingCount();
-            }
-        }
-        catch (Exception ex)
-        {
-            _ = ErrorLogger.LogAsync(ex, "Error in TxtImageFolder_TextChanged");
-        }
-    }
-
-    private void LstMissingImages_PreviewKeyDown(object sender, KeyEventArgs e)
-    {
-        try
-        {
-            if (e.Key == Key.Delete)
-            {
-                if (e.IsRepeat)
-                {
-                    e.Handled = true;
-                    return;
-                }
-
-                RemoveSelectedItem();
-                App.AudioService.PlayClickSound();
-                e.Handled = true;
-            }
-        }
-        catch (Exception ex)
-        {
-            _ = ErrorLogger.LogAsync(ex, "Error in LstMissingImages_PreviewKeyDown");
-        }
-    }
-
-    private async void MenuUseMameDescription_ClickAsync(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            if (sender is MenuItem menuItem)
-            {
-                // Handle nullable bool properly
-                var isChecked = menuItem.IsChecked;
-                Settings.UseMameDescription = isChecked;
-                Settings.SaveSettings();
-
-                // Refresh the list immediately after the setting changes
-                // Only refresh if MAME data is actually available, otherwise it's pointless
-                if (_mameLookup is { Count: > 0 })
-                    await RefreshMissingImagesListAsync();
-            }
-        }
-        catch (Exception ex)
-        {
-            _ = ErrorLogger.LogAsync(ex, "Error in MenuUseMameDescription_Click");
-        }
+        try { await RefreshMissingImagesListAsync(); }
+        catch (Exception ex) { LogService.Error(ex, "Error in BtnCheckForMissingImages_Click"); }
     }
 
     private async Task RefreshMissingImagesListAsync()
     {
-        // Cancel any existing operation
         if (_loadMissingCts != null)
         {
             await _loadMissingCts.CancelAsync();
@@ -1036,98 +617,436 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         }
         catch (OperationCanceledException)
         {
-            // Expected if a previous operation was cancelled or if this one was cancelled quickly.
-            // No need to log this as an error.
         }
-        catch (Exception ex)
-        {
-            _ = ErrorLogger.LogAsync(ex, "Error refreshing missing images list.");
-        }
+        catch (Exception ex) { LogService.Error(ex, "Error refreshing missing images list."); }
         finally
         {
-            // Ensure CTS is disposed even if an exception occurs during LoadMissingImagesList
-            // Use local variable to avoid race condition with concurrent calls
-            cts.Dispose();
             if (_loadMissingCts == cts)
             {
                 _loadMissingCts = null;
             }
+            cts.Dispose();
         }
     }
 
-    private void TxtImageFolder_LostFocus(object sender, RoutedEventArgs e)
+    private async Task LoadMissingImagesListAsync(CancellationToken cancellationToken = default)
     {
-        if (sender is TextBox textBox)
+        if (Settings.SupportedExtensions.Count == 0)
         {
-            UpdateUiStateForFolderPaths();
-
-            // Save the image folder to settings for cleanup on next startup
-            var folderPath = textBox.Text.Trim();
-            if (!string.IsNullOrEmpty(folderPath) && Directory.Exists(folderPath))
-            {
-                Settings.LastImageFolder = folderPath;
-                Settings.SaveSettings();
-            }
+            MessageBox.Show("No supported file extensions loaded. Please check settings.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
         }
+
+        var romFolderPath = GetValidatedRomFolderPath();
+        var imageFolderPath = GetValidatedImageFolderPath();
+
+        if (string.IsNullOrEmpty(romFolderPath) || string.IsNullOrEmpty(imageFolderPath))
+        {
+            MessageBox.Show("Please select both ROM and Image folders.", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        IsCheckingMissing = true;
+        try
+        {
+            var missingFiles = await Task.Run(async () =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var allRomNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                var supportedExtensionsSet = new HashSet<string>(
+                    Settings.SupportedExtensions.Select(static ext => "." + ext), StringComparer.OrdinalIgnoreCase);
+
+                var files = Directory.EnumerateFiles(romFolderPath, "*.*", new EnumerationOptions { IgnoreInaccessible = true, RecurseSubdirectories = true });
+
+                foreach (var file in files)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (supportedExtensionsSet.Contains(Path.GetExtension(file)))
+                    {
+                        var fileName = Path.GetFileNameWithoutExtension(file);
+                        if (!string.IsNullOrEmpty(fileName)) allRomNames.Add(fileName);
+                    }
+                }
+
+                var missing = new List<(string RomName, string SearchName)>();
+                var processedCount = 0;
+                foreach (var romName in allRomNames)
+                {
+                    if (++processedCount % 100 == 0)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        await Task.Yield();
+                    }
+
+                    if (FindCorrespondingImage(romName, imageFolderPath) == null)
+                    {
+                        if (Settings.UseMameDescriptions && _mameLookup != null &&
+                            _mameLookup.TryGetValue(romName, out var description) && !string.IsNullOrEmpty(description))
+                            missing.Add((romName, description));
+                        else
+                            missing.Add((romName, romName));
+                    }
+                }
+
+                cancellationToken.ThrowIfCancellationRequested();
+                return missing.OrderBy(static x => x.RomName).ToList();
+            }, cancellationToken);
+
+            cancellationToken.ThrowIfCancellationRequested();
+            MissingImages.Clear();
+            SimilarImages.Clear();
+
+            foreach (var item in missingFiles.Select(static mf => new MissingImageItem(mf.RomName, mf.SearchName)))
+                MissingImages.Add(item);
+
+            UpdateMissingCount();
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error checking for missing images: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            LogService.Error(ex, "Error checking for missing images");
+        }
+        finally { IsCheckingMissing = false; }
     }
 
-    private void UpdateMameDescriptionCheck()
+    private static string? FindCorrespondingImage(string fileNameWithoutExtension, string imageFolderPath)
     {
-        MenuUseMameDescription.IsChecked = Settings.UseMameDescription;
+        foreach (var ext in new[] { ".png", ".jpg", ".jpeg" })
+        {
+            var imagePath = Path.Combine(imageFolderPath, fileNameWithoutExtension + ext);
+            if (File.Exists(imagePath)) return imagePath;
+        }
+
+        return null;
+    }
+
+    private void RemoveSelectedItem(int? index = null)
+    {
+        var removeIndex = index ?? LstMissingImages.SelectedIndex;
+        if (removeIndex < 0 || removeIndex >= MissingImages.Count) return;
+
+        try
+        {
+            MissingImages.RemoveAt(removeIndex);
+            if (MissingImages.Count > 0)
+            {
+                var newIndex = Math.Min(removeIndex, MissingImages.Count - 1);
+                LstMissingImages.SelectedIndex = newIndex;
+                LstMissingImages.ScrollIntoView(MissingImages[newIndex]);
+            }
+            else { LblLocalSearchQuery.Content = null; }
+        }
+        catch (Exception ex) { LogService.Error(ex, "Error in RemoveSelectedItem"); }
+
+        UpdateMissingCount();
+    }
+
+    private void UpdateMissingCount()
+    {
+        try { LabelMissingRoms.Content = AppConstants.Messages.MissingCoversPrefix + MissingImages.Count; }
+        catch (Exception ex) { LogService.Error(ex, "Error in UpdateMissingCount"); }
     }
 
     private void BtnRemoveSelectedItem_Click(object sender, RoutedEventArgs e)
     {
-        RemoveSelectedItem();
-        SimilarImages.Clear();
-        App.AudioService.PlayClickSound();
-    }
-
-    private void TxtImageFolder_PreviewKeyDown(object sender, KeyEventArgs keyEventArgs)
-    {
-        if (keyEventArgs.Key == Key.Enter && sender is TextBox)
+        try
         {
-            TxtImageFolder_LostFocus(sender, keyEventArgs);
-            keyEventArgs.Handled = true;
+            RemoveSelectedItem();
+            SimilarImages.Clear();
+            App.AudioService.PlayClickSound();
         }
+        catch (Exception ex) { LogService.Error(ex, "Error in BtnRemoveSelectedItem_Click"); }
     }
 
-    private void TxtRomFolder_LostFocus(object sender, RoutedEventArgs routedEventArgs)
-    {
-        if (sender is TextBox)
-        {
-            UpdateUiStateForFolderPaths();
-        }
-    }
-
-    private void TxtRomFolder_PreviewKeyDown(object sender, KeyEventArgs e)
-    {
-        if (e.Key == Key.Enter && sender is TextBox)
-        {
-            TxtRomFolder_LostFocus(sender, e);
-            e.Handled = true;
-        }
-    }
-
-    private void TxtRomFolder_TextChanged(object sender, TextChangedEventArgs e)
+    private void RemoveItemFromList_Click(object sender, RoutedEventArgs e)
     {
         try
         {
-            // Only update button enabled state based on non-empty text,
-            // full Directory.Exists validation happens on LostFocus/Enter.
-            BtnCheckForMissingImages.IsEnabled = !string.IsNullOrEmpty(TxtRomFolder.Text.Trim()) && !string.IsNullOrEmpty(TxtImageFolder.Text.Trim());
-            LstMissingImages.IsEnabled = BtnCheckForMissingImages.IsEnabled; // Keep LstMissingImages enabled state in sync
-            if (!BtnCheckForMissingImages.IsEnabled)
+            RemoveSelectedItem();
+            App.AudioService.PlayClickSound();
+        }
+        catch (Exception ex) { LogService.Error(ex, "Error in RemoveItemFromList_Click"); }
+    }
+
+    private void CopyFileName_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (LstMissingImages.SelectedItem is MissingImageItem item)
             {
-                MissingImages.Clear();
-                ResetSimilarSearchState();
-                UpdateMissingCount();
+                try { Clipboard.SetText(item.RomName); }
+                catch
+                {
+                    // ignored
+                }
+            }
+        }
+        catch (Exception ex) { LogService.Error(ex, "Error in CopyFileName_Click"); }
+    }
+
+    private async void DeleteCorrespondingRom_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (LstMissingImages.SelectedItem is not MissingImageItem selectedItem) return;
+
+            var romFolderPath = GetValidatedRomFolderPath();
+            if (string.IsNullOrEmpty(romFolderPath)) return;
+
+            var romFilePath = await Task.Run(() => FindCorrespondingRomFile(selectedItem.RomName, romFolderPath, Settings.SupportedExtensions));
+            if (romFilePath == null)
+            {
+                MessageBox.Show($"Could not find a ROM or ISO file for '{selectedItem.RomName}' in the ROM folder.",
+                    "File Not Found", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var result = MessageBox.Show(
+                $"Are you sure you want to permanently delete this file?\n\n{romFilePath}\n\nThis action cannot be undone.",
+                "Confirm Delete", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+
+            if (result != MessageBoxResult.Yes) return;
+
+            try
+            {
+                File.Delete(romFilePath);
+                LogService.Information($"Deleted ROM file: {romFilePath}");
+                RemoveSelectedItem();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to delete file: {ex.Message}", "Delete Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                LogService.Error(ex, $"Error deleting ROM file: {romFilePath}");
             }
         }
         catch (Exception ex)
         {
-            _ = ErrorLogger.LogAsync(ex, "Error in TxtRomFolder_TextChanged");
+            LogService.Error(ex, "Error deleting ROM file");
         }
+    }
+
+    private static readonly HashSet<string> NonRomExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".dummy", ".bat", ".url", ".lnk", ".exe", ".cmd", ".txt", ".nfo", ".xml", ".json", ".ini", ".cfg", ".log", ".dat"
+    };
+
+    private static string? FindCorrespondingRomFile(string fileNameWithoutExtension, string romFolderPath, List<string> supportedExtensions)
+    {
+        var extensionsWithDot = supportedExtensions
+            .Select(static ext => ext.StartsWith('.') ? ext : "." + ext)
+            .Where(static ext => !NonRomExtensions.Contains(ext))
+            .ToArray();
+
+        foreach (var ext in extensionsWithDot)
+        {
+            var romPath = Path.Combine(romFolderPath, fileNameWithoutExtension + ext);
+            if (File.Exists(romPath)) return romPath;
+        }
+
+        // Try case-insensitive search
+        if (!Directory.Exists(romFolderPath)) return null;
+
+        var extensionsSet = new HashSet<string>(extensionsWithDot, StringComparer.OrdinalIgnoreCase);
+        foreach (var file in Directory.EnumerateFiles(romFolderPath, "*.*", new EnumerationOptions { IgnoreInaccessible = true, RecurseSubdirectories = true }))
+        {
+            if (extensionsSet.Contains(Path.GetExtension(file)) &&
+                string.Equals(Path.GetFileNameWithoutExtension(file), fileNameWithoutExtension, StringComparison.OrdinalIgnoreCase))
+            {
+                return file;
+            }
+        }
+
+        return null;
+    }
+
+    private void EditExtensions_Click(object sender, RoutedEventArgs e)
+    {
+        try { new SettingsWindow(Settings) { Owner = this }.ShowDialog(); }
+        catch (Exception ex) { LogService.Error(ex, "Error in EditExtensions_Click"); }
+    }
+
+    private void SetSimilarityAlgorithm_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (sender is not MenuItem menuItem) return;
+
+            Settings.SelectedSimilarityAlgorithm = menuItem.Header.ToString() ?? "Jaro-Winkler Distance";
+            Settings.SaveSettings();
+        }
+        catch (Exception ex) { LogService.Error(ex, "Error in SetSimilarityAlgorithm_Click"); }
+    }
+
+    private void UpdateSimilarityAlgorithmChecks()
+    {
+        try
+        {
+            foreach (var item in MenuSimilarityAlgorithms.Items)
+            {
+                if (item is MenuItem menuItem)
+                {
+                    menuItem.IsChecked = menuItem.Header.ToString() == Settings.SelectedSimilarityAlgorithm;
+                }
+            }
+        }
+        catch (Exception ex) { LogService.Error(ex, "Error in UpdateSimilarityAlgorithmChecks"); }
+    }
+
+    private void SetSimilarityThreshold_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (sender is not MenuItem clickedItem) return;
+
+            var headerText = clickedItem.Header.ToString()?.Replace("%", "") ?? "70";
+            if (double.TryParse(headerText, out var rate))
+            {
+                Settings.SimilarityThreshold = rate;
+                Settings.SaveSettings();
+            }
+        }
+        catch (Exception ex) { LogService.Error(ex, "Error in SetSimilarityThreshold_Click"); }
+    }
+
+    private void UpdateSimilarityThresholdChecks()
+    {
+        try
+        {
+            var currentThreshold = Settings.SimilarityThreshold;
+            foreach (var item in MySimilarityMenu.Items)
+            {
+                if (item is not MenuItem menuItem) continue;
+
+                var thresholdString = menuItem.Header.ToString()?.Replace("%", "") ?? "70";
+                if (double.TryParse(thresholdString, NumberStyles.Any, CultureInfo.InvariantCulture, out var menuItemThreshold))
+                {
+                    menuItem.IsChecked = Math.Abs(menuItemThreshold - currentThreshold) < 0.001;
+                }
+            }
+        }
+        catch (Exception ex) { LogService.Error(ex, "Error in UpdateSimilarityThresholdChecks"); }
+    }
+
+    private void SetThumbnailSize_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (sender is not MenuItem menuItem) return;
+            if (menuItem.Tag is not int size && !int.TryParse(menuItem.Tag?.ToString(), out size)) return;
+
+            Settings.ImageWidth = size;
+            Settings.ImageHeight = size;
+            Settings.SaveSettings();
+        }
+        catch (Exception ex) { LogService.Error(ex, "Error in SetThumbnailSize_Click"); }
+    }
+
+    private void UpdateThumbnailSizeMenuChecks()
+    {
+        try
+        {
+            var currentWidth = Settings.ImageWidth;
+            foreach (var item in ImageSizeMenu.Items)
+            {
+                if (item is not MenuItem menuItem) continue;
+
+                if (menuItem.Tag is int size || int.TryParse(menuItem.Tag?.ToString(), out size))
+                {
+                    menuItem.IsChecked = size == currentWidth;
+                }
+            }
+        }
+        catch (Exception ex) { LogService.Error(ex, "Error in UpdateThumbnailSizeMenuChecks"); }
+    }
+
+    private void LstMissingImages_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        try
+        {
+            if (e is { Key: Key.Delete, IsRepeat: false })
+            {
+                RemoveSelectedItem();
+                App.AudioService.PlayClickSound();
+                e.Handled = true;
+            }
+        }
+        catch (Exception ex) { LogService.Error(ex, "Error in LstMissingImages_PreviewKeyDown"); }
+    }
+
+    private void TxtRomFolder_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        try { UpdateUiStateForFolderPaths(); }
+        catch (Exception ex) { LogService.Error(ex, "Error in TxtRomFolder_TextChanged"); }
+    }
+
+    private void TxtImageFolder_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        try { UpdateUiStateForFolderPaths(); }
+        catch (Exception ex) { LogService.Error(ex, "Error in TxtImageFolder_TextChanged"); }
+    }
+
+    private void TxtRomFolder_LostFocus(object sender, RoutedEventArgs e)
+    {
+        try { UpdateUiStateForFolderPaths(); }
+        catch (Exception ex) { LogService.Error(ex, "Error in TxtRomFolder_LostFocus"); }
+    }
+
+    private void TxtImageFolder_LostFocus(object sender, RoutedEventArgs e)
+    {
+        try { UpdateUiStateForFolderPaths(); }
+        catch (Exception ex) { LogService.Error(ex, "Error in TxtImageFolder_LostFocus"); }
+    }
+
+    private void TxtRomFolder_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        try
+        {
+            if (e.Key == Key.Enter)
+            {
+                UpdateUiStateForFolderPaths();
+                e.Handled = true;
+            }
+        }
+        catch (Exception ex) { LogService.Error(ex, "Error in TxtRomFolder_PreviewKeyDown"); }
+    }
+
+    private void TxtImageFolder_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        try
+        {
+            if (e.Key == Key.Enter)
+            {
+                UpdateUiStateForFolderPaths();
+                e.Handled = true;
+            }
+        }
+        catch (Exception ex) { LogService.Error(ex, "Error in TxtImageFolder_PreviewKeyDown"); }
+    }
+
+    private void MainWindow_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        try
+        {
+            if (e.Key == Key.F8)
+            {
+                var filePath = ScreenshotService.CaptureActiveWindow();
+                if (filePath is not null)
+                {
+                    StatusMessage.Text = $"Screenshot saved: {filePath}";
+                }
+                else
+                {
+                    StatusMessage.Text = "Screenshot failed. Check the log for details.";
+                }
+
+                e.Handled = true;
+            }
+        }
+        catch (Exception ex) { LogService.Error(ex, "Error in MainWindow_PreviewKeyDown"); }
     }
 
     private string? GetValidatedImageFolderPath(bool showWarning = true)
@@ -1142,22 +1061,10 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
     private static string? ValidateFolderPath(string path, string folderType, bool showWarning)
     {
-        if (string.IsNullOrEmpty(path))
-        {
-            return null;
-        }
+        if (string.IsNullOrEmpty(path)) return null;
+        if (Directory.Exists(path)) return path;
 
-        if (Directory.Exists(path))
-        {
-            return path;
-        }
-
-        if (showWarning)
-        {
-            MessageBox.Show($"The {folderType.ToLowerInvariant()} folder path '{path}' is invalid or does not exist. Please correct it.",
-                $"Invalid {folderType} Folder", MessageBoxButton.OK, MessageBoxImage.Warning);
-        }
-
+        if (showWarning) MessageBox.Show($"The {folderType.ToLowerInvariant()} folder path '{path}' is invalid or does not exist.", $"Invalid {folderType} Folder", MessageBoxButton.OK, MessageBoxImage.Warning);
         return null;
     }
 
@@ -1165,36 +1072,120 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
     {
         try
         {
-            var romPath = TxtRomFolder.Text.Trim();
-            var imagePath = TxtImageFolder.Text.Trim();
-
-            var romPathValid = !string.IsNullOrEmpty(romPath) && Directory.Exists(romPath);
-            var imagePathValid = !string.IsNullOrEmpty(imagePath) && Directory.Exists(imagePath);
-
+            var romPathValid = !string.IsNullOrEmpty(TxtRomFolder.Text.Trim()) && Directory.Exists(TxtRomFolder.Text.Trim());
+            var imagePathValid = !string.IsNullOrEmpty(TxtImageFolder.Text.Trim()) && Directory.Exists(TxtImageFolder.Text.Trim());
             BtnCheckForMissingImages.IsEnabled = romPathValid && imagePathValid;
             LstMissingImages.IsEnabled = romPathValid && imagePathValid;
-
-            // Also clear suggestions if paths become invalid
             if (!romPathValid || !imagePathValid)
             {
                 MissingImages.Clear();
-                ResetSimilarSearchState();
+                SimilarImages.Clear();
                 UpdateMissingCount();
             }
 
+            StartImageFolderWatcher(imagePathValid ? TxtImageFolder.Text.Trim() : null);
+
             CommandManager.InvalidateRequerySuggested();
         }
-        catch (Exception ex)
-        {
-            _ = ErrorLogger.LogAsync(ex, "Error in UpdateUiStateForFolderPaths");
-        }
+        catch (Exception ex) { LogService.Error(ex, "Error in UpdateUiStateForFolderPaths"); }
     }
 
-    private void ResetSimilarSearchState()
+    private void StartImageFolderWatcher(string? folderPath)
     {
-        SimilarImages.Clear();
-        LblSearchQuery.Content = null;
-        HasSearchedSimilar = false;
+        if (string.Equals(_watchedFolderPath, folderPath, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        _watchedFolderPath = folderPath;
+
+        _imageFolderWatcher?.Stop();
+
+        if (string.IsNullOrEmpty(folderPath) || !Directory.Exists(folderPath))
+        {
+            LogService.Information($"StartImageFolderWatcher: skipped (path='{folderPath}', exists={Directory.Exists(folderPath ?? "")})");
+            return;
+        }
+
+        _imageFolderWatcher ??= new ImageFolderWatcher();
+        _imageFolderWatcher.ImageFound -= OnImageFolderImageFound;
+        _imageFolderWatcher.ImageFound += OnImageFolderImageFound;
+        _imageFolderWatcher.ConversionFailed -= OnImageFolderConversionFailed;
+        _imageFolderWatcher.ConversionFailed += OnImageFolderConversionFailed;
+        _imageFolderWatcher.Start(folderPath);
+        LogService.Information($"StartImageFolderWatcher: watcher started for '{folderPath}'");
+    }
+
+    private void OnImageFolderImageFound(string fileNameWithoutExtension)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            var index = MissingImages.ToList().FindIndex(m =>
+                string.Equals(m.RomName, fileNameWithoutExtension, StringComparison.OrdinalIgnoreCase));
+
+            if (index < 0)
+            {
+                LogService.Information($"ImageFolderWatcher: image '{fileNameWithoutExtension}' does not match any missing ROM name — skipping");
+                StatusMessage.Text = $"Image '{fileNameWithoutExtension}.png' was saved but doesn't match any missing ROM name.";
+                return;
+            }
+
+            RemoveSelectedItem(index);
+            LogService.Information($"Auto-removed '{fileNameWithoutExtension}' from missing images.");
+        });
+    }
+
+    private void OnImageFolderConversionFailed(string filePath, string errorMessage)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            MessageBox.Show(
+                $"Failed to convert image:\n\n{Path.GetFileName(filePath)}\n\n{errorMessage}",
+                "Image Conversion Failed",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+        });
+    }
+
+    private void SearchTabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        try
+        {
+            if (StatusSearchEngine == null) return;
+
+            var tab = SearchTabControl.SelectedIndex;
+            StatusSearchEngine.Text = tab switch
+            {
+                0 => "Local Files",
+                1 => "Google Web",
+                2 => "Bing Web",
+                3 => "Google API",
+                _ => "Unknown"
+            };
+
+            if (tab == 3 && string.IsNullOrWhiteSpace(Settings.GoogleKey))
+            {
+                MessageBox.Show(
+                    "A Google API key is required to use the Google API search.\n\nPlease enter your API key in the settings window that will open.",
+                    "API Key Required",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+
+                var apiSettingsWindow = new ApiSettingsWindow(Settings) { Owner = this };
+                apiSettingsWindow.ShowDialog();
+
+                if (string.IsNullOrWhiteSpace(Settings.GoogleKey))
+                {
+                    StatusMessage.Text = "API key not set. Google API search is unavailable.";
+                    return;
+                }
+            }
+
+            // If an item is already selected, trigger the search for the new tab
+            if (LstMissingImages.SelectedItem is MissingImageItem selectedItem)
+            {
+                TriggerActiveTabSearch(selectedItem.SearchName);
+            }
+        }
+        catch (Exception ex) { LogService.Error(ex, "Error in SearchTabControl_SelectionChanged"); }
     }
 
     protected override void OnClosed(EventArgs e)
@@ -1205,23 +1196,30 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
     public void Dispose()
     {
-        if (_disposed)
-        {
-            return;
-        }
+        if (_disposed) return;
 
         _disposed = true;
-
         Settings.PropertyChanged -= AppSettingsManagerPropertyChangedAsync;
 
-        // Cancel any pending operations first
         _findSimilarCts?.Cancel();
         _loadMissingCts?.Cancel();
 
-        // Now dispose resources
+        try { _findSimilarTask?.Wait(TimeSpan.FromSeconds(2)); }
+        catch { /* ignored - task was cancelled */ }
+
         _findSimilarCts?.Dispose();
+        _findSimilarCts = null;
         _loadMissingCts?.Dispose();
+        _loadMissingCts = null;
+
         _findSimilarSemaphore.Dispose();
+        _imageFolderWatcher?.Dispose();
+        _systemTrayIcon?.Dispose();
+
+        if (CheckForMissingImagesCommand is IDisposable disposableCheckCommand)
+            disposableCheckCommand.Dispose();
+        if (ExitCommand is IDisposable disposableExitCommand)
+            disposableExitCommand.Dispose();
 
         GC.SuppressFinalize(this);
     }

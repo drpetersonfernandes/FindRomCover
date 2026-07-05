@@ -1,125 +1,273 @@
-# Find ROM Cover
-
-[![Platform](https://img.shields.io/badge/platform-Windows%20x64%20%7C%20ARM64-blue)](https://github.com/drpetersonfernandes/FindRomCover/releases)
-[![.NET 10.0](https://img.shields.io/badge/.NET-10.0-blue.svg)](https://dotnet.microsoft.com/download/dotnet/10.0)
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE.txt)
 [![GitHub release](https://img.shields.io/github/v/release/drpetersonfernandes/FindRomCover)](https://github.com/drpetersonfernandes/FindRomCover/releases)
+[![Platform](https://img.shields.io/badge/platform-Windows%20x64%20%7C%20ARM64-blue)](https://github.com/drpetersonfernandes/FindRomCover/releases)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE.txt)
 
-Find ROM Cover is an easy-to-use WPF application designed to help you effortlessly rename and organize cover images for your ROM collection. It helps you match and rename your images to correspond with the filenames of your ROMs using intelligent similarity algorithms.
+# FindRomCover
 
-Main window with white theme:
-![Screenshot](screenshot2.png)
+A powerful Windows desktop application designed to help you automatically find and download missing cover art for your retro gaming ROM collection.
+It supports **Bing Web Image Search**, **Google Web Image Search**, and **Google Custom Search API** to fetch high-quality game cover images.
 
-Main window with dark theme:
-![Screenshot](screenshot1.png)
+![Main Window](screenshot.png)
+*Screenshot: Light Theme*
 
-## How It Works
-
-1. **Browse:** Select the folders where your ROMs and cover images are stored.
-2. **Command-line Support:** Optionally launch the application with ROM and Image folder paths provided as arguments.
-3. **List:** The app identifies which cover images are missing from your ROM collection, optionally using MAME descriptions for better readability.
-4. **Match:** It searches the Cover Image folder for images with similar filenames using a configurable similarity algorithm. Adjust the similarity threshold to find the best matches.
-5. **Display:** Suggested cover images appear in the right panel for the selected ROM, along with their calculated similarity percentage. You can adjust the size of the image previews.
-6. **Copy:** Click on an image or use the right-click context menu ("Use This Image") to copy it to the Cover Image folder, renaming the image to match the ROM filename and converting it to PNG format. The context menu also provides options to copy the image filename or open its location in File Explorer.
+![Main Window](screenshot2.png)
+*Screenshot: Dark Theme*
 
 ## Features
 
-- **Easy ROM and Cover Image Matching:** Automatically matches ROM files with corresponding cover images based on name similarity, with robust image loading and processing.
-- **Multiple Similarity Algorithms:** Choose between [Jaro-Winkler Distance](https://en.wikipedia.org/wiki/Jaro%E2%80%93Winkler_distance) (default), [Levenshtein Distance](https://en.wikipedia.org/wiki/Levenshtein_distance), and [Jaccard Similarity](https://en.wikipedia.org/wiki/Jaccard_index) to find the best matches for your needs.
-- **Adjustable Similarity Threshold:** Fine-tune how strict the matching criteria should be, whether you prefer exact matches or broader suggestions.
-- **Thumbnail Size Customization:** Choose how large or small you want the cover image thumbnails to appear, making it easier to view and select the right covers.
-- **Manual Selection & Context Menu:** Browse through suggested images, view similarity scores, and use the right-click context menu for actions like using the image, copying its filename, or opening its folder location.
-- **Missing Image Finder:** Quickly identify which ROMs are missing cover images, helping you complete your collection. Includes an option to use MAME descriptions for ROM names.
-- **Theme Customization:** Switch between Light and Dark base themes and choose from a variety of accent colors.
-- **Simple Interface:** Designed for ease of use, with improved folder path validation and validated settings management for supported extensions and runtime limits.
-- **Audio Feedback:** Get audible confirmation for successful actions like copying images or removing items from the list.
-- **Automatic Error Reporting:** The application includes an automatic error reporting mechanism to help developers quickly identify and fix issues, ensuring a more stable experience. This includes detailed logging and internal error tracking.
-- **Update Notifications:** Automatically checks for new releases on GitHub and notifies you when an update is available.
+- **Smart Search**: Automatically searches for game covers using cleaned ROM filenames.
+- **MAME Integration**: Leverages MAME database for accurate game titles and descriptions.
+- **Batch Processing**: Scan entire ROM directories to identify missing covers.
+- **Multiple Sources**:
+    - **Bing Web Image Search**: Uses an embedded browser (WebView2) to display Bing image search results.
+    - **Google Web Image Search**: Uses an embedded browser (WebView2) to display Google image search results.
+    - **Google Custom Search API**: Fetches image results directly via API (requires an API key).
+- **Real-time Preview**: Thumbnail previews with configurable sizes (100-500px).
+- **Customizable UI**: Light/Dark themes with 20+ accent colors.
+- **Missing Covers List**: Automatically generates a list of ROMs without corresponding cover art (checks for PNG, JPG, BMP, GIF, TIFF, WebP, AVIF).
+- **Flexible Configuration**: Support for custom file extensions and search queries.
+- **Automatic Image Conversion**: Automatically converts downloaded images (JPG, BMP, GIF, TIFF, WebP, AVIF, HEIC, HEIF, JXL, JP2) to PNG format using Magick.NET (ImageMagick). Also, automatically converts newly saved images in the image folder to PNG.
+- **Detailed Logging**: Built-in log viewer for troubleshooting and `app.log`/`error.log` files using Serilog.
+- **Sound Feedback**: Optional audio feedback for user actions using NAudio.
+- **Command-line Arguments**: Start the application with pre-set ROM and Image folders for quick scanning.
+- **Auto-Copy to Clipboard**: Automatically copies the selected ROM filename to the clipboard when navigating the missing covers list.
+- **Automatic Updates**: Checks for new releases on startup via GitHub and notifies you when an update is available, with release notes and direct download links.
+- **System Tray Integration**: Minimize to system tray with balloon notifications and quick restore functionality.
+- **Dependency Injection**: Uses Microsoft.Extensions.DependencyInjection for clean architecture and testability.
+- **Comprehensive Testing**: Full test suite with xUnit, FluentAssertions, and Moq.
 
-## Project Architecture
+## Supported File Types
 
-The codebase follows a clean, modular architecture with clear separation of concerns. A companion test project (`FindRomCover.Tests/`) provides unit test coverage using xUnit and FluentAssertions.
+You can add or remove supported extensions through the `Settings > Edit Supported Extensions...` menu.
 
-### Services (`FindRomCover/Services/`)
-- **[`AudioService`](FindRomCover/Services/AudioService.cs)** - Provides audio feedback using WPF MediaPlayer with STA thread handling
-- **[`ImageLoader`](FindRomCover/Services/ImageLoader.cs)** - Progressive image loading with retry logic for locked files and corruption recovery via Magick.NET
-- **[`ImageProcessor`](FindRomCover/Services/ImageProcessor.cs)** - Handles image conversion and saving to PNG format, plus cleanup of orphaned temp files
-- **[`SimilarityCalculator`](FindRomCover/Services/SimilarityCalculator.cs)** - Implements multiple string similarity algorithms (Jaro-Winkler, Levenshtein, Jaccard) with parallel processing
-- **[`NgramIndex`](FindRomCover/Services/NgramIndex.cs)** - N-gram indexing for optimized similarity matching performance
-- **[`ButtonFactory`](FindRomCover/Services/ButtonFactory.cs)** - Factory for creating context menus and orchestrating similarity calculations
-- **[`ErrorLogger`](FindRomCover/Services/ErrorLogger.cs)** - Comprehensive error logging with automatic API reporting, file-based logs, and internal error tracking
-- **[`GitHubReleaseService`](FindRomCover/Services/GitHubReleaseService.cs)** - Checks GitHub releases for application updates
-- **[`MameDataService`](FindRomCover/Services/MameDataService.cs)** - MAME data lookup service for ROM description resolution
-- **[`UpdateCheckOrchestrator`](FindRomCover/Services/UpdateCheckOrchestrator.cs)** - Orchestrates update checking workflow with debounce and notification management
-- **[`DelegateCommand`](FindRomCover/Services/DelegateCommand.cs)** - ICommand implementation for WPF MVVM data binding
-- **[`ObjectToBoolConverter`](FindRomCover/Services/ObjectToBoolConverter.cs)** - WPF value converter for object-to-bool transformations
-- **[`IAudioService`](FindRomCover/Services/IAudioService.cs)** - Interface for audio service abstraction
+**Recognized Cover Image Formats**: The application recognizes and converts `.jpg`, `.jpeg`, `.bmp`, `.gif`, `.tiff`, `.tif`, `.webp`, `.avif`, `.heic`, `.heif`, `.jxl`, and `.jp2` files to `.png` format.
 
-### Managers (`FindRomCover/Managers/`)
-- **[`SettingsManager`](FindRomCover/Managers/SettingsManager.cs)** - Manages application settings with XML persistence, INotifyPropertyChanged support, and cross-instance static synchronization
+## Getting Started
 
-### Models (`FindRomCover/models/`)
-- **[`ImageData`](FindRomCover/models/ImageData.cs)** - Immutable record representing an image with similarity score and lazy-loaded broken image fallback
-- **[`MameData`](FindRomCover/models/MameData.cs)** - MAME machine data model with MessagePack serialization support
-- **[`MissingImageItem`](FindRomCover/models/MissingImageItem.cs)** - Represents a ROM missing its cover image
-- **[`SimilarityCalculationResult`](FindRomCover/models/SimilarityCalculationResult.cs)** - Container for similarity calculation results including processing errors
-- **[`GitHubReleaseResponse`](FindRomCover/models/GitHubReleaseResponse.cs)** - DTO for GitHub API release responses
-- **[`UpdateCheckResult`](FindRomCover/models/UpdateCheckResult.cs)** - Model for application update check results
-- **[`BugReportModel`](FindRomCover/models/BugReportModel.cs)** - Model for bug report submissions
-- **[`UpdateNotificationInfo`](FindRomCover/models/UpdateNotificationInfo.cs)** - Model for update notification display data
+### Prerequisites
 
-## Where can I find ROM Cover Images?
+- Windows 10 or later
+- **.NET 10.0 Runtime** (automatically installed if using the provided executable)
+- **Microsoft Edge WebView2 Runtime**: Essential for Bing and Google Web Image Search. Most Windows 10/11 systems have this pre-installed. If missing, the application will prompt you with a direct download link.
+- (Optional) Valid API key for Google Custom Search API if you choose to use that search method.
 
-You can find cover images on websites such as [Libretro Thumbnails](https://github.com/libretro-thumbnails/libretro-thumbnails) and [EmuMovies](https://emumovies.com/), with which I have no affiliation.
+### Installation
 
-## Requirements
+1. **Download the latest release** from the [Releases](https://github.com/drpetersonfernandes/FindRomCover/releases) page.
+2. **Extract** the archive to a folder of your choice.
+3. **Run** `FindRomCover.exe`.
+4. **Configure API keys** (if using Google API search, see Setup section below).
 
-- Windows 7 or later
-- [.NET 10.0 Runtime](https://dotnet.microsoft.com/download/dotnet/10.0)
+### API Setup (Only for Google Custom Search API)
 
-## Installation
+The "Bing Web Search" and "Google Web Image Search" options do **not** require any API keys. They use an embedded browser to display results.
 
-1. Download the latest release.
-2. Extract the ZIP file to a folder of your choice.
-3. Run `FindRomCover.exe`.
+To use the **Google Custom Search API**:
+1. **Open the application.**
+2. Navigate to `Settings > API Settings` in the menu.
+3. **Google Custom Search API**:
+    - Go to [Google Cloud Console](https://console.cloud.google.com).
+    - Enable the "Custom Search JSON API".
+    - Create an API key.
+    - Enter your Google API key into the `API Settings` window.
+    - Click "Save".
 
-## Recent Updates (Refactored Architecture)
+## Usage Guide
 
-The codebase has undergone a significant refactor to improve maintainability and separation of concerns:
+### Basic Workflow
 
-### New Service Layer
-- **AudioService** - Extracted audio playback into a dedicated service with proper disposal pattern
-- **ImageLoader** - Centralized image loading with Magick.NET, retry logic for locked files, and corruption recovery
-- **ImageProcessor** - Dedicated image processing service for format conversion and temp file cleanup
-- **SimilarityCalculator** - Pure static utility for string similarity calculations with parallel execution
-- **ButtonFactory** - Factory pattern for UI element creation and similarity search orchestration
+1. **Setup Directories**
+   - ROM Folder: Where your game files are stored.
+   - Image Folder: Where you want cover images saved.
+   - Click "Browse..." to select folders.
 
-### Manager Layer
-- **SettingsManager** - Comprehensive settings management with XML serialization, data binding support, and cross-instance static synchronization
+2. **Scan for Missing Covers**
+   - Click "Check for Missing Images".
+   - The app will list all ROMs without a corresponding `.png`, `.jpg`, `.jpeg`, `.bmp`, `.gif`, `.tiff`, `.webp`, or `.avif` cover in your image folder.
 
-### Model Layer
-- Immutable records and classes for data representation
-- Lazy initialization patterns for resource-intensive operations
-- Proper encapsulation with init-only properties
+3. **Find Covers**
+   - Select a game from the missing covers list.
+   - The app automatically searches for cover images using your selected search engine.
+   - If using "Web Search" (Bing/Google Web), the results will appear in the embedded browser.
+   - If using "Google API", image suggestions will appear as clickable thumbnails.
 
-### Technical Improvements
-- Switched to `System.Text.Json` for all JSON handling (removed Newtonsoft.Json dependency)
-- Dependency injection via `Microsoft.Extensions.DependencyInjection` for service registration and lifetime management
-- Updated dependencies: ControlzEx 7.0.4, Magick.NET-Q16-AnyCPU 14.13.1, MahApps.Metro 3.0.0-rc0529, MessagePack 3.1.6, Microsoft.Extensions.DependencyInjection 10.0.8
-- Enhanced error logging with multiple log files (API, User, Internal)
-- Improved image loading with progressive loading, retries for locked files, and GDI+ error fallbacks
-- N-gram indexing for optimized similarity calculation performance
-- Parallel processing for similarity calculations with cancellation support
-- Thread-safe lazy initialization for MAME data and broken image resources
-- GitHub release checking for application update notifications
+4. **Download Covers**
+   - **For API Search**: Click on the cover image you want from the suggestions. The image is automatically downloaded, converted to PNG (if necessary), and saved as `[gamename].png`.
+   - **For Web Search**: Right-click on an image in the embedded browser and choose "Save image as...". Save it inside the Image Folder. The application's `FileSystemWatcher` will then detect the new image, convert it to PNG if needed, and remove the game from the missing list. *Note: Automatic saving directly from the web view is not available due to browser security restrictions.*
+   - The game is removed from the missing covers list once a corresponding PNG is detected in the image folder.
 
-## Support the Project
+### Advanced Features
 
-If you find 'Find ROM Cover' useful, please consider showing your support!
+#### Custom Search Queries
+Add extra search terms in the "Extra Query" field:
+- `"box art"` - for box art specifically
+- `"front cover"` - for front covers only
+- `"game cover"` - for cover images
 
-- **Give us a Star!** If you like this project, please give it a star ⭐ on GitHub. It helps more people discover the project!
-- **Donate:** Did you enjoy using Find ROM Cover? Consider [donating](https://www.purelogiccode.com/donate) to support the project or simply to say thanks! Your contribution helps in maintaining and improving the application.
+#### Theme Customization
+Access through the menu:
+- **Theme > Base Theme** - Switch between Light and Dark.
+- **Theme > Accent Colors** - Choose from 20+ color schemes.
 
-## Developer
+#### Search Engine Selection
+Switch between "Bing Web Search", "Google Web Image Search", and "Google API" via:
+- **Select Search Engine** menu.
 
-- Developed by [Pure Logic Code](https://www.purelogiccode.com).
+#### Thumbnail Size
+Adjust preview sizes for API search results:
+- **Set Thumbnail Size** menu (100-500px).
+
+#### MAME Descriptions
+Toggle the use of MAME descriptions for search queries:
+- **Settings > Use MAME Descriptions** - When enabled, the app will use the full MAME game description instead of the cleaned ROM filename for searches.
+
+#### Log Window
+Access detailed logs for troubleshooting:
+- **Settings > Show/Hide Log Window**.
+- Log files are also saved as `app.log` and `error.log` in the application folder.
+- `error_user.log` contains a simplified list of errors for user reference.
+
+#### Command-line Arguments
+You can launch `FindRomCover.exe` with command-line arguments to pre-fill the ROM and Image folders:
+- `FindRomCover.exe "C:\Path\To\ImageFolder" "C:\Path\To\RomFolder"`
+- If only one argument is provided, it will be treated as the Image Folder.
+- If both are provided, the application will automatically trigger a scan for missing images on startup.
+
+#### System Tray
+The application can be minimized to the system tray for background operation:
+- Minimize the window to send it to the system tray.
+- Right-click the tray icon to restore or exit the application.
+- Balloon notifications inform you when the app is minimized.
+
+## Architecture
+
+The application follows a clean architecture pattern with separation of concerns:
+
+### Project Structure
+
+```
+FindRomCover/
+├── ApiProvider/          # External API integrations (Google Custom Search)
+├── Managers/             # Data management (Settings, MAME)
+├── Models/               # Data models and DTOs
+├── Services/             # Business logic and utilities
+├── Views/                # WPF windows and controls
+└── Resources/            # Images, icons, and audio files
+```
+
+### Key Components
+
+- **App.xaml.cs**: Application entry point with dependency injection setup, global exception handling, and theme management.
+- **MainWindow**: Main application window with tabbed interface for different search methods.
+- **Services**: Modular services for specific functionality:
+  - `ImageProcessor`: Image conversion and processing using Magick.NET
+  - `ImageFolderWatcher`: Real-time file system monitoring for automatic image detection
+  - `WebSearchService`: URL generation for web searches
+  - `SearchQueryHelper`: ROM filename cleaning and sanitization
+  - `UpdateCheckService`: GitHub release checking
+  - `SystemTrayIcon`: System tray integration
+  - `LogService`: Centralized logging with Serilog
+
+### Dependencies
+
+- **MahApps.Metro**: Modern WPF UI framework
+- **Magick.NET**: Image processing and format conversion
+- **Microsoft.Web.WebView2**: Embedded web browser for search results
+- **NAudio**: Audio feedback system
+- **Serilog**: Structured logging
+- **Microsoft.Extensions.DependencyInjection**: Dependency injection container
+- **MessagePack**: Efficient binary serialization for settings
+
+## Troubleshooting
+
+### Common Issues
+
+**"API Key is not set" error (for Google API search)**
+- If prompted, ensure your Google API key is correctly entered in `Settings > API Settings`.
+- Verify the key is active and has sufficient quota in your Google Cloud Console.
+
+**"WebView2 Runtime Missing" or "WebView2 component is not ready" error**
+- On first launch, or if the component is missing, the application will prompt you to download the Microsoft Edge WebView2 Runtime. This is required for the "Bing Web Search" and "Google Web Image Search" features.
+- Follow the prompt to download and install the runtime from Microsoft's official website.
+- After installation, you may need to restart FindRomCover.
+- If the issue persists, ensure your Windows installation is up to date.
+
+**No search results**
+- Check your internet connection.
+- Try different search terms in "Extra Query".
+- Switch between "Bing Web Search", "Google Web Image Search", and "Google API" search engines.
+- If using Google API, check your API key and Search Engine ID.
+
+**Images not saving or converting automatically**
+- Ensure the image folder has write permissions.
+- For web searches, remember that you need to manually save images from the embedded browser. The application's `FileSystemWatcher` will then detect the new file, convert it to PNG if needed, and update the missing list.
+- If a file already exists, you'll be prompted to overwrite it.
+- Check the `app.log` for any errors related to file access or image conversion.
+
+**Missing or Corrupted MAME Data File (`mame.dat`)**
+- If you encounter errors about a missing `mame.dat` file, ensure it is present in the same directory as `FindRomCover.exe`.
+- If the file is present but errors about corruption occur, try obtaining a fresh copy of `mame.dat`.
+- MAME descriptions will not be available if this file is missing or corrupted.
+
+### Logs
+Access detailed logs via:
+- **Settings > Show/Hide Log Window**.
+- Log files are saved as `app.log` and `error.log` in the application folder.
+- `error_user.log` contains a simplified list of errors for user reference.
+
+## Testing
+
+The project includes a comprehensive test suite using:
+
+- **xUnit**: Test framework
+- **FluentAssertions**: Fluent assertion library
+- **Moq**: Mocking framework
+- **coverlet**: Code coverage
+
+Run tests with:
+```bash
+dotnet test
+```
+
+## Building from Source
+
+### Prerequisites
+- .NET 10.0 SDK
+- Visual Studio 2022 or later (recommended)
+
+### Build Steps
+```bash
+git clone https://github.com/drpetersonfernandes/FindRomCover.git
+cd FindRomCover
+dotnet build
+```
+
+### Publishing
+```bash
+dotnet publish -c Release -r win-x64 --self-contained
+```
+
+## Acknowledgments
+
+- **MahApps.Metro** for the beautiful WPF UI framework.
+- **Magick.NET** (ImageMagick) for robust image loading and conversion.
+- **MessagePack** for efficient binary serialization.
+- **MAME** team for the comprehensive arcade game database.
+- **Microsoft.Web.WebView2** for embedding web content.
+- **NAudio** for audio playback.
+- **Serilog** for structured logging.
+- **xUnit**, **FluentAssertions**, and **Moq** for the testing framework.
+
+## License
+
+This project is licensed under the **GNU General Public License v3.0** - see the [LICENSE.txt](LICENSE.txt) file for details.
+
+## Support
+
+- **Issues**: [GitHub Issues](https://github.com/drpetersonfernandes/FindRomCover/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/drpetersonfernandes/FindRomCover/discussions)
+- **Donations**: [Support Development](https://www.purelogiccode.com/donate)
+
+---
+
+Made with ❤️ by [Pure Logic Code](https://www.purelogiccode.com)

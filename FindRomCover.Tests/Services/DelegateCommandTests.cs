@@ -1,57 +1,22 @@
-using System.Diagnostics.CodeAnalysis;
-using System.Windows.Input;
-using FindRomCover.Services;
 using FluentAssertions;
+using FindRomCover.Services;
+using Xunit;
 
 namespace FindRomCover.Tests.Services;
 
-[SuppressMessage("ReSharper", "NullableWarningSuppressionIsUsed")]
 public class DelegateCommandTests
 {
     [Fact]
-    public void ConstructorWithNullExecuteThrowsArgumentNullException()
+    public void ConstructorWithNullExecuteShouldThrowArgumentNullException()
     {
         var act = static () => new DelegateCommand(null!);
 
-        act.Should().Throw<ArgumentNullException>();
+        act.Should().Throw<ArgumentNullException>()
+            .WithParameterName("execute");
     }
 
     [Fact]
-    public void ExecuteInvokesTheProvidedDelegate()
-    {
-        var wasCalled = false;
-        object? receivedParameter = null;
-        var command = new DelegateCommand(param =>
-        {
-            wasCalled = true;
-            receivedParameter = param;
-        });
-
-        command.Execute("test");
-
-        wasCalled.Should().BeTrue();
-        receivedParameter.Should().Be("test");
-    }
-
-    [Fact]
-    public void ExecutePassesNullParameter()
-    {
-        var wasCalled = false;
-        object? receivedParameter = "sentinel";
-        var command = new DelegateCommand(param =>
-        {
-            wasCalled = true;
-            receivedParameter = param;
-        });
-
-        command.Execute(null);
-
-        wasCalled.Should().BeTrue();
-        receivedParameter.Should().BeNull();
-    }
-
-    [Fact]
-    public void CanExecuteWithoutPredicateReturnsTrue()
+    public void CanExecuteWithoutCanExecuteFuncShouldReturnTrue()
     {
         var command = new DelegateCommand(static _ => { });
 
@@ -61,17 +26,7 @@ public class DelegateCommandTests
     }
 
     [Fact]
-    public void CanExecuteWithTruePredicateReturnsTrue()
-    {
-        var command = new DelegateCommand(static _ => { }, static _ => true);
-
-        var result = command.CanExecute(null);
-
-        result.Should().BeTrue();
-    }
-
-    [Fact]
-    public void CanExecuteWithFalsePredicateReturnsFalse()
+    public void CanExecuteWithCanExecuteFuncShouldReturnFuncResult()
     {
         var command = new DelegateCommand(static _ => { }, static _ => false);
 
@@ -81,25 +36,83 @@ public class DelegateCommandTests
     }
 
     [Fact]
-    public void CanExecutePassesParameterToPredicate()
+    public void CanExecuteWithCanExecuteFuncReturningTrueShouldReturnTrue()
     {
-        object? receivedParameter = null;
-        var command = new DelegateCommand(static _ => { }, param =>
-        {
-            receivedParameter = param;
-            return true;
-        });
+        var command = new DelegateCommand(static _ => { }, static _ => true);
 
-        command.CanExecute("hello");
+        var result = command.CanExecute(null);
 
-        receivedParameter.Should().Be("hello");
+        result.Should().BeTrue();
     }
 
     [Fact]
-    public void ImplementsICommandInterface()
+    public void ExecuteShouldInvokeAction()
+    {
+        var executed = false;
+        var command = new DelegateCommand(_ => { executed = true; });
+
+        command.Execute(null);
+
+        executed.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ExecuteShouldPassParameter()
+    {
+        object? receivedParam = null;
+        var command = new DelegateCommand(param => { receivedParam = param; });
+
+        command.Execute("test-param");
+
+        receivedParam.Should().Be("test-param");
+    }
+
+    [Fact]
+    public void ExecuteWithNullParameterShouldWork()
+    {
+        object? receivedParam = "not null";
+        var command = new DelegateCommand(param => { receivedParam = param; });
+
+        command.Execute(null);
+
+        receivedParam.Should().BeNull();
+    }
+
+    [Fact]
+    public void CanExecuteShouldPassParameter()
+    {
+        object? receivedParam = null;
+        var command = new DelegateCommand(static _ => { }, param =>
+        {
+            receivedParam = param;
+            return true;
+        });
+
+        command.CanExecute("test-param");
+
+        receivedParam.Should().Be("test-param");
+    }
+
+    [Fact]
+    public void CanExecuteChangedShouldBeSubscribable()
     {
         var command = new DelegateCommand(static _ => { });
+        var eventRaised = false;
+        EventHandler handler = (_, _) => { eventRaised = true; };
+        command.CanExecuteChanged += handler;
 
-        command.Should().BeAssignableTo<ICommand>();
+        command.CanExecuteChanged -= handler;
+
+        // Verify subscription/unsubscription works without error
+        eventRaised.Should().BeFalse();
+    }
+
+    [Fact]
+    public void CanExecuteWithFuncReturningFalseShouldReturnFalse()
+    {
+        var command = new DelegateCommand(static _ => { }, static _ => false);
+
+        command.CanExecute("anything").Should().BeFalse();
+        command.CanExecute(null).Should().BeFalse();
     }
 }

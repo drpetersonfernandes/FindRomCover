@@ -1,26 +1,18 @@
 using System.Diagnostics;
 using System.IO;
-using System.Net.Http;
 using System.Windows;
 using ControlzEx.Theming;
 using FindRomCover.Managers;
 using FindRomCover.Services;
 using ImageMagick;
-using MessageBox = System.Windows.MessageBox;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace FindRomCover;
 
 public partial class App
 {
-    /// <summary>
-    /// The dependency injection service provider for the application.
-    /// </summary>
     public static IServiceProvider? ServiceProvider { get; private set; }
 
-    /// <summary>
-    /// Gets the SettingsManager instance from the DI container.
-    /// </summary>
     public static SettingsManager SettingsManager
     {
         get
@@ -31,6 +23,9 @@ public partial class App
         }
     }
 
+    public static DebugWindow? LogWindow { get; private set; }
+    public static ImageSaveService ImageSaveService { get; } = new();
+
     public static string? StartupImageFolderPath { get; private set; }
     public static string? StartupRomFolderPath { get; private set; }
 
@@ -38,33 +33,22 @@ public partial class App
     {
         try
         {
-            return new AudioService();
+            return new LocalAudioService();
         }
         catch (Exception ex)
         {
-            _ = ErrorLogger.LogAsync(ex, "Failed to initialize AudioService, using NullAudioService fallback");
+            LogService.Warning(ex, "Failed to initialize audio service, falling back to NullAudioService");
             return new NullAudioService();
         }
     });
 
     public static IAudioService AudioService => AudioServiceLazy.Value;
 
-    /// <summary>
-    /// Configures the dependency injection container and registers application services.
-    /// </summary>
     private static void ConfigureServices(IServiceCollection services)
     {
-        // Register SettingsManager as a singleton
         services.AddSingleton<SettingsManager>();
-
-        // Register MainWindow with constructor injection
-        services.AddTransient<MainWindow>();
     }
 
-    /// <summary>
-    /// Safely executes an async task in a fire-and-forget manner with proper exception handling.
-    /// Prevents unobserved task exceptions from crashing the application.
-    /// </summary>
     private static void FireAndForget(Func<Task> asyncAction)
     {
         _ = Task.Run(async () =>
@@ -75,44 +59,146 @@ public partial class App
             }
             catch (Exception ex)
             {
-                // Exceptions are already logged by ErrorLogger.LogAsync
-                // This prevents unobserved task exceptions from propagating
-                Debug.WriteLine($"FireAndForget caught unhandled exception: {ex}");
+                LogService.Error(ex, "FireAndForget caught unhandled exception");
             }
         });
     }
 
-    /// <summary>
-    /// Checks GitHub for a new release and notifies the user if an update is available.
-    /// </summary>
+    private static void RegisterGlobalExceptionHandlers()
+    {
+        AppDomain.CurrentDomain.UnhandledException += (_, args) =>
+        {
+            var ex = args.ExceptionObject as Exception ?? new InvalidOperationException(args.ExceptionObject.ToString() ?? "Unknown AppDomain exception");
+            LogService.Fatal(ex, "Unhandled AppDomain exception - Application will terminate");
+            Current?.Dispatcher.BeginInvoke(static () =>
+            {
+                MessageBox.Show(
+                    "An unexpected error occurred and the application needs to close.\n\nPlease report this issue to the development team.",
+                    "Fatal Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            });
+        };
+
+        TaskScheduler.UnobservedTaskException += (_, args) =>
+        {
+            LogService.Error(args.Exception, "Unobserved task exception");
+            args.SetObserved();
+        };
+
+        Current.DispatcherUnhandledException += (_, args) =>
+        {
+            LogService.Error(args.Exception, "Unhandled dispatcher exception (UI Thread)");
+            MessageBox.Show(
+                "An unexpected error occurred.\n\n" +
+                $"Error: {args.Exception.Message}\n\n" +
+                "The error has been reported to the development team.",
+                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            args.Handled = true;
+        };
+    }
+
+    protected override async void OnStartup(StartupEventArgs e)
+    {
+        try
+        {
+            LogService.Initialize();
+            RegisterGlobalExceptionHandlers();
+
+            var services = new ServiceCollection();
+            ConfigureServices(services);
+            ServiceProvider = services.BuildServiceProvider();
+
+            FireAndForget(ApplicationStatsService.RecordStartupAsync);
+
+            try
+            {
+                ResourceLimits.Memory = AppConstants.DefaultMemoryLimit;
+                ResourceLimits.Thread = AppConstants.DefaultThreadLimit;
+            }
+            catch (Exception ex)
+            {
+                LogService.Warning(ex, "Failed to set resource limits.");
+            }
+
+            switch (e.Args.Length)
+            {
+                case >= 2:
+                    {
+                        var imageFolderPath = e.Args[0];
+                        var romFolderPath = e.Args[1];
+
+                        if (Directory.Exists(imageFolderPath) && Directory.Exists(romFolderPath))
+                        {
+                            StartupImageFolderPath = imageFolderPath;
+                            StartupRomFolderPath = romFolderPath;
+                        }
+
+                        break;
+                    }
+                case 1:
+                    {
+                        if (Directory.Exists(e.Args[0]))
+                        {
+                            StartupImageFolderPath = e.Args[0];
+                        }
+
+                        break;
+                    }
+            }
+
+            LogWindow = new DebugWindow();
+
+            var settings = SettingsManager;
+
+            var folderToClean = !string.IsNullOrEmpty(StartupImageFolderPath)
+                ? StartupImageFolderPath
+                : settings.LastImageFolder;
+
+            if (!string.IsNullOrEmpty(folderToClean) && Directory.Exists(folderToClean))
+            {
+                await Task.Run(() => ImageProcessor.CleanupOrphanedTempFiles(folderToClean));
+            }
+
+            ApplyTheme(settings.BaseTheme, settings.AccentColor);
+
+            var mainWindow = new MainWindow(SettingsManager, StartupImageFolderPath, StartupRomFolderPath);
+            mainWindow.Show();
+
+            LogService.Information("Application started successfully.");
+
+            FireAndForget(CheckForUpdatesAsync);
+        }
+        catch (Exception ex)
+        {
+            LogService.Fatal(ex, "Error in the method OnStartup");
+            MessageBox.Show(
+                $"A fatal error occurred during application startup:\n\n{ex.Message}\n\nThe application will now close.",
+                "Fatal Startup Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            Shutdown();
+            Environment.Exit(1);
+        }
+    }
+
     private static async Task CheckForUpdatesAsync()
     {
         try
         {
-            using var httpClient = new HttpClient();
-            var releaseService = new GitHubReleaseService(httpClient)
-            {
-                HttpClientTimeoutSeconds = 15
-            };
-            var orchestrator = new UpdateCheckOrchestrator(releaseService);
-
-            var notification = await orchestrator.CheckAsync();
-
-            if (notification.ShouldNotify)
+            var updateInfo = await UpdateCheckService.CheckForUpdateAsync();
+            if (updateInfo is { IsUpdateAvailable: true })
             {
                 Current.Dispatcher.Invoke(() =>
                 {
                     var choice = MessageBox.Show(
-                        notification.Message,
-                        "Update Available",
-                        MessageBoxButton.YesNo,
-                        MessageBoxImage.Information);
+                        $"A new version of FindRomCover is available!\n\n" +
+                        $"Current: {updateInfo.CurrentVersion}\n" +
+                        $"Latest: {updateInfo.LatestVersion}\n\n" +
+                        "Would you like to download it?",
+                        "Update Available", MessageBoxButton.YesNo, MessageBoxImage.Information);
 
                     if (choice == MessageBoxResult.Yes)
                     {
                         Process.Start(new ProcessStartInfo
                         {
-                            FileName = notification.ReleaseUrl,
+                            FileName = updateInfo.ReleaseUrl,
                             UseShellExecute = true
                         });
                     }
@@ -121,206 +207,80 @@ public partial class App
         }
         catch (Exception ex)
         {
-            _ = ErrorLogger.LogAsync(ex, "Error checking for updates on GitHub");
-        }
-    }
-
-    /// <summary>
-    /// Registers global exception handlers to catch unhandled exceptions from all threads,
-    /// unobserved task exceptions, and dispatcher exceptions.
-    /// </summary>
-    private static void RegisterGlobalExceptionHandlers()
-    {
-        // Handle exceptions from non-UI threads
-        AppDomain.CurrentDomain.UnhandledException += (sender, args) =>
-        {
-            var ex = args.ExceptionObject as Exception ?? new InvalidOperationException(args.ExceptionObject.ToString() ?? "Unknown AppDomain exception");
-            const string contextMessage = "Unhandled AppDomain exception - Application will terminate";
-
-            _ = ErrorLogger.LogAsync(ex, contextMessage);
-
-            // Marshal to UI thread — UnhandledException fires on the faulting thread
-            Current?.Dispatcher.BeginInvoke(static () =>
-            {
-                MessageBox.Show(
-                    "An unexpected error occurred and the application needs to close.\n\n" +
-                    "Please report this issue to the development team.",
-                    "Fatal Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
-            });
-        };
-
-        // Handle unobserved task exceptions
-        TaskScheduler.UnobservedTaskException += (sender, args) =>
-        {
-            const string contextMessage = "Unobserved task exception";
-            _ = ErrorLogger.LogAsync(args.Exception, contextMessage);
-            args.SetObserved(); // Prevent the exception from terminating the process
-        };
-
-        // Handle dispatcher exceptions (UI thread exceptions)
-        Current.DispatcherUnhandledException += (sender, args) =>
-        {
-            const string contextMessage = "Unhandled dispatcher exception (UI Thread)";
-            _ = ErrorLogger.LogAsync(args.Exception, contextMessage);
-
-            MessageBox.Show(
-                "An unexpected error occurred.\n\n" +
-                $"Error: {args.Exception.Message}\n\n" +
-                "The error has been reported to the development team.",
-                "Error",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
-
-            args.Handled = true; // Prevent the exception from terminating the application
-        };
-    }
-
-    protected override async void OnStartup(StartupEventArgs e)
-    {
-        try
-        {
-            // Register global exception handlers FIRST, before any other initialization
-            RegisterGlobalExceptionHandlers();
-
-            // Initialize dependency injection container
-            var services = new ServiceCollection();
-            ConfigureServices(services);
-            ServiceProvider = services.BuildServiceProvider();
-
-            // Track application usage (fire-and-forget, non-blocking)
-            FireAndForget(static () => UsageTracker.TrackUsageAsync());
-
-            // Magick.NET resource limits
-            ResourceLimits.Memory = AppConstants.DefaultMemoryLimit;
-            ResourceLimits.Thread = AppConstants.DefaultThreadLimit;
-
-            // Check for command-line arguments. e.Args is more robust than Environment.CommandLine.
-            // Assumes the order is: <image_folder_path> <rom_folder_path>
-            if (e.Args.Length == 2)
-            {
-                var imageFolderPath = e.Args[0];
-                var romFolderPath = e.Args[1];
-
-                var imagePathValid = Directory.Exists(imageFolderPath);
-                var romPathValid = Directory.Exists(romFolderPath);
-
-                if (imagePathValid && romPathValid)
-                {
-                    StartupImageFolderPath = imageFolderPath;
-                    StartupRomFolderPath = romFolderPath;
-                }
-                else
-                {
-                    var invalidPaths = new List<string>();
-                    if (!imagePathValid)
-                        invalidPaths.Add($"Image folder: '{imageFolderPath}'");
-                    if (!romPathValid)
-                        invalidPaths.Add($"ROM folder: '{romFolderPath}'");
-
-                    MessageBox.Show(
-                        $"The following command-line paths are invalid or do not exist:\n\n{string.Join("\n", invalidPaths)}\n\nThe application will start with empty folder paths.",
-                        "Invalid Command-Line Arguments", MessageBoxButton.OK, MessageBoxImage.Warning);
-                }
-            }
-
-            // Clean up orphaned temp files from previous crashes asynchronously
-            // This handles temp files left behind if the app crashed during image processing
-            var folderToClean = !string.IsNullOrEmpty(StartupImageFolderPath)
-                ? StartupImageFolderPath
-                : SettingsManager.LastImageFolder;
-
-            if (!string.IsNullOrEmpty(folderToClean) && Directory.Exists(folderToClean))
-            {
-                await Task.Run(() => ImageProcessor.CleanupOrphanedTempFiles(folderToClean));
-            }
-
-            // Apply theme BEFORE creating MainWindow to prevent theme flashing
-            ApplyTheme(SettingsManager.BaseTheme, SettingsManager.AccentColor);
-
-            // Create and show MainWindow manually (StartupUri removed from App.xaml)
-            var mainWindow = ServiceProvider.GetRequiredService<MainWindow>();
-            mainWindow.Show();
-
-            // Check for updates asynchronously (fire-and-forget, non-blocking)
-            FireAndForget(CheckForUpdatesAsync);
-        }
-        catch (Exception ex)
-        {
-            _ = ErrorLogger.LogAsync(ex, "Error in the method OnStartup");
-            MessageBox.Show(
-                $"A fatal error occurred during application startup:\n\n{ex.Message}\n\nThe application will now close.",
-                "Fatal Startup Error",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
-            Shutdown();
+            LogService.Warning(ex, "Update check failed silently.");
         }
     }
 
     protected override void OnExit(ExitEventArgs e)
     {
+        try { if (AudioService is IDisposable disposableAudioService) disposableAudioService.Dispose(); }
+        catch (Exception ex)
+        {
+            LogService.Warning(ex, "Error disposing AudioService during shutdown.");
+        }
+
+        try { HttpClientHelper.Dispose(); }
+        catch (Exception ex)
+        {
+            LogService.Warning(ex, "Error disposing HttpClientHelper during shutdown.");
+        }
+
+        try { ErrorLogger.Dispose(); }
+        catch (Exception ex)
+        {
+            LogService.Warning(ex, "Error disposing ErrorLogger during shutdown.");
+        }
+
         try
         {
-            if (AudioService is IDisposable disposableAudioService)
+            if (ServiceProvider is IDisposable disposableProvider)
             {
-                disposableAudioService.Dispose();
+                disposableProvider.Dispose();
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // ignored
+            LogService.Warning(ex, "Error disposing ServiceProvider during shutdown.");
         }
 
         try
         {
-            ErrorLogger.Dispose();
-        }
-        catch
-        {
-            // ignored
-        }
-
-        try
-        {
-            UsageTracker.Dispose();
-        }
-        catch
-        {
-            // ignored
-        }
-
-        try
-        {
-            if (ServiceProvider is IDisposable disposableServiceProvider)
+            if (LogWindow != null)
             {
-                disposableServiceProvider.Dispose();
+                LogWindow.ForceClose();
+                LogWindow = null;
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // ignored
+            Debug.Print($"Error closing LogWindow during shutdown: {ex.Message}");
         }
 
-        try
+        try { base.OnExit(e); }
+        catch (Exception ex)
         {
-            base.OnExit(e);
-        }
-        catch
-        {
-            // ignored
+            Debug.Print($"Error in base.OnExit during shutdown: {ex.Message}");
         }
 
-        Environment.Exit(e.ApplicationExitCode);
+        try { LogService.Dispose(); }
+        catch (Exception ex)
+        {
+            Debug.Print($"Error disposing LogService during shutdown: {ex.Message}");
+        }
+
+        Environment.Exit(0);
     }
 
     public static void ChangeTheme(string baseTheme, string accentColor)
     {
-        // Validate inputs - SettingsManager property setters will handle fallback to defaults
-        ApplyTheme(baseTheme, accentColor);
-        SettingsManager.BaseTheme = baseTheme;
-        SettingsManager.AccentColor = accentColor;
-        SettingsManager.SaveSettings();
+        try
+        {
+            ApplyTheme(baseTheme, accentColor);
+            SettingsManager.BaseTheme = baseTheme;
+            SettingsManager.AccentColor = accentColor;
+            SettingsManager.SaveSettings();
+        }
+        catch (Exception ex) { LogService.Error(ex, "Error in ChangeTheme"); }
     }
 
     private static void ApplyTheme(string baseTheme, string accentColor)
@@ -331,7 +291,11 @@ public partial class App
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
-            FireAndForget(() => ErrorLogger.LogAsync(ex, $"Error applying theme: {baseTheme}.{accentColor}"));
+            FireAndForget(() =>
+            {
+                LogService.Error(ex, $"Error applying theme: {baseTheme}.{accentColor}");
+                return Task.CompletedTask;
+            });
         }
     }
 
@@ -343,16 +307,13 @@ public partial class App
             var accentColor = SettingsManager.AccentColor;
             ThemeManager.Current.ChangeTheme(window, $"{baseTheme}.{accentColor}");
         }
-        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+        catch (Exception ex)
         {
-            FireAndForget(() => ErrorLogger.LogAsync(ex, "Error applying theme to window, using default"));
-            try
+            LogService.Error(ex, "Error in ApplyThemeToWindow, falling back to Light.Blue");
+            try { ThemeManager.Current.ChangeTheme(window, "Light.Blue"); }
+            catch
             {
-                ThemeManager.Current.ChangeTheme(window, "Light.Blue");
-            }
-            catch (Exception fallbackEx)
-            {
-                FireAndForget(() => ErrorLogger.LogAsync(fallbackEx, "Failed to apply default theme 'Light.Blue' to window"));
+                // ignored
             }
         }
     }
@@ -361,7 +322,6 @@ public partial class App
     {
         public void PlayClickSound()
         {
-            // No-op implementation
         }
 
         public void Dispose()

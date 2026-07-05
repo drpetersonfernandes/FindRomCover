@@ -3,24 +3,22 @@ using System.Windows;
 using FindRomCover.Managers;
 using FindRomCover.Services;
 using MahApps.Metro.Controls.Dialogs;
-using MessageBox = System.Windows.MessageBox;
 
 namespace FindRomCover;
 
 public partial class SettingsWindow
 {
-    private readonly SettingsManager _settingsManager; // This will now always be App.Settings
+    private readonly SettingsManager _settingsManager;
     private readonly ObservableCollection<string> _supportedExtensions;
 
     public SettingsWindow(SettingsManager settingsManager)
     {
         InitializeComponent();
-        App.ApplyThemeToWindow(this);
 
         _settingsManager = settingsManager ?? throw new ArgumentNullException(nameof(settingsManager));
 
         _supportedExtensions = new ObservableCollection<string>(_settingsManager.SupportedExtensions.OrderBy(static e => e, StringComparer.OrdinalIgnoreCase));
-        DataContext = new SettingsViewModel { SupportedExtensions = _supportedExtensions };
+        DataContext = new { SupportedExtensions = _supportedExtensions };
     }
 
     private async void BtnAdd_ClickAsync(object sender, RoutedEventArgs e)
@@ -45,11 +43,11 @@ public partial class SettingsWindow
                 return;
             }
 
-            // Check for valid characters and length in file extension
+            // Check for valid characters in file extension
             if (!IsValidExtension(newExtension))
             {
                 await this.ShowMessageAsync("Invalid Input",
-                    "Extension is invalid. It must be 1-10 characters and contain only letters, numbers, or hyphens.");
+                    "Extension contains invalid characters. Only letters, numbers, and hyphens are allowed.");
                 return;
             }
 
@@ -66,35 +64,22 @@ public partial class SettingsWindow
 
             _supportedExtensions.Add(newExtension);
 
-            ReSortExtensions();
-
             LstSupportedExtensions.SelectedItem = newExtension;
         }
         catch (Exception ex)
         {
-            _ = ErrorLogger.LogAsync(ex, "Error in method BtnAdd_Click");
+            LogService.Error(ex, "Error in method BtnAdd_ClickAsync");
         }
     }
 
     private static bool IsValidExtension(string extension)
     {
-        const int maxExtensionLength = 10;
         // Check if extension contains only valid characters (letters, numbers, hyphens)
-        // and is not empty or too long
-        if (string.IsNullOrEmpty(extension) || extension.Length > maxExtensionLength)
+        // and is not empty
+        if (string.IsNullOrEmpty(extension))
             return false;
 
         return extension.All(static c => char.IsLetterOrDigit(c) || c == '-');
-    }
-
-    private void ReSortExtensions()
-    {
-        var sorted = _supportedExtensions.OrderBy(static e => e, StringComparer.OrdinalIgnoreCase).ToList();
-        _supportedExtensions.Clear();
-        foreach (var ext in sorted)
-        {
-            _supportedExtensions.Add(ext);
-        }
     }
 
     private void BtnRemove_Click(object sender, RoutedEventArgs e)
@@ -106,10 +91,7 @@ public partial class SettingsWindow
                 _supportedExtensions.Remove(selectedExtension);
             }
         }
-        catch (Exception ex)
-        {
-            _ = ErrorLogger.LogAsync(ex, "Error in method BtnRemove_Click");
-        }
+        catch (Exception ex) { LogService.Error(ex, "Error in BtnRemove_Click"); }
     }
 
     private void BtnSave_Click(object sender, RoutedEventArgs e)
@@ -125,8 +107,8 @@ public partial class SettingsWindow
             {
                 var invalidList = string.Join(", ", invalidExtensions);
                 var result = MessageBox.Show(
-                    $"The following extensions are invalid: {invalidList}\n\n" +
-                    "Extensions must be 1-10 characters long and contain only letters, numbers, and hyphens.\n\n" +
+                    $"The following extensions contain invalid characters: {invalidList}\n\n" +
+                    "Only letters, numbers, and hyphens are allowed in file extensions.\n\n" +
                     "Would you like to remove these invalid extensions and save the rest?",
                     "Invalid Extensions", MessageBoxButton.YesNo, MessageBoxImage.Warning);
 
@@ -158,7 +140,7 @@ public partial class SettingsWindow
             var normalizedExtensions = _supportedExtensions
                 .Select(static ext => ext.ToLowerInvariant())
                 .OrderBy(static ext => ext, StringComparer.OrdinalIgnoreCase)
-                .ToArray();
+                .ToList();
 
             _settingsManager.SupportedExtensions = normalizedExtensions;
             _settingsManager.SaveSettings();
@@ -168,10 +150,9 @@ public partial class SettingsWindow
         }
         catch (Exception ex)
         {
-            _ = ErrorLogger.LogAsync(ex, "Error in BtnSave_Click");
+            LogService.Error(ex, "Error in BtnSave_Click");
             MessageBox.Show("An error occurred while saving settings. Your changes were not saved.",
                 "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            DialogResult = false;
         }
     }
 
@@ -179,10 +160,5 @@ public partial class SettingsWindow
     {
         DialogResult = false;
         Close();
-    }
-
-    private sealed class SettingsViewModel
-    {
-        public ObservableCollection<string> SupportedExtensions { get; init; } = new();
     }
 }
