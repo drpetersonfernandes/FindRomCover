@@ -248,6 +248,7 @@ public partial class App
             if (LogWindow != null)
             {
                 LogWindow.ForceClose();
+                LogWindow.Close();
                 LogWindow = null;
             }
         }

@@ -545,18 +545,9 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
             return;
         }
 
-        // Allow the window to close normally (X button or Alt+F4)
-        try { _findSimilarCts?.Cancel(); }
-        catch
-        {
-            // ignored
-        }
-
-        try { _loadMissingCts?.Cancel(); }
-        catch
-        {
-            // ignored
-        }
+        // X button or Alt+F4: cancel the raw close and use the explicit shutdown path
+        e.Cancel = true;
+        ExitApplication();
     }
 
     private void Exit_Click(object sender, RoutedEventArgs e)
@@ -1215,6 +1206,11 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         _findSimilarSemaphore.Dispose();
         _imageFolderWatcher?.Dispose();
         _systemTrayIcon?.Dispose();
+
+        try { GoogleWebView?.Dispose(); }
+        catch { /* ignored */ }
+        try { BingWebView?.Dispose(); }
+        catch { /* ignored */ }
 
         if (CheckForMissingImagesCommand is IDisposable disposableCheckCommand)
             disposableCheckCommand.Dispose();
