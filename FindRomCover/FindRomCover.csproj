@@ -59,6 +59,8 @@
         <Resource Include="images\usethis.png" />
         <None Remove="images\folder.png" />
         <Resource Include="images\folder.png" />
+        <None Remove="icon\icon.ico" />
+        <EmbeddedResource Include="icon\icon.ico" />
     </ItemGroup>
 
     <ItemGroup>
