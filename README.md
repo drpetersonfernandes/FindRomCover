@@ -8,10 +8,8 @@ A powerful Windows desktop application designed to help you automatically find a
 It supports **Bing Web Image Search**, **Google Web Image Search**, and **Google Custom Search API** to fetch high-quality game cover images.
 
 ![Main Window](screenshot.png)
-*Screenshot: Light Theme*
 
 ![Main Window](screenshot2.png)
-*Screenshot: Dark Theme*
 
 ## Features
 
