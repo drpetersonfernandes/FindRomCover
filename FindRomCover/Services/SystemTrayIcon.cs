@@ -18,7 +18,7 @@ public sealed class SystemTrayIcon : IDisposable
         try
         {
             var assembly = Assembly.GetExecutingAssembly();
-            using var stream = assembly.GetManifestResourceStream("FindRomCover.icon.scraper.ico");
+            using var stream = assembly.GetManifestResourceStream("FindRomCover.icon.icon.ico");
             icon = stream != null ? new Icon(stream) : SystemIcons.Application;
         }
         catch
