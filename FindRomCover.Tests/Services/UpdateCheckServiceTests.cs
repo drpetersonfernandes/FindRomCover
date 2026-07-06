@@ -189,7 +189,7 @@ public class UpdateCheckServiceTests
     [Fact]
     public async Task CheckForUpdateAsyncWithMockedHttpClientShouldReturnUpdateInfo()
     {
-        var json = BuildReleaseJson("v3.0.0", "https://github.com/repo/releases/tag/v3.0.0");
+        var json = BuildReleaseJson("v4.0.0", "https://github.com/repo/releases/tag/v4.0.0");
         var mockHandler = new Mock<HttpMessageHandler>();
 
         mockHandler.Protected()
@@ -208,7 +208,7 @@ public class UpdateCheckServiceTests
         var result = await UpdateCheckService.CheckForUpdateAsync(httpClient);
 
         result.IsUpdateAvailable.Should().BeTrue();
-        result.LatestVersion.Should().Be("3.0.0");
+        result.LatestVersion.Should().Be("4.0.0");
     }
 
     [Fact]
