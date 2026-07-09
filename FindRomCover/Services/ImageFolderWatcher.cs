@@ -217,7 +217,7 @@ public sealed class ImageFolderWatcher : IDisposable
                     }
                     else
                     {
-                        LogService.Warning($"ImageFolderWatcher: file disappeared after wait: '{filePath}'");
+                        LogService.Debug($"ImageFolderWatcher: file disappeared after wait: '{filePath}'");
                     }
 
                     return;
@@ -288,7 +288,7 @@ public sealed class ImageFolderWatcher : IDisposable
                     var (convertedPath, convertError) = await ConvertToPngWithRetryAsync(filePath);
                     if (convertedPath == null)
                     {
-                        LogService.Warning($"ImageFolderWatcher: conversion to PNG failed for '{filePath}' — ImageFound NOT fired");
+                        LogService.Debug($"ImageFolderWatcher: conversion to PNG failed for '{filePath}' — ImageFound NOT fired");
                         ConversionFailed?.Invoke(filePath, convertError ?? "Unknown error");
                         return;
                     }
@@ -419,16 +419,25 @@ public sealed class ImageFolderWatcher : IDisposable
 
         for (var attempt = 1; attempt <= maxRetries; attempt++)
         {
-            var (path, error) = await ConvertToPngAsync(sourcePath);
-            if (path != null)
-                return (path, null);
-
-            lastError = error;
-            if (attempt < maxRetries)
+            try
             {
-                LogService.Debug($"ImageFolderWatcher: convert retry {attempt}/{maxRetries} for '{sourcePath}'");
-                var delay = baseDelayMs * Math.Pow(2, attempt - 1);
-                await Task.Delay((int)delay);
+                return await ConvertToPngAsync(sourcePath);
+            }
+            catch (MagickException ex)
+            {
+                LogService.Warning(ex, $"ImageFolderWatcher: image conversion skipped for corrupt/misformatted file: {sourcePath}");
+                return (null, ex.Message);
+            }
+            catch (Exception ex)
+            {
+                lastError = ex.Message;
+                LogService.Error(ex, $"Failed to convert image to PNG: {sourcePath}");
+                if (attempt < maxRetries)
+                {
+                    LogService.Debug($"ImageFolderWatcher: convert retry {attempt}/{maxRetries} for '{sourcePath}'");
+                    var delay = baseDelayMs * Math.Pow(2, attempt - 1);
+                    await Task.Delay((int)delay);
+                }
             }
         }
 
@@ -441,32 +450,24 @@ public sealed class ImageFolderWatcher : IDisposable
         var fileNameWithoutExt = Path.GetFileNameWithoutExtension(sourcePath);
         var targetPath = Path.Combine(directory ?? ".", fileNameWithoutExt + ".png");
 
-        try
+        var settings = ImageProcessor.GetMagickReadSettings(sourcePath);
+        using var magickImage = new MagickImage(sourcePath, settings);
+        magickImage.AutoOrient();
+        magickImage.Quality = 90;
+        magickImage.Format = MagickFormat.Png;
+
+        await magickImage.WriteAsync(targetPath);
+
+        if (File.Exists(sourcePath) && !string.Equals(sourcePath, targetPath, StringComparison.OrdinalIgnoreCase))
         {
-            var settings = ImageProcessor.GetMagickReadSettings(sourcePath);
-            using var magickImage = new MagickImage(sourcePath, settings);
-            magickImage.AutoOrient();
-            magickImage.Quality = 90;
-            magickImage.Format = MagickFormat.Png;
-
-            await magickImage.WriteAsync(targetPath);
-
-            if (File.Exists(sourcePath) && !string.Equals(sourcePath, targetPath, StringComparison.OrdinalIgnoreCase))
+            try { File.Delete(sourcePath); }
+            catch (Exception ex)
             {
-                try { File.Delete(sourcePath); }
-                catch (Exception ex)
-                {
-                    LogService.Warning(ex, $"ImageFolderWatcher: failed to delete source file after PNG conversion: '{sourcePath}'");
-                }
+                LogService.Warning(ex, $"ImageFolderWatcher: failed to delete source file after PNG conversion: '{sourcePath}'");
             }
+        }
 
-            return (targetPath, null);
-        }
-        catch (Exception ex)
-        {
-            LogService.Error(ex, $"Failed to convert image to PNG: {sourcePath}");
-            return (null, ex.Message);
-        }
+        return (targetPath, null);
     }
 
     public void Dispose()

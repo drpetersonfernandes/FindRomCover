@@ -8,9 +8,8 @@
         <UseWPF>true</UseWPF>
         <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
         <ApplicationIcon>icon\icon.ico</ApplicationIcon>
-        <PackageIcon></PackageIcon>
-        <AssemblyVersion>3.0.0</AssemblyVersion>
-        <FileVersion>3.0.0</FileVersion>
+        <AssemblyVersion>3.0.1</AssemblyVersion>
+        <FileVersion>3.0.1</FileVersion>
         <LangVersion>14</LangVersion>
         <DebugType>embedded</DebugType>
         <DebugSymbols>true</DebugSymbols>
@@ -67,10 +66,10 @@
         <PackageReference Include="ControlzEx" Version="7.0.4" />
         <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="14.14.0" />
         <PackageReference Include="MahApps.Metro" Version="3.0.0-rc0529" />
-        <PackageReference Include="MessagePack" Version="3.1.7" />
+        <PackageReference Include="MessagePack" Version="3.1.8" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.9" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.9" />
-        <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4022.49" />
+        <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4078.44" />
         <PackageReference Include="NAudio" Version="2.3.0" />
         <PackageReference Include="Serilog" Version="4.3.1" />
         <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
