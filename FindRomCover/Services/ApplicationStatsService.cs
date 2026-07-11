@@ -36,6 +36,10 @@ public static class ApplicationStatsService
             {
                 LogService.Information("Application stats recorded successfully.");
             }
+            else if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+            {
+                LogService.Debug("Application stats API rate-limited (429).");
+            }
             else
             {
                 LogService.Warning($"Application stats API returned: {response.StatusCode}");

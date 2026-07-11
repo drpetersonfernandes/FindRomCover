@@ -26,6 +26,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
     private string _selectedRomFileName = string.Empty;
     private bool _disposed;
     private CoreWebView2Environment? _webViewEnv;
+    private bool _webView2Unavailable;
     private ImageFolderWatcher? _imageFolderWatcher;
     private string? _watchedFolderPath;
     private SystemTrayIcon? _systemTrayIcon;
@@ -273,6 +274,11 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
                 LogService.Error(ex, "Failed to initialize Bing WebView2");
             }
         }
+        catch (WebView2RuntimeNotFoundException ex)
+        {
+            _webView2Unavailable = true;
+            LogService.Warning(ex, "WebView2 Runtime is not installed. Web search features will be unavailable.");
+        }
         catch (Exception ex)
         {
             LogService.Error(ex, "Failed to initialize WebView2 environment");
@@ -303,6 +309,9 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         if (webView.CoreWebView2 != null)
             return true;
 
+        if (_webView2Unavailable)
+            return false;
+
         try
         {
             if (_webViewEnv == null)
@@ -312,6 +321,12 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
             await webView.EnsureCoreWebView2Async(_webViewEnv);
             return webView.CoreWebView2 != null;
+        }
+        catch (WebView2RuntimeNotFoundException ex)
+        {
+            _webView2Unavailable = true;
+            LogService.Warning(ex, "WebView2 Runtime is not installed. Web search features will be unavailable.");
+            return false;
         }
         catch (Exception ex)
         {

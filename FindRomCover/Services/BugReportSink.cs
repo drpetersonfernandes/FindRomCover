@@ -18,7 +18,7 @@ public class BugReportSink : ILogEventSink
 
     public void Emit(LogEvent logEvent)
     {
-        if (logEvent.Level < LogEventLevel.Warning)
+        if (logEvent.Level < LogEventLevel.Error)
             return;
 
         try
