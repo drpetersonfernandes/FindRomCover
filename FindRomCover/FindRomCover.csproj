@@ -64,7 +64,7 @@
 
     <ItemGroup>
         <PackageReference Include="ControlzEx" Version="7.0.4" />
-        <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="14.14.0" />
+        <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="14.15.0" />
         <PackageReference Include="MahApps.Metro" Version="3.0.0-rc0529" />
         <PackageReference Include="MessagePack" Version="3.1.8" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.9" />
