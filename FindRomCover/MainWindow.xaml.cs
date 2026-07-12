@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -27,6 +28,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
     private bool _disposed;
     private CoreWebView2Environment? _webViewEnv;
     private bool _webView2Unavailable;
+    private bool _webView2NotificationShown;
     private ImageFolderWatcher? _imageFolderWatcher;
     private string? _watchedFolderPath;
     private SystemTrayIcon? _systemTrayIcon;
@@ -278,6 +280,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         {
             _webView2Unavailable = true;
             LogService.Warning(ex, "WebView2 Runtime is not installed. Web search features will be unavailable.");
+            NotifyWebView2Unavailable();
         }
         catch (Exception ex)
         {
@@ -326,12 +329,43 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
         {
             _webView2Unavailable = true;
             LogService.Warning(ex, "WebView2 Runtime is not installed. Web search features will be unavailable.");
+            NotifyWebView2Unavailable();
             return false;
         }
         catch (Exception ex)
         {
             LogService.Error(ex, "Failed to lazily initialize WebView2");
             return false;
+        }
+    }
+
+    private void NotifyWebView2Unavailable()
+    {
+        if (_webView2NotificationShown)
+            return;
+
+        _webView2NotificationShown = true;
+
+        var result = MessageBox.Show(
+            "The WebView2 Runtime is not installed, so Google and Bing web search tabs will be unavailable.\n\n" +
+            "Would you like to download the WebView2 Runtime now?",
+            "WebView2 Runtime Required",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+
+        if (result == MessageBoxResult.Yes)
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo("https://developer.microsoft.com/en-us/microsoft-edge/webview2/")
+                {
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                LogService.Error(ex, "Failed to open WebView2 download page.");
+            }
         }
     }
 

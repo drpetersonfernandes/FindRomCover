@@ -5,7 +5,7 @@
 # FindRomCover
 
 A powerful Windows desktop application designed to help you automatically find and download missing cover art for your retro gaming ROM collection.
-It supports **Bing Web Image Search**, **Google Web Image Search**, and **Google Custom Search API** to fetch high-quality game cover images.
+It supports **Local Similarity Search** across your existing image folder, plus **Google Web Image Search**, **Bing Web Image Search**, and the **Google Custom Search API** to fetch high-quality game cover images.
 
 ![Main Window](screenshot.png)
 
@@ -17,14 +17,16 @@ It supports **Bing Web Image Search**, **Google Web Image Search**, and **Google
 - **MAME Integration**: Leverages MAME database for accurate game titles and descriptions.
 - **Batch Processing**: Scan entire ROM directories to identify missing covers.
 - **Multiple Sources**:
-    - **Bing Web Image Search**: Uses an embedded browser (WebView2) to display Bing image search results.
+    - **Local Similarity Search**: Matches ROM filenames against images already in your local image folder using configurable similarity algorithms (Jaccard Similarity, Jaro-Winkler Distance, or Levenshtein Distance) with an adjustable match threshold (10-90%).
     - **Google Web Image Search**: Uses an embedded browser (WebView2) to display Google image search results.
+    - **Bing Web Image Search**: Uses an embedded browser (WebView2) to display Bing image search results.
     - **Google Custom Search API**: Fetches image results directly via API (requires an API key).
 - **Real-time Preview**: Thumbnail previews with configurable sizes (100-500px).
 - **Customizable UI**: Light/Dark themes with 20+ accent colors.
-- **Missing Covers List**: Automatically generates a list of ROMs without corresponding cover art (checks for PNG, JPG, BMP, GIF, TIFF, WebP, AVIF).
+- **Missing Covers List**: Automatically generates a list of ROMs without corresponding cover art (checks for PNG, JPG, BMP, GIF, TIFF, WebP, AVIF). Right-click an entry to remove it from the list, copy its filename, or delete the corresponding ROM/ISO file.
 - **Flexible Configuration**: Support for custom file extensions and search queries.
 - **Automatic Image Conversion**: Automatically converts downloaded images (JPG, BMP, GIF, TIFF, WebP, AVIF, HEIC, HEIF, JXL, JP2) to PNG format using Magick.NET (ImageMagick). Also, automatically converts newly saved images in the image folder to PNG.
+- **Automatic File Rename & Match**: A built-in `FileSystemWatcher` monitors the image folder and automatically renames any newly saved image to match the currently selected missing ROM's filename, then converts it to PNG and removes the entry from the missing covers list — so images saved from the embedded browser are matched hands-free.
 - **Detailed Logging**: Built-in log viewer for troubleshooting and `app.log`/`error.log` files using Serilog.
 - **Sound Feedback**: Optional audio feedback for user actions using NAudio.
 - **Command-line Arguments**: Start the application with pre-set ROM and Image folders for quick scanning.
@@ -58,7 +60,7 @@ You can add or remove supported extensions through the `Settings > Edit Supporte
 
 ### API Setup (Only for Google Custom Search API)
 
-The "Bing Web Search" and "Google Web Image Search" options do **not** require any API keys. They use an embedded browser to display results.
+The "Local Files", "Google Web", and "Bing Web" options do **not** require any API keys. Local Files searches your own image folder, and the web options use an embedded browser to display results.
 
 To use the **Google Custom Search API**:
 1. **Open the application.**
@@ -86,12 +88,13 @@ To use the **Google Custom Search API**:
 3. **Find Covers**
    - Select a game from the missing covers list.
    - The app automatically searches for cover images using your selected search engine.
-   - If using "Web Search" (Bing/Google Web), the results will appear in the embedded browser.
+   - On the **Local Files** tab, it lists images from your image folder whose names are similar to the ROM, ranked by the selected similarity algorithm and threshold.
+   - If using "Web Search" (Google/Bing Web), the results will appear in the embedded browser.
    - If using "Google API", image suggestions will appear as clickable thumbnails.
 
 4. **Download Covers**
-   - **For API Search**: Click on the cover image you want from the suggestions. The image is automatically downloaded, converted to PNG (if necessary), and saved as `[gamename].png`.
-   - **For Web Search**: Right-click on an image in the embedded browser and choose "Save image as...". Save it inside the Image Folder. The application's `FileSystemWatcher` will then detect the new image, convert it to PNG if needed, and remove the game from the missing list. *Note: Automatic saving directly from the web view is not available due to browser security restrictions.*
+   - **For Local Files / API Search**: Click on the cover image you want from the suggestions. The image is automatically converted to PNG (if necessary) and saved as `[gamename].png`.
+   - **For Web Search**: Right-click on an image in the embedded browser and choose "Save image as...". Save it inside the Image Folder using any filename. The application's `FileSystemWatcher` will then detect the new image, automatically rename it to match the currently selected missing ROM's filename, convert it to PNG if needed, and remove the game from the missing list. *Note: Automatic saving directly from the web view is not available due to browser security restrictions.*
    - The game is removed from the missing covers list once a corresponding PNG is detected in the image folder.
 
 ### Advanced Features
@@ -108,8 +111,12 @@ Access through the menu:
 - **Theme > Accent Colors** - Choose from 20+ color schemes.
 
 #### Search Engine Selection
-Switch between "Bing Web Search", "Google Web Image Search", and "Google API" via:
-- **Select Search Engine** menu.
+Switch between "Local Files", "Google Web", "Bing Web", and "Google API" using the tabs above the results area.
+
+#### Similarity Algorithm & Threshold (Local Files)
+Configure how local image names are matched to your ROMs:
+- **Set Similarity Algorithm** - Choose between Jaccard Similarity, Jaro-Winkler Distance, and Levenshtein Distance.
+- **Set Similarity Threshold** - Set the minimum match percentage (10-90%) required to list a local image.
 
 #### Thumbnail Size
 Adjust preview sizes for API search results:
@@ -160,6 +167,7 @@ FindRomCover/
 - **Services**: Modular services for specific functionality:
   - `ImageProcessor`: Image conversion and processing using Magick.NET
   - `ImageFolderWatcher`: Real-time file system monitoring for automatic image detection
+  - `SimilarityCalculator`: Local image name matching via Jaccard, Jaro-Winkler, and Levenshtein algorithms
   - `WebSearchService`: URL generation for web searches
   - `SearchQueryHelper`: ROM filename cleaning and sanitization
   - `UpdateCheckService`: GitHub release checking
@@ -193,12 +201,13 @@ FindRomCover/
 **No search results**
 - Check your internet connection.
 - Try different search terms in "Extra Query".
-- Switch between "Bing Web Search", "Google Web Image Search", and "Google API" search engines.
+- Switch between "Local Files", "Google Web", "Bing Web", and "Google API" search engines.
+- For local searches, lower the similarity threshold or try a different similarity algorithm.
 - If using Google API, check your API key and Search Engine ID.
 
 **Images not saving or converting automatically**
 - Ensure the image folder has write permissions.
-- For web searches, remember that you need to manually save images from the embedded browser. The application's `FileSystemWatcher` will then detect the new file, convert it to PNG if needed, and update the missing list.
+- For web searches, remember that you need to manually save images from the embedded browser. The application's `FileSystemWatcher` will then detect the new file, rename it to match the selected ROM, convert it to PNG if needed, and update the missing list.
 - If a file already exists, you'll be prompted to overwrite it.
 - Check the `app.log` for any errors related to file access or image conversion.
 
