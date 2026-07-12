@@ -61,7 +61,7 @@ public class ImageSaveService
             using (var image = new MagickImage(inputStream))
             {
                 image.Format = MagickFormat.Png;
-                await image.WriteAsync(tempOutputPath, cancellationToken);
+                await image.WriteAsync(tempOutputPath, MagickFormat.Png, cancellationToken);
             }
 
             File.Move(tempOutputPath, outputPath, true);

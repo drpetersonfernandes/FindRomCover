@@ -499,7 +499,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
     private void DonateButton_Click(object sender, RoutedEventArgs e)
     {
-        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://www.purelogiccode.com/donate") { UseShellExecute = true }); }
+        try { Process.Start(new ProcessStartInfo("https://www.purelogiccode.com/donate") { UseShellExecute = true }); }
         catch (Exception ex)
         {
             MessageBox.Show($"Unable to open the donation link: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -530,7 +530,7 @@ public partial class MainWindow : INotifyPropertyChanged, IDisposable
 
                 if (choice == MessageBoxResult.Yes)
                 {
-                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(updateInfo.ReleaseUrl) { UseShellExecute = true });
+                    Process.Start(new ProcessStartInfo(updateInfo.ReleaseUrl) { UseShellExecute = true });
                 }
             }
             else

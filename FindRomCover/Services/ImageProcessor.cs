@@ -192,7 +192,7 @@ public static class ImageProcessor
                         }
                     }
 
-                    await magickImage.WriteAsync(tempPath, cancellationToken);
+                    await magickImage.WriteAsync(tempPath, magickImage.Format, cancellationToken);
 
                     if (!File.Exists(tempPath))
                     {
